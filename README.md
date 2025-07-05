@@ -10,9 +10,10 @@ Full-featured, well-typed, and easy-to-use LSP client for Python.
 
 ## Features
 
-- **Well-Typed**: Provides type hints for all LSP operations, making it easy to use and integrate with your code.
-- **Multiprocessing Support**: Supports running multiple LSP servers in parallel, allowing you to speedup your LSP operations.
-- **Easy to Extend**: You can easily add support for new LSP servers by implementing a few methods.
+- **Well-Typed**: Provides type hints and [protocol definition](<README#Requiring LSP Client to Have Desired Capabilities>) for all LSP operations, making it easy to use and integrate with your code.
+- **Full-Featured**: Supports a wide range of LSP capabilities, and you can easily [extend it to support more capabilities](<README#(Advanced) Add Support for New LSP Capabilities>).
+- **Multiprocessing Support**: Supports [running multiple LSP servers in parallel](<README#Multiple Server Processes>), allowing you to speedup your LSP operations.
+- **Easy to Extend**: You can easily [add support for new LSP servers](<README#Add Support for New LSP Servers>) by implementing a few methods.
 
 ## Install
 
@@ -29,7 +30,8 @@ To maintain simplicity, `lsp-client` won't automatically install any LSP servers
 
 ```python
 import asyncio as aio
-from lsp_client import BasedPyrightClient, Position
+from lsp_client import Position
+from lsp_client.servers.based_pyright import BasedPyrightClient
 
 async def main():
     async with BasedPyrightClient.start(
@@ -64,6 +66,65 @@ if __name__ == "__main__":
     aio.run(main())
 ```
 
+### A work-as-is Example
+
+Clone the repository and run the following example to see how it works:
+
+```bash
+git clone https://github.com/observerw/lsp-client.git
+```
+
+```python
+from pathlib import Path
+
+from asyncio_addon import async_main
+
+from lsp_client import Position, Range, lsp_type
+from lsp_client.servers.based_pyright import BasedPyrightClient
+
+repo_path = Path.cwd()
+curr_path = Path(__file__)
+
+
+@async_main
+async def main():
+    async with BasedPyrightClient.start(repo_path=repo_path) as client:
+        # found all references of `BasedPyrightClient` class
+        if refs := await client.request_references(
+            file_path="src/lsp_client/servers/based_pyright.py",
+            position=Position(8, 24),
+        ):
+            for ref in refs:
+                print(f"Found references: {ref}")
+
+            # check if includes reference in current file
+            assert any(
+                client.from_uri(ref.uri) == curr_path
+                and ref.range == Range(Position(13, 15), Position(13, 33))
+                for ref in refs
+            )
+            print("All references found successfully.")
+
+        # find the definition of `main` function
+        def_task = client.create_request(
+            client.request_definition_location(
+                file_path=curr_path,
+                position=Position(47, 8),
+            )
+        )
+
+    match def_task.result():
+        case [lsp_type.Location() as loc]:
+            print(f"Found definition: {loc}")
+            assert client.from_uri(loc.uri) == curr_path
+            assert loc.range == Range(Position(12, 10), Position(12, 14))
+    print("Definition found successfully.")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 ## Multiple Server Processes
 
 One key feature of `lsp-client` is the ability to run multiple LSP server processes in parallel. This is particularly useful for large codebases or when you need to perform multiple LSP requests simultaneously, which can significantly speed up operations like finding references or definitions.
@@ -86,28 +147,39 @@ results = [task.result() for task in tasks]
 
 When a request is made by the client, it will be sent to one of the available server processes. The client will automatically handle the distribution of requests across the available servers.
 
+However, please note that starting too many server processes may consume a lot of system resources and lead to performance degradation. It is recommended to adjust the `server_count` parameter based on your system's capabilities and the size of the codebase you are working with.
+
 ## Requiring LSP Client to Have Desired Capabilities
 
+All LSP capabilities are declared as [`Protocol`](https://typing.python.org/en/latest/spec/protocol.html), which means you can combine them to create a protocol to constrain the LSP client to have specific capabilities. For example:
+
 ```python
+# Client with references and definition capabilities
 class GoodClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRequestDefinition,
     LSPClientBase,
 ): ...
 
+# Client with only completions capability
 class BadClient(
     lsp_cap.WithRequestCompletions,
     LSPClientBase,
 ): ...
 
+# Here we define a protocol that requires the client
+# to have both `WithRequestReferences` and `WithRequestDefinition` capabilities.
 @runtime_checkable
 class DesiredClientProtocol(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRequestDefinition,
-    Protocol,
+    Protocol, # don't forget to inherit from `Protocol`
 ): ...
 
+# good client can be accepted
 good: type[DesiredClientProtocol] = GoodClient
+
+# bad client cannot be accepted, since it does not have the required capabilities
 # type[BadClient]  is not assignable to type[DesiredClientProtocol]
 bad: type[DesiredClientProtocol] = BadClient
 ```
@@ -152,7 +224,11 @@ In static mode, it is required to keep the code repository unchanged during the 
 
 ## (WIP) Automatic Document Synchronization
 
-Soon!
+Coming soon!
+
+## (Advanced) Add Support for New LSP Capabilities
+
+TODO ...
 
 ## What if ... ?
 
