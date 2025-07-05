@@ -44,7 +44,6 @@ class LSPClientBase(
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        print(cls.client_capabilities)
         cls.check_client_capability()
 
     def auto_install(self, base_path: AnyPath | None = None) -> None:
