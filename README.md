@@ -200,7 +200,7 @@ You can override any capability method to customize the behavior for your specif
 - Provide better type hints and documentation
 - ...
 
-This project takes the spirit of `multilspy`, and refactor the code to provide more out-of-the-box support for various LSP servers (we even support [Github Copilot Server](src/lsp_client/impl/copilot.py)) and capabilities, and **make it easier to extend and use**.
+This project takes the spirit of `multilspy`, and refactor the code to provide more out-of-the-box support for various LSP servers (we even support [Github Copilot Server](src/lsp_client/servers/copilot.py)) and capabilities, and **make it easier to extend and use**.
 
 ### (Static Mode) Why do we need to use Language Server to perform static code analysis?
 
