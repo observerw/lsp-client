@@ -197,11 +197,11 @@ class WithRequestDefinition(WithRequestDefinitionBase, Protocol):
 
     @staticmethod
     def is_definition_links(result: list) -> TypeGuard[list[types.DefinitionLink]]:
-        return all(isinstance(item, types.DefinitionLink) for item in result)
+        return all(isinstance(item, types.LocationLink) for item in result)
 
     async def request_definition(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.DefinitionLink] | None:
+    ) -> Sequence[types.LocationLink] | None:
         match await self._request_definition(file_path, position):
             case list() as result if self.is_definition_links(result):
                 return result

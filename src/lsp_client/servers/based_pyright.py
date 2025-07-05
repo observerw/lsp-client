@@ -8,7 +8,7 @@ from lsp_client.client import LSPClientBase
 
 class BasedPyrightClient(
     cap.WithRequestReferences,
-    cap.WithRequestDefinition,
+    cap.WithRequestDefinitionLocation,
     cap.WithRequestHover,
     cap.WithReceiveLogMessage,
     cap.WithReceiveShowMessage,
@@ -68,9 +68,11 @@ class BasedPyrightClient(
                 ],
             ),
             definition=types.DefinitionClientCapabilities(
+                dynamic_registration=True,
                 link_support=True,
             ),
             type_definition=types.TypeDefinitionClientCapabilities(
+                dynamic_registration=True,
                 link_support=True,
             ),
             references=types.ReferenceClientCapabilities(
