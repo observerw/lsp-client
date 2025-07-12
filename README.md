@@ -1,10 +1,10 @@
-# (WIP) LSP Client
+# LSP Client
 
 [![PyPI version](https://badge.fury.io/py/lsp-client.svg)](https://badge.fury.io/py/lsp-client)
 [![Python versions](https://img.shields.io/pypi/pyversions/lsp-client.svg)](https://pypi.org/project/lsp-client/)
 
-> [!WARNING]
-> This project is still in development and may not be fully functional yet. Soon we will have a stable release.
+> [!NOTE]
+> This project is still in development and may not be fully functional yet. Any PRs are welcome to help us improve it!
 
 Full-featured, well-typed, and easy-to-use LSP client for Python.
 
