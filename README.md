@@ -297,6 +297,26 @@ On contrast, LSP servers are usually well-maintained (since they are used by man
 
 Sadly, most LSP servers are designed for dynamic analysis and do not provide cache mechanism, which means they will be slow when performing code analysis on large codebases. But considering their rich features and good maintainability, it is a good trade-off.
 
+### Why do we have `WithRequestDocumentSymbols`, `WithRequestDocumentSymbolInformation`, and `WithRequestDocumentBaseSymbols` for `textDocument/documentSymbol` capability?
+
+According to the [LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol), LSP servers should return `SymbolInformation[]` whenever possible. However, some LSP servers do not support this feature and only return `DocumentSymbol[]`, so the return type of `WithRequestDocumentSymbols` is `Sequence[types.DocumentSymbolInformation] | Sequence[types.DocumentSymbol]`, which can be troublesome when you want to use the return values:
+
+```python
+for sym in await client.request_document_symbols(file_path):
+    # type matching is required here, boring!
+    if isinstance(sym, types.DocumentSymbolInformation):
+        print(f"Symbol: {sym.name} at {sym.location.range}")
+    elif isinstance(sym, types.DocumentSymbol):
+        print(f"Document Symbol: {sym.name} at {sym.range}")
+```
+
+To make it easier to use, we provide `WithRequestDocumentSymbolInformation` that returns `Sequence[types.DocumentSymbolInformation]` only and `WithRequestDocumentBaseSymbols` that returns `Sequence[types.DocumentSymbol]` only. If you can ensure that your LSP server supports `SymbolInformation`, you can use `WithRequestDocumentSymbolInformation` to get a more convenient return type.
+
+This design is also applied to:
+
+- `WithRequestDefinition`
+- `WithRequestWorkspaceSymbols`
+
 ## Thanks
 
 This project is heavily inspired by [multilspy](https://github.com/microsoft/multilspy), thanks for their great work!
