@@ -1,10 +1,10 @@
-# (WIP) LSP Client
+# LSP Client
 
 [![PyPI version](https://badge.fury.io/py/lsp-client.svg)](https://badge.fury.io/py/lsp-client)
 [![Python versions](https://img.shields.io/pypi/pyversions/lsp-client.svg)](https://pypi.org/project/lsp-client/)
 
-> [!WARNING]
-> This project is still in development and may not be fully functional yet. Soon we will have a stable release.
+> [!NOTE]
+> This project is still in development and may not be fully functional yet. Any PRs are welcome to help us improve it!
 
 Full-featured, well-typed, and easy-to-use LSP client for Python.
 
@@ -186,6 +186,56 @@ good: type[DesiredClientProtocol] = GoodClient
 bad: type[DesiredClientProtocol] = BadClient
 ```
 
+## Capability Checking
+
+The LSP client provides built-in capability checking to ensure both client and server compatibility. This is handled through the `LSPCapability` protocol defined in `src/lsp_client/capability/client.py`.
+
+### How Capability Checking Works
+
+Each LSP capability mixin implements two key methods:
+
+- `check_client_capability()`: Verifies that the client declares the necessary capabilities to the server
+- `check_server_capability(capability: types.ServerCapabilities)`: Validates that the server supports the required capabilities
+
+### Automatic Capability Validation
+
+During the initialization process, the client automatically performs capability checking:
+
+```python
+async def initialize(self):
+    result = await self.request_all(
+        types.InitializeRequest(
+            id="initialize",
+            params=self.initialize_params,
+        ),
+        schema=types.InitializeResponse,
+    )
+    for res in result:
+        # Automatic server capability checking
+        super().check_server_capability(res.capabilities)
+```
+
+### Custom Capability Checking
+
+When implementing new LSP capabilities, you should override both checking methods:
+
+```python
+class WithMyCustomCapability(LSPCapability):
+    @classmethod
+    def check_client_capability(cls):
+        # Verify client capabilities are properly declared
+        # Raise an exception if requirements aren't met
+        pass
+    
+    @classmethod 
+    def check_server_capability(cls, capability: types.ServerCapabilities):
+        # Verify server supports the required capability
+        # Raise an exception if server doesn't support it
+        pass
+```
+
+This ensures that capability mismatches are caught early during client initialization rather than failing silently or producing unexpected runtime errors.
+
 ## Add Support for New LSP Servers
 
 Add support for a new LSP server is simple. Example from [BasedPyright](src/lsp_client/servers/based_pyright.py):
@@ -296,6 +346,26 @@ However, the truth is almost all static analysis tools are far from satisfying. 
 On contrast, LSP servers are usually well-maintained (since they are used by many IDEs), and they provide a lot of useful features for static code analysis, such as find references, find definitions, hover information, and more.
 
 Sadly, most LSP servers are designed for dynamic analysis and do not provide cache mechanism, which means they will be slow when performing code analysis on large codebases. But considering their rich features and good maintainability, it is a good trade-off.
+
+### Why do we have `WithRequestDocumentSymbols`, `WithRequestDocumentSymbolInformation`, and `WithRequestDocumentBaseSymbols` for `textDocument/documentSymbol` capability?
+
+According to the [LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol), LSP servers should return `SymbolInformation[]` whenever possible. However, some LSP servers do not support this feature and only return `DocumentSymbol[]`, so the return type of `WithRequestDocumentSymbols` is `Sequence[types.DocumentSymbolInformation] | Sequence[types.DocumentSymbol]`, which can be troublesome when you want to use the return values:
+
+```python
+for sym in await client.request_document_symbols(file_path):
+    # type matching is required here, boring!
+    if isinstance(sym, types.DocumentSymbolInformation):
+        print(f"Symbol: {sym.name} at {sym.location.range}")
+    elif isinstance(sym, types.DocumentSymbol):
+        print(f"Document Symbol: {sym.name} at {sym.range}")
+```
+
+To make it easier to use, we provide `WithRequestDocumentSymbolInformation` that returns `Sequence[types.DocumentSymbolInformation]` only and `WithRequestDocumentBaseSymbols` that returns `Sequence[types.DocumentSymbol]` only. If you can ensure that your LSP server supports `SymbolInformation`, you can use `WithRequestDocumentSymbolInformation` to get a more convenient return type.
+
+This design is also applied to:
+
+- `WithRequestDefinition`
+- `WithRequestWorkspaceSymbols`
 
 ## Thanks
 
