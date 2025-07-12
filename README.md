@@ -186,6 +186,56 @@ good: type[DesiredClientProtocol] = GoodClient
 bad: type[DesiredClientProtocol] = BadClient
 ```
 
+## Capability Checking
+
+The LSP client provides built-in capability checking to ensure both client and server compatibility. This is handled through the `LSPCapability` protocol defined in `src/lsp_client/capability/client.py`.
+
+### How Capability Checking Works
+
+Each LSP capability mixin implements two key methods:
+
+- `check_client_capability()`: Verifies that the client declares the necessary capabilities to the server
+- `check_server_capability(capability: types.ServerCapabilities)`: Validates that the server supports the required capabilities
+
+### Automatic Capability Validation
+
+During the initialization process, the client automatically performs capability checking:
+
+```python
+async def initialize(self):
+    result = await self.request_all(
+        types.InitializeRequest(
+            id="initialize",
+            params=self.initialize_params,
+        ),
+        schema=types.InitializeResponse,
+    )
+    for res in result:
+        # Automatic server capability checking
+        super().check_server_capability(res.capabilities)
+```
+
+### Custom Capability Checking
+
+When implementing new LSP capabilities, you should override both checking methods:
+
+```python
+class WithMyCustomCapability(LSPCapability):
+    @classmethod
+    def check_client_capability(cls):
+        # Verify client capabilities are properly declared
+        # Raise an exception if requirements aren't met
+        pass
+    
+    @classmethod 
+    def check_server_capability(cls, capability: types.ServerCapabilities):
+        # Verify server supports the required capability
+        # Raise an exception if server doesn't support it
+        pass
+```
+
+This ensures that capability mismatches are caught early during client initialization rather than failing silently or producing unexpected runtime errors.
+
 ## Add Support for New LSP Servers
 
 Add support for a new LSP server is simple. Example from [BasedPyright](src/lsp_client/servers/based_pyright.py):
