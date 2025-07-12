@@ -1,6 +1,6 @@
 bump version:
     # replace the version in pyproject.toml
-    sed -i '' 's/version = ".*"/version = "{{ version }}"/'
+    sed -i '' 's/version = ".*"/version = "{{ version }}"/g' pyproject.toml
     # commit the change
     git add pyproject.toml
     git commit -m "bump version to {{ version }}"
