@@ -47,17 +47,20 @@ class LSPServerProcess:
 
     @property
     def stdin(self) -> StreamWriter:
-        assert (stdin := self.process.stdin)
+        stdin = self.process.stdin
+        assert stdin, "Process stdin is not available"
         return stdin
 
     @property
     def stdout(self) -> StreamReader:
-        assert (stdout := self.process.stdout)
+        stdout = self.process.stdout
+        assert stdout, "Process stdout is not available"
         return stdout
 
     @property
     def stderr(self) -> StreamReader:
-        assert (stderr := self.process.stderr)
+        stderr = self.process.stderr
+        assert stderr, "Process stderr is not available"
         return stderr
 
     async def receive_package(self) -> JsonRpcRawPackage:

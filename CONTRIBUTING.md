@@ -42,6 +42,7 @@ Thank you for your interest in contributing to LSP Client! This guide will help 
 - [ ] Add support for export result
 - [ ] Add support for file watching & automatic DocumentSync capabilities
 - [ ] Add support for static mode
+- [ ] Add load balancing for multiple LSP servers
 - [ ] Add support for automatically generating client side capabilities from server capabilities
 
 ## 🔧 Project Structure
