@@ -34,7 +34,7 @@ build-backend = "hatchling.build"
 lsp-client = "lsp_client.mcp.server:app"
 
 [tool.ruff]
-target-version = "0.1.0"
+target-version = "py313"
 
 [tool.ruff.format]
 quote-style = "double"
