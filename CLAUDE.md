@@ -12,6 +12,7 @@ This is an LSP (Language Server Protocol) client library for Python that provide
 
 - `uv sync` - Install dependencies
 - `uv sync --group dev` - Install with development dependencies
+- `uv sync --group mcp` - Install with MCP dependencies
 
 ### Testing
 
@@ -58,6 +59,11 @@ This is an LSP (Language Server Protocol) client library for Python that provide
 - `BasedPyrightClient`: Python language server with comprehensive capabilities
 - Extensible pattern for adding new server support
 
+**MCP Integration** (`src/lsp_client/mcp/`): MCP server implementation:
+
+- `cli.py`: CLI interface for MCP tools
+- `locate.py`: Location resolution utilities
+
 ### Key Design Patterns
 
 **Protocol-Based Capabilities**: LSP features are implemented as Protocol classes that can be mixed into client implementations. This allows for:
@@ -85,6 +91,7 @@ This is an LSP (Language Server Protocol) client library for Python that provide
 - `src/lsp_client/server/`: Server process management and request handling
 - `src/lsp_client/servers/`: Concrete server implementations
 - `src/lsp_client/utils/`: Path utilities and helper functions
+- `src/lsp_client/mcp/`: MCP server tools and utilities
 - `tests/`: Test suite including mock server for testing
 
 ## Usage Patterns
@@ -104,6 +111,12 @@ tasks = [
     for file, pos in file_positions
 ]
 results = [task.result() for task in tasks]
+```
+
+### MCP Server Usage
+
+```bash
+lsp-client --repo-path /path/to/repo
 ```
 
 ### Custom Server Implementation
