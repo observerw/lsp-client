@@ -83,6 +83,8 @@ class RequestManager:
     timeout: float | None = 5.0
 
     _cond: aio.Condition = field(default_factory=aio.Condition)
+    """If all pending requests are handled"""
+
     _pending: dict[JsonRpcID, RequestEvent] = field(default_factory=dict)
 
     async def wait_complete(self):
@@ -92,6 +94,11 @@ class RequestManager:
 
     @asynccontextmanager
     async def request[T: RequestEvent](self, event: T) -> AsyncGenerator[T]:
+        """
+        Register a request event to pending requests, let caller to send the request,
+        wait for the response, and finally unregister the event.
+        """
+
         try:
             self._pending[event.id] = event
             yield event
@@ -108,7 +115,6 @@ class RequestManager:
 
         id = resp["id"]
         assert id, f"Unexpected response without id: {resp}"
-
         assert id in self._pending, (
             f"Response {resp} with id {id} not found in pending requests"
         )

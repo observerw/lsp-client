@@ -23,15 +23,31 @@ uv add lsp-client
 
 Currently, `lsp-client` supports Python 3.13 and above. Any backward-compatible PRs are welcome.
 
-To maintain simplicity, `lsp-client` won't automatically install any LSP servers. Before using it, you need to install the LSP server you want to use and make sure it is available in your `$PATH`. Here are some examples of LSP servers you can use:
+To maintain simplicity, **`lsp-client` won't automatically install any LSP servers. Before using it, you need to install the LSP server you want to use and make sure it is available in your `$PATH`**. Here are some examples of LSP servers you can use:
 
 - Python: [BasedPyright](https://docs.basedpyright.com/dev/installation/command-line-and-language-server/)
 
 ## Usage
 
+The `lsp-client` package exports the following items:
+
+- `LSPClientBase`: Base class for implementing LSP clients
+- `LSPServerInfo`: Configuration for LSP server processes  
+- `lsp_cap`: Module containing all LSP capability mixins
+- `lsp_type`: Re-exported from `lsprotocol.types`, including all LSP types and schemas
+- `servers`: Module containing pre-defined LSP server clients
+
+For convenience, some common schemas are re-exported from `lsp_type`:
+
+- `Position`: Represents a position in a text document (line, character)
+- `Range`: Represents a range in a text document (start/end positions)
+
+### Example Usage
+
 ```python
 import asyncio as aio
-from lsp_client import Position
+from lsp_client import LSPServerInfo, Position
+# import a pre-defined LSP client you want to use
 from lsp_client.servers.based_pyright import BasedPyrightClient
 
 async def main():
@@ -46,8 +62,8 @@ async def main():
             file_path="path/to/your/file.py",  # Update with your file path
             position=Position(12, 29),  # Update with your desired position
         )
-        # [Task-Group](https://docs.python.org/3/library/asyncio-task.html#asyncio.TaskGroup)-like interface
-        # to run multiple requests in parallel
+        # Task-Group-like interface to run multiple requests in parallel
+        # check <https://docs.python.org/3/library/asyncio-task.html#asyncio.TaskGroup>
         def_tasks = [
             client.create_request(client.request_definition(file_path, position))
             for file_path, position in [
