@@ -41,3 +41,7 @@ async def requet_reference(loc: Locate, ctx: Context):
         file_path=loc.rel_file_path,
         position=position,
     )
+
+
+def main():
+    mcp.run()

@@ -7,7 +7,6 @@ from typing import Self
 from pydantic import BaseModel, Field, model_validator
 
 from lsp_client import Position
-from lsp_client.utils.path import RelPath
 
 
 def locate_by_context(file_path: Path, context: str) -> tuple[int, str]:
@@ -31,7 +30,7 @@ def locate_by_lineno(file_path: Path, lineno: int) -> str:
 class Locate(BaseModel):
     """Locate a symbol in a code file."""
 
-    rel_file_path: RelPath = Field(
+    rel_file_path: Path = Field(
         description="Relative path to the file containing the symbol. "
     )
 

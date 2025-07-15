@@ -43,7 +43,7 @@ class LSPClientBase(
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
 
-        if inspect.isabstract(cls):
+        if inspect.isabstract(cls) or issubclass(cls, Protocol):
             return
 
         cls.check_client_capability()
