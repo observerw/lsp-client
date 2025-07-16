@@ -58,6 +58,7 @@ class WithRequestInlineCompletions(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.InlineCompletionResponse,
+            file_paths=[file_path],
         ):
             case types.InlineCompletionList(items=items) | items:
                 return items
@@ -143,6 +144,7 @@ class WithRequestReferences(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.ReferencesResponse,
+            file_paths=[file_path],
         )
 
 
@@ -189,6 +191,7 @@ class WithRequestDefinition(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.DefinitionResponse,
+            file_paths=[file_path],
         ):
             case types.Location() as location:
                 return [location]
@@ -276,6 +279,7 @@ class WithRequestHover(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.HoverResponse,
+            file_paths=[file_path],
         )
 
 
@@ -320,6 +324,7 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.CallHierarchyPrepareResponse,
+            file_paths=[file_path],
         )
 
     async def request_call_hierarchy_incoming_call(
@@ -342,6 +347,7 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
                     params=types.CallHierarchyIncomingCallsParams(item=prepare_result),
                 ),
                 schema=types.CallHierarchyIncomingCallsResponse,
+                file_paths=[file_path],
             )
             for prepare_result in prepare_results
         )
@@ -373,6 +379,7 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
                     params=types.CallHierarchyOutgoingCallsParams(item=prepare_result),
                 ),
                 schema=types.CallHierarchyOutgoingCallsResponse,
+                file_paths=[file_path],
             )
             for prepare_result in prepare_results
         )
@@ -424,6 +431,7 @@ class WithRequestCompletions(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.CompletionResponse,
+            file_paths=[file_path],
         ):
             case types.CompletionList(items=items) | items:
                 return items
@@ -468,6 +476,7 @@ class WithRequestSignatureHelp(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.SignatureHelpResponse,
+            file_paths=[file_path],
         )
 
 
@@ -505,6 +514,7 @@ class WithRequestDocumentSymbols(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.DocumentSymbolResponse,
+            file_paths=[file_path],
         )
 
 

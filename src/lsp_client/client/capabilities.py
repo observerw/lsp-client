@@ -27,6 +27,7 @@ DEFAULT_CLIENT_CAPABILITY: ClientCapabilities = lsp_type.ClientCapabilities(
         diagnostics=lsp_type.DiagnosticWorkspaceClientCapabilities(
             refresh_support=True,
         ),
+        workspace_folders=True,
     ),
     text_document=lsp_type.TextDocumentClientCapabilities(
         synchronization=lsp_type.TextDocumentSyncClientCapabilities(
