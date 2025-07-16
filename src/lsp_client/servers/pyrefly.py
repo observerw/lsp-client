@@ -25,7 +25,7 @@ class PyReflyClient(
     lsp_cap.WithReceiveLogMessage,
     lsp_cap.WithReceiveShowMessage,
     lsp_cap.WithReceiveLogTrace,
-    lsp_cap.WithRespondWorkspaceFolders,
+    # lsp_cap.WithRespondWorkspaceFolders,
     LSPClientBase,
 ):
     """
@@ -45,7 +45,7 @@ class PyReflyClient(
                 diagnostics=lsp_type.DiagnosticWorkspaceClientCapabilities(
                     refresh_support=True,
                 ),
-                workspace_folders=True,
+                # workspace_folders=True,
             ),
             text_document=lsp_type.TextDocumentClientCapabilities(
                 synchronization=lsp_type.TextDocumentSyncClientCapabilities(
