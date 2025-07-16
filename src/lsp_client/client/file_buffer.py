@@ -5,14 +5,11 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 
-from lsprotocol import types
-
 from lsp_client.utils.path import AbsPath
 
 
 @dataclass(frozen=True)
 class LSPFileBufferItem:
-    language_id: types.LanguageKind
     file_path: AbsPath
 
     @cached_property
@@ -25,29 +22,27 @@ class LSPFileBufferItem:
 
     @property
     def version(self) -> int:
+        # TODO: when text editing is supported, this should be updated
         return 0
 
 
-@dataclass
 class LSPFileBuffer:
-    language_id: types.LanguageKind
+    type PosixPath = str
 
-    _lookup: dict[str, LSPFileBufferItem] = field(default_factory=dict)
-    _ref_count: Counter[str] = field(default_factory=Counter)
+    _lookup: dict[PosixPath, LSPFileBufferItem] = field(default_factory=dict)
+    _ref_count: Counter[PosixPath] = field(default_factory=Counter)
 
     def open(self, file_paths: Iterable[AbsPath]) -> Sequence[LSPFileBufferItem]:
         """Open files and save to buffer. Only return newly opened files."""
 
+        self._ref_count.update(file_path.as_posix() for file_path in file_paths)
+
         items: list[LSPFileBufferItem] = []
-
         for file_path in file_paths:
-            self._ref_count.update(path.as_posix() for path in file_paths)
-
             if (file_path_posix := file_path.as_posix()) in self._lookup:
                 continue
 
             item = self._lookup[file_path_posix] = LSPFileBufferItem(
-                language_id=self.language_id,
                 file_path=file_path,
             )
             items.append(item)

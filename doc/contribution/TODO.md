@@ -14,8 +14,6 @@
 - [ ] Support more LSP capabilities
 - [ ] Add more tests for existing capabilities
 
-## Testing
-
 ## LSP Server
 
 - [ ] Add documentation about LSP server version checking
@@ -28,3 +26,4 @@
 - [ ] Add support for file watching & automatic DocumentSync capabilities
 - [ ] Add support for static mode
 - [ ] Add support for sending request without opening files
+- [ ] Add support for text-editing capabilities

@@ -18,8 +18,8 @@ from lsp_client.server import LSPServerInfo, LSPServerPool, ServerRequestQueue
 from lsp_client.types import AnyPath
 from lsp_client.utils.path import AbsPath
 
-from .buffer import LSPFileBuffer
 from .capabilities import FULL_FEATURED_CLIENT_CAPABILITY
+from .file_buffer import LSPFileBuffer
 from .server_req import ServerRequestClient
 
 
@@ -145,7 +145,7 @@ class LSPClientBase(
 
     @cached_property
     def file_buffer(self) -> LSPFileBuffer:
-        return LSPFileBuffer(language_id=self.language_id)
+        return LSPFileBuffer()
 
     def _check_closed(self):
         if self._closed:
