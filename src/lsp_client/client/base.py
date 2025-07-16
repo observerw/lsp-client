@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio as aio
 import inspect
 import logging
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, ClassVar, Protocol, override
+from typing import Any, ClassVar, Protocol, Self, override
 
 from asyncio_addon import gather_all
 from lsprotocol import types
@@ -74,7 +74,7 @@ class LSPClientBase(
         server_info: LSPServerInfo | None = None,
         file_paths: Sequence[AnyPath] = (),
         pending_timeout: float | None = 5.0,
-    ):
+    ) -> AsyncGenerator[Self, Any]:
         """
         Start the LSP client.
 
