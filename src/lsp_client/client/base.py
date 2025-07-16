@@ -189,7 +189,7 @@ class LSPClientBase(
             await gather_all(
                 self.notify_text_document_opened(
                     file_path=item.file_path,
-                    file_content=item.contents,
+                    file_content=item.content,
                 )
                 for item in buffer_items
             )

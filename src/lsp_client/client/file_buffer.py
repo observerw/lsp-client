@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
 
 from lsp_client.utils.path import AbsPath
@@ -11,14 +11,15 @@ from lsp_client.utils.path import AbsPath
 @dataclass(frozen=True)
 class LSPFileBufferItem:
     file_path: AbsPath
+    file_content: bytes
 
     @cached_property
     def uri(self) -> str:
         return self.file_path.as_uri()
 
     @cached_property
-    def contents(self) -> str:
-        return self.file_path.read_text(encoding="utf-8")
+    def content(self) -> str:
+        return self.file_content.decode("utf-8")
 
     @property
     def version(self) -> int:
@@ -29,8 +30,12 @@ class LSPFileBufferItem:
 class LSPFileBuffer:
     type PosixPath = str
 
-    _lookup: dict[PosixPath, LSPFileBufferItem] = field(default_factory=dict)
-    _ref_count: Counter[PosixPath] = field(default_factory=Counter)
+    _lookup: dict[PosixPath, LSPFileBufferItem]
+    _ref_count: Counter[PosixPath]
+
+    def __init__(self) -> None:
+        self._lookup = {}
+        self._ref_count = Counter()
 
     def open(self, file_paths: Iterable[AbsPath]) -> Sequence[LSPFileBufferItem]:
         """Open files and save to buffer. Only return newly opened files."""
@@ -43,7 +48,7 @@ class LSPFileBuffer:
                 continue
 
             item = self._lookup[file_path_posix] = LSPFileBufferItem(
-                file_path=file_path,
+                file_path=file_path, file_content=file_path.read_bytes()
             )
             items.append(item)
 
