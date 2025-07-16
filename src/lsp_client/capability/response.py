@@ -150,3 +150,36 @@ class WithRespondShowMessage(LSPCapabilityClient, Protocol):
         self.logger.debug("Responding to show message: %s", req.params.message)
         # default to just return None
         return types.ShowMessageResponse(id=req.id)
+
+
+@runtime_checkable
+class WithRespondWorkspaceFolders(LSPCapabilityClient, Protocol):
+    """
+    `workspace/workspaceFolders` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders
+    """
+
+    @override
+    @classmethod
+    def check_client_capability(cls):
+        assert (workspace := cls.client_capabilities.workspace)
+        assert workspace.workspace_folders
+        logger.debug("Client supports workspace/workspaceFolders checked")
+
+    @override
+    @classmethod
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
+        logger.debug("Server supports workspace/workspaceFolders checked")
+
+    async def respond_workspace_folders(
+        self, req: types.WorkspaceFoldersRequest
+    ) -> types.WorkspaceFoldersResponse:
+        self.logger.debug("Responding to workspace folders request")
+        # TODO do we need to do something here?
+        return types.WorkspaceFoldersResponse(
+            id=req.id,
+            result=None,
+        )

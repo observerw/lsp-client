@@ -56,6 +56,11 @@ class ServerRequestClient(cap.LSPCapabilityClient, Protocol):
                     raw_req, types.PublishDiagnosticsNotification
                 )
                 await self.process_notification(self.notify_publish_diagnostics(req))
+            case {"method": types.WORKSPACE_WORKSPACE_FOLDERS} if isinstance(
+                self, cap.WithRespondWorkspaceFolders
+            ):
+                req = lsp_converter.structure(raw_req, types.WorkspaceFoldersRequest)
+                await self.process_request(self.respond_workspace_folders(req))
             # TODO add more server request handlers here
             case other_req:
                 self.logger.warning(

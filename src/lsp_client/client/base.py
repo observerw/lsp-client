@@ -19,7 +19,7 @@ from lsp_client.types import AnyPath
 from lsp_client.utils.path import AbsPath
 
 from .buffer import LSPFileBuffer
-from .capabilities import DEFAULT_CLIENT_CAPABILITY
+from .capabilities import FULL_FEATURED_CLIENT_CAPABILITY
 from .server_req import ServerRequestClient
 
 
@@ -33,7 +33,9 @@ class LSPClientBase(
     Protocol,
 ):
     server_cmd: ClassVar[Sequence[str]]
-    client_capabilities: ClassVar[types.ClientCapabilities] = DEFAULT_CLIENT_CAPABILITY
+    client_capabilities: ClassVar[types.ClientCapabilities] = (
+        FULL_FEATURED_CLIENT_CAPABILITY
+    )
 
     server: LSPServerPool
     repo_path: AbsPath
