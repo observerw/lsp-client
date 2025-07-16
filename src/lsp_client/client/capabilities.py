@@ -7,7 +7,7 @@ from lsprotocol.types import ClientCapabilities
 
 from lsp_client import lsp_type
 
-DEFAULT_CLIENT_CAPABILITY: ClientCapabilities = lsp_type.ClientCapabilities(
+FULL_FEATURED_CLIENT_CAPABILITY: ClientCapabilities = lsp_type.ClientCapabilities(
     workspace=lsp_type.WorkspaceClientCapabilities(
         symbol=lsp_type.WorkspaceSymbolClientCapabilities(
             symbol_kind=lsp_type.ClientSymbolKindOptions(
@@ -27,7 +27,6 @@ DEFAULT_CLIENT_CAPABILITY: ClientCapabilities = lsp_type.ClientCapabilities(
         diagnostics=lsp_type.DiagnosticWorkspaceClientCapabilities(
             refresh_support=True,
         ),
-        workspace_folders=True,
     ),
     text_document=lsp_type.TextDocumentClientCapabilities(
         synchronization=lsp_type.TextDocumentSyncClientCapabilities(
@@ -106,6 +105,7 @@ DEFAULT_CLIENT_CAPABILITY: ClientCapabilities = lsp_type.ClientCapabilities(
         position_encodings=["utf-16"],
     ),
 )
+"""Intend to be used by full-featured LSP servers that support most of the LSP features."""
 
 
 def client_capabilities_with_default(update: dict[str, Any]) -> ClientCapabilities:
@@ -118,7 +118,7 @@ def client_capabilities_with_default(update: dict[str, Any]) -> ClientCapabiliti
         update (dict[str, Any]): The updates to apply to the default client capability.
     """
 
-    capabilities = attrs.evolve(DEFAULT_CLIENT_CAPABILITY)
+    capabilities = attrs.evolve(FULL_FEATURED_CLIENT_CAPABILITY)
 
     for key, value in update.items():
         match key.split("."):
