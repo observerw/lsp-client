@@ -4,12 +4,17 @@ basedpyright: Language Server for Python - https://docs.basedpyright.com
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
-from typing import ClassVar
+from typing import ClassVar, override
+
+from semver import Version
 
 import lsp_client.capability as cap
 from lsp_client import lsp_type
 from lsp_client.client import LSPClientBase
+
+logger = logging.getLogger(__name__)
 
 
 class BasedPyrightClient(
@@ -132,3 +137,17 @@ class BasedPyrightClient(
             ),
         )
     )
+
+    @override
+    @classmethod
+    def check_server_capability(
+        cls,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
+    ):
+        if info and (version := info.version):
+            assert Version.parse(version).match(">=1.29")
+            logger.debug(
+                "Server version %s supports BasedPyrightClient capabilities",
+                version,
+            )

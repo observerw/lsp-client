@@ -21,7 +21,11 @@ class LSPCapability(Protocol):
 
     @classmethod
     @abstractmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities): ...
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ): ...
 
 
 class LSPCapabilityClient(LSPCapability, Protocol):
@@ -65,14 +69,6 @@ class LSPCapabilityClient(LSPCapability, Protocol):
                 )
             ],
         )
-
-    @classmethod
-    def check_version_capability(cls):
-        """
-        Check if the LSP server version is compatible with the client capabilities.
-
-        Override this method in concrete implementations to enforce version checks.
-        """
 
     @abstractmethod
     async def request[R](
@@ -148,7 +144,10 @@ class LSPCapabilityClient(LSPCapability, Protocol):
             schema=types.InitializeResponse,
         )
         for res in result:
-            super().check_server_capability(res.capabilities)
+            super().check_server_capability(
+                res.capabilities,
+                res.server_info,
+            )
 
         await self.notify_all(
             types.InitializedNotification(

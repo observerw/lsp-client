@@ -12,7 +12,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 
-dependencies = ["asyncio-addon>=0.2.0", "lsprotocol>=2025.0.0"]
+dependencies = ["asyncio-addon>=0.2.0", "lsprotocol>=2025.0.0", "semver>=3.0.4"]
 
 [dependency-groups]
 dev = [

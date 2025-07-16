@@ -31,7 +31,11 @@ class WithRequestInlineCompletions(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.inline_completion_provider
         logger.debug("Server supports textDocument/inlineCompletion checked")
 
@@ -75,7 +79,11 @@ class WithRequestExecuteCommand(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.execute_command_provider
 
         logger.debug("Server supports workspace/executeCommand checked")
@@ -111,7 +119,11 @@ class WithRequestReferences(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.references_provider
 
         logger.debug("Server supports textDocument/references checked")
@@ -146,7 +158,11 @@ class WithRequestDefinition(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.definition_provider
 
         logger.debug("Server supports textDocument/definition checked")
@@ -237,7 +253,11 @@ class WithRequestHover(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.hover_provider
 
         logger.debug("Server supports textDocument/hover checked")
@@ -277,7 +297,11 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.call_hierarchy_provider
 
         logger.debug("Server supports textDocument/callHierarchy checked")
@@ -377,7 +401,11 @@ class WithRequestCompletions(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.completion_provider
 
         logger.debug("Server supports textDocument/completion checked")
@@ -417,7 +445,11 @@ class WithRequestSignatureHelp(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.signature_help_provider
 
         logger.debug("Server supports textDocument/signatureHelp checked")
@@ -451,7 +483,11 @@ class WithRequestDocumentSymbols(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.document_symbol_provider
 
         logger.debug("Server supports textDocument/documentSymbol checked")
@@ -531,7 +567,11 @@ class WithRequestWorkspaceSymbols(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.workspace_symbol_provider
 
         logger.debug("Server supports workspace/symbol checked")

@@ -33,7 +33,11 @@ class WithNotifyTextDocumentSynchronize(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.text_document_sync
 
         logger.debug("Server supports textDocument/didOpen checked")
@@ -84,7 +88,11 @@ class WithNotifyChangeConfiguration(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         logger.debug("Server supports workspace/didChangeConfiguration checked")
 
     async def notify_change_configuration(
@@ -113,7 +121,11 @@ class WithNotifyChangeWorkspaceFolders(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert (workspace := capability.workspace)
         assert workspace.workspace_folders
         assert workspace.workspace_folders.supported

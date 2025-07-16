@@ -23,7 +23,8 @@ from .server_req import ServerRequestClient
 
 @dataclass
 class LSPClientBase(
-    # Client support for textDocument/didOpen, textDocument/didChange and textDocument/didClose notifications is mandatory
+    # Client support for `textDocument/didOpen`, `textDocument/didChange` and `textDocument/didClose`
+    # notifications is mandatory
     cap.WithNotifyTextDocumentSynchronize,
     ServerRequestClient,
     cap.LSPCapabilityClient,
@@ -43,11 +44,10 @@ class LSPClientBase(
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
 
-        if inspect.isabstract(cls):
+        if inspect.isabstract(cls) or issubclass(cls, Protocol):
             return
 
         cls.check_client_capability()
-        cls.check_version_capability()
 
     def auto_install(self, base_path: AnyPath | None = None) -> None:
         """

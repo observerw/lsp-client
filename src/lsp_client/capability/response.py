@@ -27,7 +27,11 @@ class WithReceiveLogMessage(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         logger.debug("Server supports window/logMessage checked")
 
     async def receive_log_message(self, req: types.LogMessageNotification):
@@ -49,7 +53,11 @@ class WithReceiveLogTrace(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         logger.debug("Server supports window/logTrace checked")
 
     async def receive_log_trace(self, req: types.LogTraceNotification):
@@ -69,7 +77,11 @@ class WithReceiveShowMessage(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         logger.debug("Server supports window/showMessage checked")
 
     async def receive_show_message(self, req: types.ShowMessageNotification):
@@ -92,7 +104,11 @@ class WithNotifyPublishDiagnostics(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         logger.debug("Server supports textDocument/publishDiagnostics checked")
 
     async def notify_publish_diagnostics(
@@ -121,7 +137,11 @@ class WithRespondShowMessage(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         logger.debug("Server supports window/showMessageRequest checked")
 
     async def respond_show_message(
