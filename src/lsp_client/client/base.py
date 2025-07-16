@@ -10,6 +10,7 @@ from functools import cached_property
 from typing import Any, ClassVar, Protocol, override
 
 from asyncio_addon import gather_all
+from lsprotocol import types
 
 import lsp_client.capability as cap
 from lsp_client.jsonrpc import JsonRpcResponse, lsp_converter, response_deserialize
@@ -18,6 +19,7 @@ from lsp_client.types import AnyPath
 from lsp_client.utils.path import AbsPath
 
 from .buffer import LSPFileBuffer
+from .capabilities import DEFAULT_CLIENT_CAPABILITY
 from .server_req import ServerRequestClient
 
 
@@ -31,6 +33,7 @@ class LSPClientBase(
     Protocol,
 ):
     server_cmd: ClassVar[Sequence[str]]
+    client_capabilities: ClassVar[types.ClientCapabilities] = DEFAULT_CLIENT_CAPABILITY
 
     server: LSPServerPool
     repo_path: AbsPath
