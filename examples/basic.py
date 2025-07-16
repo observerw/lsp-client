@@ -21,26 +21,29 @@ curr_path = Path(__file__)
 async def main():
     async with BasedPyrightClient.start(repo_path=repo_path) as client:
         # found all references of `BasedPyrightClient` class
-        if refs := await client.request_references(
+        refs = await client.request_references(
             file_path="src/lsp_client/servers/based_pyright.py",
-            position=Position(14, 24),
-        ):
-            for ref in refs:
-                print(f"Found references: {ref}")
+            position=Position(19, 24),
+        )
+        assert refs and len(refs) > 0, (
+            "No references found for BasedPyrightClient class"
+        )
+        for ref in refs:
+            print(f"Found references: {ref}")
 
-            # check if includes reference in current file
-            assert any(
-                client.from_uri(ref.uri) == curr_path
-                and ref.range == Range(Position(21, 15), Position(21, 33))
-                for ref in refs
-            )
-            print("All references found successfully.")
+        # check if includes reference in current file
+        assert any(
+            client.from_uri(ref.uri) == curr_path
+            and ref.range == Range(Position(21, 15), Position(21, 33))
+            for ref in refs
+        )
+        print("All references found successfully.")
 
         # find the definition of `main` function
         def_task = client.create_request(
             client.request_definition(
                 file_path=curr_path,
-                position=Position(55, 8),
+                position=Position(58, 8),
             )
         )
 
