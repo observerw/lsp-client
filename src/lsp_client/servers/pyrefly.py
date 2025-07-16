@@ -25,6 +25,7 @@ class PyReflyClient(
     lsp_cap.WithReceiveLogMessage,
     lsp_cap.WithReceiveShowMessage,
     lsp_cap.WithReceiveLogTrace,
+    lsp_cap.WithRespondWorkspaceFolders,
     LSPClientBase,
 ):
     """
@@ -36,6 +37,85 @@ class PyReflyClient(
         "pyrefly",
         "lsp",
         "-v",
+    )
+
+    client_capabilities: ClassVar[lsp_type.ClientCapabilities] = (
+        lsp_type.ClientCapabilities(
+            workspace=lsp_type.WorkspaceClientCapabilities(
+                diagnostics=lsp_type.DiagnosticWorkspaceClientCapabilities(
+                    refresh_support=True,
+                ),
+                workspace_folders=True,
+            ),
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                synchronization=lsp_type.TextDocumentSyncClientCapabilities(
+                    will_save=True,
+                    will_save_wait_until=True,
+                    did_save=True,
+                ),
+                references=lsp_type.ReferenceClientCapabilities(),
+                hover=lsp_type.HoverClientCapabilities(
+                    content_format=[
+                        lsp_type.MarkupKind.Markdown,
+                        lsp_type.MarkupKind.PlainText,
+                    ],
+                ),
+                completion=lsp_type.CompletionClientCapabilities(
+                    completion_item=lsp_type.ClientCompletionItemOptions(
+                        snippet_support=True,
+                        commit_characters_support=True,
+                        documentation_format=[
+                            lsp_type.MarkupKind.Markdown,
+                            lsp_type.MarkupKind.PlainText,
+                        ],
+                        deprecated_support=True,
+                        preselect_support=True,
+                        tag_support=lsp_type.CompletionItemTagOptions(
+                            value_set=[lsp_type.CompletionItemTag.Deprecated]
+                        ),
+                    ),
+                ),
+                signature_help=lsp_type.SignatureHelpClientCapabilities(
+                    signature_information=lsp_type.ClientSignatureInformationOptions(
+                        documentation_format=[
+                            lsp_type.MarkupKind.Markdown,
+                            lsp_type.MarkupKind.PlainText,
+                        ],
+                        parameter_information=lsp_type.ClientSignatureParameterInformationOptions(
+                            label_offset_support=True,
+                        ),
+                    ),
+                ),
+                document_symbol=lsp_type.DocumentSymbolClientCapabilities(
+                    symbol_kind=lsp_type.ClientSymbolKindOptions(
+                        value_set=[*lsp_type.SymbolKind],
+                    ),
+                    tag_support=lsp_type.ClientSymbolTagOptions(
+                        value_set=[
+                            lsp_type.SymbolTag.Deprecated,
+                        ]
+                    ),
+                    hierarchical_document_symbol_support=True,
+                ),
+            ),
+            window=lsp_type.WindowClientCapabilities(
+                show_message=lsp_type.ShowMessageRequestClientCapabilities(
+                    message_action_item=lsp_type.ClientShowMessageActionItemOptions(
+                        additional_properties_support=True,
+                    ),
+                ),
+                show_document=lsp_type.ShowDocumentClientCapabilities(
+                    support=True,
+                ),
+            ),
+            general=lsp_type.GeneralClientCapabilities(
+                regular_expressions=lsp_type.RegularExpressionsClientCapabilities(
+                    engine="ECMAScript",
+                    version="ES2020",
+                ),
+                position_encodings=["utf-16"],
+            ),
+        )
     )
 
     @override

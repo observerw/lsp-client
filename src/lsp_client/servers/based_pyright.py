@@ -10,26 +10,15 @@ from typing import ClassVar, override
 
 from semver import Version
 
-import lsp_client.capability as cap
 from lsp_client import lsp_type
+from lsp_client.capability.group import FullFeaturedCapabilityGroup
 from lsp_client.client import LSPClientBase
 
 logger = logging.getLogger(__name__)
 
 
 class BasedPyrightClient(
-    cap.WithRequestReferences,
-    cap.WithRequestDefinition,
-    cap.WithRequestHover,
-    cap.WithRequestCallHierarchy,
-    cap.WithRequestCompletions,
-    cap.WithRequestSignatureHelp,
-    cap.WithRequestDocumentSymbols,
-    cap.WithRequestWorkspaceSymbols,
-    cap.WithReceiveLogMessage,
-    cap.WithReceiveShowMessage,
-    cap.WithReceiveLogTrace,
-    cap.WithNotifyPublishDiagnostics,
+    FullFeaturedCapabilityGroup,
     LSPClientBase,
 ):
     language_id: ClassVar[lsp_type.LanguageKind] = lsp_type.LanguageKind.Python
