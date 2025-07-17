@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio as aio
 import logging
+import os
 import random
 from collections.abc import Generator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from asyncio_addon import gather_all
 
@@ -69,11 +70,15 @@ class LSPServerPool:
         cls,
         server_cmd: Sequence[str],
         server_req_queue: ServerRequestQueue,
+        process_count: int | Literal["auto"],
         *,
-        process_count: int = 1,
         info: LSPServerInfo | None = None,
         pending_timeout: float | None = None,
     ):
+        if process_count == "auto":
+            process_count = os.cpu_count() or 1
+        assert process_count >= 1, f"Invalid process count: {process_count}"
+
         processes = await gather_all(
             LSPServerProcess.create(
                 *server_cmd,

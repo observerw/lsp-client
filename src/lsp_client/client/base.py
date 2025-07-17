@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, ClassVar, Protocol, Self, override
+from typing import Any, ClassVar, Literal, Protocol, Self, override
 
 from asyncio_addon import gather_all
 from lsprotocol import types
@@ -72,7 +72,7 @@ class LSPClientBase(
         cls,
         repo_path: AnyPath,
         *,
-        server_count: int = 1,
+        server_count: int | Literal["auto"] = 1,
         server_info: LSPServerInfo | None = None,
         file_paths: Sequence[AnyPath] = (),
         pending_timeout: float | None = 5.0,
