@@ -9,21 +9,26 @@ from typing import Protocol, override, runtime_checkable
 
 from lsprotocol import types
 
-from .client import LSPCapabilityClient
+from .client import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 
 logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
-class WithReceiveLogMessage(LSPCapabilityClient, Protocol):
+class WithReceiveLogMessage(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `window/logMessage` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_logMessage
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        logger.debug("Client supports window/logMessage checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        # logMessage don't need client capabilities
+        return types.ClientCapabilities()
 
     @override
     @classmethod
@@ -39,17 +44,16 @@ class WithReceiveLogMessage(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithReceiveLogTrace(LSPCapabilityClient, Protocol):
+class WithReceiveLogTrace(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     Window log trace capability
 
     `window/logTrace` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#logTrace
     """
-
-    @override
-    @classmethod
-    def check_client_capability(cls):
-        logger.debug("Client supports window/logTrace checked")
 
     @override
     @classmethod
@@ -65,15 +69,27 @@ class WithReceiveLogTrace(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithReceiveShowMessage(LSPCapabilityClient, Protocol):
+class WithReceiveShowMessage(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `window/showMessage` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_showMessage
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        logger.debug("Client supports window/showMessage checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            window=types.WindowClientCapabilities(
+                show_message=types.ShowMessageRequestClientCapabilities(
+                    message_action_item=types.ClientShowMessageActionItemOptions(
+                        additional_properties_support=True,
+                    ),
+                ),
+            )
+        )
 
     @override
     @classmethod
@@ -89,18 +105,30 @@ class WithReceiveShowMessage(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithNotifyPublishDiagnostics(LSPCapabilityClient, Protocol):
+class WithNotifyPublishDiagnostics(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `textDocument/publishDiagnostics` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.publish_diagnostics
-
-        logger.debug("Client supports for textDocument/publishDiagnostics checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                publish_diagnostics=types.PublishDiagnosticsClientCapabilities(
+                    related_information=True,
+                    version_support=True,
+                    tag_support=types.ClientDiagnosticsTagOptions(
+                        value_set=[types.DiagnosticTag.Deprecated]
+                    ),
+                    code_description_support=True,
+                )
+            )
+        )
 
     @override
     @classmethod
@@ -123,17 +151,27 @@ class WithNotifyPublishDiagnostics(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithRespondShowMessage(LSPCapabilityClient, Protocol):
+class WithRespondShowMessage(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `window/showMessageRequest` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_showMessageRequest
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (window := cls.client_capabilities.window)
-        assert window.show_message
-        logger.debug("Client supports window/showMessageRequest checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            window=types.WindowClientCapabilities(
+                show_message=types.ShowMessageRequestClientCapabilities(
+                    message_action_item=types.ClientShowMessageActionItemOptions(
+                        additional_properties_support=True,
+                    ),
+                ),
+            )
+        )
 
     @override
     @classmethod
@@ -153,17 +191,21 @@ class WithRespondShowMessage(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithRespondWorkspaceFolders(LSPCapabilityClient, Protocol):
+class WithRespondWorkspaceFolders(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `workspace/workspaceFolders` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (workspace := cls.client_capabilities.workspace)
-        assert workspace.workspace_folders
-        logger.debug("Client supports workspace/workspaceFolders checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            workspace=types.WorkspaceClientCapabilities(workspace_folders=True)
+        )
 
     @override
     @classmethod

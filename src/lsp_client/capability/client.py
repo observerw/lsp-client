@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import logging
-import os
 from abc import abstractmethod
 from collections.abc import Sequence
-from functools import cached_property
-from typing import Any, ClassVar, Protocol, final
+from typing import Any, Protocol, final, runtime_checkable
 
 from lsprotocol import types
 
@@ -14,10 +12,15 @@ from lsp_client.types import AnyPath
 from lsp_client.utils.path import AbsPath
 
 
-class LSPCapability(Protocol):
+@runtime_checkable
+class LSPCapabilityProtocol(Protocol):
     @classmethod
     @abstractmethod
-    def check_client_capability(cls): ...
+    def client_capability(cls) -> types.ClientCapabilities:
+        """
+        Return the client capabilities for this capability.
+        This is used to register the capability with the LSP server.
+        """
 
     @classmethod
     @abstractmethod
@@ -25,10 +28,15 @@ class LSPCapability(Protocol):
         cls,
         capability: types.ServerCapabilities,
         info: types.ServerInfo | None,
-    ): ...
+    ):
+        """
+        Check if the server supports this capability.
+        This is used to validate the server capabilities against the client capabilities.
+        """
 
 
-class LSPCapabilityClient(LSPCapability, Protocol):
+@runtime_checkable
+class LSPCapabilityClientProtocol(Protocol):
     """
     Minimal interface to implement LSP capabilities.
 
@@ -37,40 +45,15 @@ class LSPCapabilityClient(LSPCapability, Protocol):
     inherit from this class along with specific capability mixins.
     """
 
-    repo_path: AbsPath
-    logger: logging.Logger
+    @property
+    def repo_path(self) -> AbsPath: ...
 
-    language_id: ClassVar[types.LanguageKind]
-    client_capabilities: ClassVar[types.ClientCapabilities]
-    initialization_options: ClassVar[dict | None] = None
+    @property
+    def logger(self) -> logging.Logger: ...
 
-    @cached_property
-    def initialize_params(self) -> types.InitializeParams:
-        """Initialize parameters for the LSP client."""
-        root_uri = self.repo_path.as_uri()
-        root_path_posix = self.repo_path.as_posix()
+    @property
+    def language_id(self) -> types.LanguageKind: ...
 
-        return types.InitializeParams(
-            capabilities=self.client_capabilities,
-            process_id=os.getpid(),
-            client_info=types.ClientInfo(
-                name="LSP Client",
-                version="1.81.0-insider",
-            ),
-            locale="en-us",
-            root_path=root_path_posix,
-            root_uri=root_uri,
-            initialization_options=self.initialization_options,
-            trace=types.TraceValue.Verbose,
-            workspace_folders=[
-                types.WorkspaceFolder(
-                    uri=root_uri,
-                    name=self.repo_path.name,
-                )
-            ],
-        )
-
-    @abstractmethod
     async def request[R](
         self,
         req: Any,
@@ -90,8 +73,8 @@ class LSPCapabilityClient(LSPCapability, Protocol):
         Returns:
             T: The response from the LSP server.
         """
+        ...
 
-    @abstractmethod
     async def request_all[R](
         self,
         req: Any,
@@ -105,8 +88,8 @@ class LSPCapabilityClient(LSPCapability, Protocol):
         Returns:
             Sequence[Any]: The responses from all LSP servers.
         """
+        ...
 
-    @abstractmethod
     async def respond(self, resp: Any):
         """
         Respond the request from the LSP server.
@@ -115,7 +98,6 @@ class LSPCapabilityClient(LSPCapability, Protocol):
             resp (Any): The response to send back to the LSP server.
         """
 
-    @abstractmethod
     async def notify_all(self, msg: Any):
         """
         Notify all LSP servers. Only used for methods that need to be sent to all servers, such as `initialized`.
@@ -134,42 +116,3 @@ class LSPCapabilityClient(LSPCapability, Protocol):
     def from_uri(self, uri: str) -> AbsPath:
         """Convert a URI to an absolute file path."""
         return AbsPath.from_uri(uri)
-
-    async def initialize(self):
-        result = await self.request_all(
-            types.InitializeRequest(
-                id="intialize",
-                params=self.initialize_params,
-            ),
-            schema=types.InitializeResponse,
-        )
-        for res in result:
-            super().check_server_capability(
-                res.capabilities,
-                res.server_info,
-            )
-
-        await self.notify_all(
-            types.InitializedNotification(
-                params=types.InitializedParams(),
-            )
-        )
-
-    async def shutdown(self):
-        """
-        `shutdown` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
-        """
-
-        await self.request_all(
-            types.ShutdownRequest(
-                id="shutdown",
-            ),
-            schema=types.ShutdownResponse,
-        )
-
-    async def exit(self) -> None:
-        """
-        `exit` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit
-        """
-
-        await self.notify_all(types.ExitNotification())

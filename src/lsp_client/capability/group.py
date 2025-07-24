@@ -17,5 +17,6 @@ class FullFeaturedCapabilityGroup(
     lsp_cap.WithReceiveLogTrace,
     lsp_cap.WithNotifyPublishDiagnostics,
     lsp_cap.WithRespondWorkspaceFolders,
+    # TODO sync with implemented capabilities
 ):
-    """Capability group corresponding to `DEFAULT_CLIENT_CAPABILITY`"""
+    """All capabilities."""

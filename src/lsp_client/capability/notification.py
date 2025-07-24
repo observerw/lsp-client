@@ -8,13 +8,17 @@ from lsprotocol import types
 
 from lsp_client.types import AnyPath
 
-from .client import LSPCapabilityClient
+from .client import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 
 logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
-class WithNotifyTextDocumentSynchronize(LSPCapabilityClient, Protocol):
+class WithNotifyTextDocumentSynchronize(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `textDocument/didOpen` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didOpen
     `textDocument/didChange` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange
@@ -23,13 +27,16 @@ class WithNotifyTextDocumentSynchronize(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.synchronization
-
-        logger.debug("Client supports for textDocument/didOpen checked")
-        logger.debug("Client supports for textDocument/didChange checked")
-        logger.debug("Client supports for textDocument/didClose checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                synchronization=types.TextDocumentSyncClientCapabilities(
+                    will_save=True,
+                    will_save_wait_until=True,
+                    did_save=True,
+                )
+            )
+        )
 
     @override
     @classmethod
@@ -73,18 +80,23 @@ class WithNotifyTextDocumentSynchronize(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithNotifyChangeConfiguration(LSPCapabilityClient, Protocol):
+class WithNotifyChangeConfiguration(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `workspace/didChangeConfiguration` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeConfiguration
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (workspace := cls.client_capabilities.workspace)
-        assert workspace.did_change_configuration
-
-        logger.debug("Client supports for workspace/didChangeConfiguration checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            workspace=types.WorkspaceClientCapabilities(
+                did_change_configuration=types.DidChangeConfigurationClientCapabilities()
+            )
+        )
 
     @override
     @classmethod
@@ -106,18 +118,23 @@ class WithNotifyChangeConfiguration(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithNotifyChangeWorkspaceFolders(LSPCapabilityClient, Protocol):
+class WithNotifyChangeWorkspaceFolders(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `workspace/didChangeWorkspaceFolders` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWorkspaceFolders
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (workspace := cls.client_capabilities.workspace)
-        assert workspace.workspace_folders
-
-        logger.debug("Client supports for workspace/didChangeWorkspaceFolders checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            workspace=types.WorkspaceClientCapabilities(
+                workspace_folders=True,
+            )
+        )
 
     @override
     @classmethod
