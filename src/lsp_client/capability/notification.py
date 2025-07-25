@@ -8,7 +8,7 @@ from lsprotocol import types
 
 from lsp_client.types import AnyPath
 
-from .client import LSPCapabilityClientProtocol, LSPCapabilityProtocol
+from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 
 logger = logging.getLogger(__name__)
 

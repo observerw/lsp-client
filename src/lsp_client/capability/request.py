@@ -9,7 +9,7 @@ from lsprotocol import types
 
 from lsp_client.types import AnyPath, Position
 
-from .client import LSPCapabilityClientProtocol, LSPCapabilityProtocol
+from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 from .utils import jsonrpc_uuid
 
 logger = logging.getLogger(__name__)
@@ -143,13 +143,19 @@ class WithRequestReferences(
         logger.debug("Server supports textDocument/references checked")
 
     async def request_references(
-        self, file_path: AnyPath, position: Position
+        self,
+        file_path: AnyPath,
+        position: Position,
+        *,
+        include_declaration: bool = False,
     ) -> Sequence[types.Location] | None:
         return await self.request(
             types.ReferencesRequest(
                 id=jsonrpc_uuid(),
                 params=types.ReferenceParams(
-                    context=types.ReferenceContext(include_declaration=False),
+                    context=types.ReferenceContext(
+                        include_declaration=include_declaration
+                    ),
                     text_document=types.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
@@ -157,7 +163,7 @@ class WithRequestReferences(
                 ),
             ),
             schema=types.ReferencesResponse,
-            # file_paths=[file_path],
+            file_paths=[file_path],
         )
 
 
@@ -212,7 +218,7 @@ class WithRequestDefinition(
                 ),
             ),
             schema=types.DefinitionResponse,
-            file_paths=[file_path],
+            # file_paths=[file_path],
         ):
             case types.Location() as location:
                 return [location]
@@ -661,7 +667,8 @@ class WithRequestWorkspaceSymbols(
     ) -> Sequence[types.SymbolInformation] | Sequence[types.WorkspaceSymbol] | None:
         return await self.request(
             types.WorkspaceSymbolRequest(
-                id=jsonrpc_uuid(), params=types.WorkspaceSymbolParams(query=query)
+                id=jsonrpc_uuid(),
+                params=types.WorkspaceSymbolParams(query=query),
             ),
             schema=types.WorkspaceSymbolResponse,
         )

@@ -69,10 +69,9 @@ class LSPServerPool:
         cls,
         server_cmd: Sequence[str],
         server_req_queue: ServerRequestQueue,
-        *,
-        process_count: int = 1,
-        info: LSPServerInfo | None = None,
-        pending_timeout: float | None = None,
+        process_count: int,
+        info: LSPServerInfo,
+        pending_timeout: float,
     ):
         processes = await gather_all(
             LSPServerProcess.create(
@@ -82,7 +81,6 @@ class LSPServerPool:
             )
             for i in range(process_count)
         )
-        logger.info("LSPServerPool initialized with %d processes", len(processes))
 
         server_pool = cls(
             processes=processes,
@@ -90,6 +88,7 @@ class LSPServerPool:
             manager=RequestManager(timeout=pending_timeout),
         )
 
+        logger.info("LSPServerPool initialized with %d processes", len(processes))
         yield server_pool
 
         await gather_all(process.shutdown() for process in processes)
@@ -107,15 +106,19 @@ class LSPServerPool:
                 for process in self.processes
             ]
 
+            logger.info("LSPServerPool started")
+
             yield
             # all client side requests are registered, and client requests to shutdown
 
             await self.manager.wait_complete()
             # all client side requests are responded
+            logger.info("all client side requests are completed")
 
             for task in tasks:
                 assert task.cancel()
             # safely cancel all server side request workers
+            logger.info("all server side request workers are finished")
 
     @contextmanager
     def next_server(self) -> Generator[LSPServerProcess, Any]:

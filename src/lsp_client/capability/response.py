@@ -9,7 +9,7 @@ from typing import Protocol, override, runtime_checkable
 
 from lsprotocol import types
 
-from .client import LSPCapabilityClientProtocol, LSPCapabilityProtocol
+from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 
 logger = logging.getLogger(__name__)
 

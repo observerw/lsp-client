@@ -16,7 +16,6 @@ class FullFeaturedCapabilityGroup(
     lsp_cap.WithReceiveShowMessage,
     lsp_cap.WithReceiveLogTrace,
     lsp_cap.WithNotifyPublishDiagnostics,
-    lsp_cap.WithRespondWorkspaceFolders,
     # TODO sync with implemented capabilities
 ):
     """All capabilities."""

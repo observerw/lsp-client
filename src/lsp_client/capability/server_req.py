@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import asyncio as aio
+import logging
 from dataclasses import dataclass
 from typing import Protocol
 
 from lsprotocol import types
 
 import lsp_client.capability as cap
-from lsp_client.jsonrpc import (
-    JsonRpcRawReqPackage,
-    JsonRpcResponse,
-    lsp_converter,
-)
+from lsp_client.jsonrpc import JsonRpcRawReqPackage, JsonRpcResponse, lsp_converter
 from lsp_client.server import ServerRequestQueue
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ServerRequestClient(cap.LSPCapabilityClient, Protocol):
+class ServerRequestClient(cap.LSPCapabilityClientProtocol, Protocol):
     """Client mixin for handling server-side requests."""
 
     server_req_queue: ServerRequestQueue
@@ -72,6 +71,7 @@ class ServerRequestClient(cap.LSPCapabilityClient, Protocol):
     async def _server_req_worker(self):
         """Worker to handle server side requests."""
 
+        logger.info("Starting to receive server requests")
         async with aio.TaskGroup() as tg:
             while True:
                 raw_req = await self.server_req_queue.get()
