@@ -70,12 +70,11 @@ class LSPServerPool:
         cls,
         server_cmd: Sequence[str],
         server_req_queue: ServerRequestQueue,
-        process_count: int,
+        process_count: int | None,
         info: LSPServerInfo,
         pending_timeout: float,
     ):
-        if process_count == "auto":
-            process_count = os.cpu_count() or 1
+        process_count = process_count or os.cpu_count() or 1
         assert process_count >= 1, f"Invalid process count: {process_count}"
 
         processes = await gather_all(

@@ -17,10 +17,17 @@ from .capability.client import LSPCapabilityClientBase
 
 @dataclass
 class LSPClientBase[Client: LSPCapabilityClientBase](ABC):
-    server_count: int = 1
+    server_count: int | None = 1
+    """The number of LSP server processes to start. If None, defaults to the number of CPU cores."""
+
     server_info: LSPServerInfo = field(default_factory=LSPServerInfo)
+    """Runtime information for the LSP server."""
+
     pending_timeout: float = 10
+    """Timeout for pending requests in seconds."""
+
     initialization_options: dict[str, Any] | None = None
+    """Extra initialization options when initializing the LSP server."""
 
     @cached_property
     def logger(self) -> logging.Logger:
