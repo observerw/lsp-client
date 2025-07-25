@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
-from asyncio_addon import async_main
-
 from lsp_client import Position, Range, lsp_type
-from lsp_client.servers.based_pyright import BasedPyrightClient
+from lsp_client.clients.based_pyright import BasedPyrightClient
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -17,13 +16,12 @@ repo_path = Path.cwd()
 curr_path = Path(__file__)
 
 
-@async_main
 async def main():
-    async with BasedPyrightClient.start(repo_path=repo_path) as client:
+    async with BasedPyrightClient().start(repo_path=repo_path) as client:
         # found all references of `BasedPyrightClient` class
         refs = await client.request_references(
-            file_path="src/lsp_client/servers/based_pyright.py",
-            position=Position(19, 24),
+            file_path="src/lsp_client/clients/based_pyright.py",
+            position=Position(40, 24),
         )
         assert refs and len(refs) > 0, (
             "No references found for BasedPyrightClient class"
@@ -56,4 +54,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
