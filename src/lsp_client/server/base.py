@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio as aio
 import logging
+import os
 import random
 from collections.abc import Generator, Sequence
 from contextlib import asynccontextmanager, contextmanager
@@ -73,6 +74,10 @@ class LSPServerPool:
         info: LSPServerInfo,
         pending_timeout: float,
     ):
+        if process_count == "auto":
+            process_count = os.cpu_count() or 1
+        assert process_count >= 1, f"Invalid process count: {process_count}"
+
         processes = await gather_all(
             LSPServerProcess.create(
                 *server_cmd,
