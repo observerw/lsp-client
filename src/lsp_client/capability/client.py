@@ -321,5 +321,5 @@ class LSPCapabilityClientBase(
         await self.notify_all(types.ExitNotification())
 
     @abstractmethod
-    def check_server_compatibility(self, info: types.ServerInfo):
+    def check_server_compatibility(self, info: types.ServerInfo | None):
         """Check if the available server capabilities are compatible with the client."""

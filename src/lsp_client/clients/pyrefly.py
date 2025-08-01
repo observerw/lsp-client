@@ -10,8 +10,12 @@ from typing import override
 
 from semver import Version
 
-from lsp_client import LSPClientBase, lsp_cap, lsp_type
-from lsp_client.client import LSPCapabilityClientBase
+from lsp_client import (
+    LSPCapabilityClientBase,
+    LSPClientBase,
+    lsp_cap,
+    lsp_type,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +41,12 @@ class PyReflyCapabilityClient(
         return lsp_type.LanguageKind.Python
 
     @override
-    def check_server_compatibility(self, info: lsp_type.ServerInfo):
+    def check_server_compatibility(self, info: lsp_type.ServerInfo | None):
+        assert info, "Server info must be provided to check compatibility"
+
         version = info.version
         assert version, "Server version is required for compatibility check"
+
         assert Version.parse(version).match(">=0.24")
         logger.debug(
             "Server version %s supports BasedPyrightClient capabilities",

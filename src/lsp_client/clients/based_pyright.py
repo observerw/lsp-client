@@ -28,9 +28,12 @@ class BasedPyrightCapabilityClient(
         return lsp_type.LanguageKind.Python
 
     @override
-    def check_server_compatibility(self, info: lsp_type.ServerInfo):
+    def check_server_compatibility(self, info: lsp_type.ServerInfo | None):
+        assert info, "Server info must be provided to check compatibility"
+
         version = info.version
         assert version, "Server version is required for compatibility check"
+
         assert Version.parse(version).match(">=1.29")
         logger.debug(
             "Server version %s supports BasedPyrightClient capabilities",
