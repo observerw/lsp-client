@@ -14,10 +14,7 @@ class RelPath(Path):
         base_path: str | PathLike | None = None,
     ) -> None:
         if (path := Path(*args)).is_absolute():
-            if not base_path:
-                raise ValueError("base_path must be provided for absolute paths")
-            if not (base_path := Path(base_path)).is_absolute():
-                raise ValueError("base_path must be an absolute path")
+            base_path = Path(base_path) if base_path else Path.cwd()
             super().__init__(path.relative_to(base_path))
         else:
             super().__init__(path)
@@ -48,11 +45,7 @@ class AbsPath(Path):
         if (path := Path(*args)).is_absolute():
             super().__init__(path)
         else:
-            if not base_path:
-                raise ValueError("base_path must be provided for relative paths")
-            if not (base_path := Path(base_path)).is_absolute():
-                raise ValueError("base_path must be an absolute path")
-
+            base_path = Path(base_path) if base_path else Path.cwd()
             super().__init__(base_path / path)
 
     def as_path(self) -> Path:
