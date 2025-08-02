@@ -1,5 +1,8 @@
 """
 ty: Type checker and language server for Python - https://docs.astral.sh/ty/
+
+References:
+    - VSCode Extension: https://github.com/astral-sh/ty-vscode
 """
 
 from __future__ import annotations
@@ -43,6 +46,7 @@ class TyCapabilityClient(
     ) -> lsp_type.ConfigurationResponse:
         items = req.params.items
 
+        # TODO handle workspace/configuration request
         config = [{} for _ in items]
 
         return lsp_type.ConfigurationResponse(
