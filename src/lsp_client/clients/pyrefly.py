@@ -5,17 +5,21 @@ pyrefly: Type checker and language server for Python - https://pyrefly.org/
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
+from contextlib import asynccontextmanager
 from typing import override
 
 from semver import Version
 
 from lsp_client import (
+    BaseLSPCapabilityClientArgs,
     LSPCapabilityClientBase,
     LSPClientBase,
+    WorkspaceFolder,
     lsp_cap,
     lsp_type,
 )
+from lsp_client.server import LSPServerPool
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +63,6 @@ class PyReflyClient(LSPClientBase[PyReflyCapabilityClient]):
 
     @property
     @override
-    def cap(self) -> type[PyReflyCapabilityClient]:
-        return PyReflyCapabilityClient
-
-    @property
-    @override
     def server_cmd(self) -> Sequence[str]:
         return (
             "pyrefly",
@@ -71,3 +70,20 @@ class PyReflyClient(LSPClientBase[PyReflyCapabilityClient]):
             "-j",
             f"{self.thread_count}",
         )
+
+    @override
+    @asynccontextmanager
+    async def _start_client(
+        self,
+        server: LSPServerPool,
+        workspace: Sequence[WorkspaceFolder],
+    ) -> AsyncGenerator[PyReflyCapabilityClient]:
+        async with PyReflyCapabilityClient.start(
+            server=server,
+            args=BaseLSPCapabilityClientArgs(
+                workspace_folders=workspace,
+                initialization_options={},
+                sync_file=self.sync_file,
+            ),
+        ) as client:
+            yield client

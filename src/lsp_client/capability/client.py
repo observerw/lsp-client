@@ -9,13 +9,15 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import cached_property
 from itertools import product
-from typing import Any, Protocol, Self, override
+from pathlib import Path
+from typing import Any, Self, override
 
 from asyncio_addon import gather_all
 from lsprotocol import types
 
+from lsp_client import lsp_type
 from lsp_client.jsonrpc import JsonRpcResponse, lsp_converter, response_deserialize
-from lsp_client.server import LSPServerPool, ServerRequestQueue
+from lsp_client.server import LSPServerPool
 from lsp_client.types import AnyPath
 from lsp_client.utils.attrs import attrs_merges
 from lsp_client.utils.path import AbsPath
@@ -25,33 +27,73 @@ from .notification import WithNotifyTextDocumentSynchronize
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 from .server_req import ServerRequestClient
 
+ROOT_FOLDER_NAME = "__root__"
+
+
+@dataclass(frozen=True)
+class WorkspaceFolder:
+    path: AbsPath
+    name: str
+
+    @cached_property
+    def uri(self) -> str:
+        return self.path.as_uri()
+
+    def as_lsp(self) -> lsp_type.WorkspaceFolder:
+        return lsp_type.WorkspaceFolder(
+            uri=self.path.as_uri(),
+            name=self.name,
+        )
+
+
+@dataclass(frozen=True)
+class BaseLSPCapabilityClientArgs:
+    # initialization settings
+    workspace_folders: Sequence[WorkspaceFolder]
+    initialization_options: dict[str, Any]
+
+    # extra settings
+    sync_file: bool
+
 
 @dataclass
-class LSPCapabilityClientBase(
+class LSPCapabilityClientBase[
+    Args: BaseLSPCapabilityClientArgs = BaseLSPCapabilityClientArgs,
+](
     # Client support for `textDocument/didOpen`, `textDocument/didChange` and `textDocument/didClose`
     # notifications is mandatory
     WithNotifyTextDocumentSynchronize,
     ServerRequestClient,
     LSPCapabilityClientProtocol,
-    Protocol,
 ):
+    _args: Args
+
     _server: LSPServerPool
     _request_tg: aio.TaskGroup
     """Tasks of sending requests to the server and receiving responses."""
 
-    _repo_path: AbsPath
     _logger: logging.Logger
+
     _closed: bool = False
 
     @property
-    @override
-    def repo_path(self) -> AbsPath:
-        return self._repo_path
+    def args(self) -> Args:
+        return self._args
 
     @property
     @override
     def logger(self) -> logging.Logger:
         return self._logger
+
+    @cached_property
+    def workspace(self) -> dict[str, WorkspaceFolder]:
+        """Workspace folders indexed by their URIs."""
+        return {folder.name: folder for folder in self._args.workspace_folders}
+
+    @cached_property
+    def is_single_root(self) -> bool:
+        """Whether the workspace has a single root folder."""
+        return len(self.workspace) == 1
 
     @classmethod
     def client_capabilities(cls) -> types.ClientCapabilities:
@@ -78,7 +120,7 @@ class LSPCapabilityClientBase(
         Automatically install the LSP server.
 
         Args:
-            base_path (AnyPath | None): The base path to install the server. If None, the server will be installed in the current working directory.
+            base_path (AnyPath | None): The base path to install the server. If None, the server will be installed in the default location.
         """
 
         raise NotImplementedError(
@@ -88,27 +130,36 @@ class LSPCapabilityClientBase(
     @classmethod
     @asynccontextmanager
     async def start(
-        cls,
-        repo_path: AbsPath,
-        server: LSPServerPool,
-        *,
-        file_paths: Sequence[AnyPath] = (),
-        initialization_options: dict[str, Any] | None = None,
+        cls, server: LSPServerPool, args: Args
     ) -> AsyncGenerator[Self, Any]:
-        server_req_queue = ServerRequestQueue()
         logger = logging.getLogger(cls.__name__)
 
         async with server.start(), aio.TaskGroup() as tg:
             client = cls(
-                server_req_queue=server_req_queue,
+                _args=args,
+                server_req_queue=server.server_req_queue,
                 _server=server,
-                _repo_path=AbsPath(repo_path),
                 _request_tg=tg,
                 _logger=logger,
             )
 
+            initialize_params = types.InitializeParams(
+                capabilities=client.client_capabilities(),
+                process_id=os.getpid(),
+                client_info=types.ClientInfo(
+                    name="LSP Client",
+                    version="1.81.0-insider",
+                ),
+                locale="en-us",
+                initialization_options=args.initialization_options,
+                trace=types.TraceValue.Verbose,
+                workspace_folders=[
+                    folder.as_lsp() for folder in args.workspace_folders
+                ],
+            )
+
             # initialize repo
-            _ = await client.initialize(initialization_options=initialization_options)
+            _ = await client.initialize(initialize_params)
             logger.info("LSP client initialized successfully.")
 
             # prepare for server side requests
@@ -119,8 +170,7 @@ class LSPCapabilityClientBase(
                 # all client side requests are sent
             finally:
                 try:
-                    pass
-                    # _ = await client.shutdown()
+                    _ = await client.shutdown()
                 except TimeoutError as e:
                     raise TimeoutError(
                         "LSP client shutdown timed out, server failed to exit gracefully."
@@ -153,12 +203,43 @@ class LSPCapabilityClientBase(
 
         return self._closed
 
+    @override
+    def as_uri(self, file_path: AnyPath) -> str:
+        """
+        Turn a file path into a URI.
+
+        For multi-root workspace, using the first part of a relative path as the workspace folder name.
+        """
+
+        if (file_path := Path(file_path)).is_absolute():
+            # abs path must be in one of the workspace folders
+            if not any(
+                file_path.is_relative_to(folder.path)
+                for folder in self.workspace.values()
+            ):
+                raise ValueError(f"{file_path} is not a valid workspace file path")
+
+            return file_path.as_uri()
+
+        if self.is_single_root:
+            folder = self.workspace[ROOT_FOLDER_NAME]
+        else:
+            root = file_path.parts[0]
+            if root not in self.workspace:
+                raise ValueError(f"{root} is not a valid workspace folder")
+            folder = self.workspace[root]
+
+        return AbsPath(file_path, base_path=folder.path).as_uri()
+
+    @override
+    def from_uri(self, uri: str) -> AbsPath:
+        """Convert a URI to an absolute file path."""
+        return AbsPath.from_uri(uri)
+
     @asynccontextmanager
     async def open_files(self, *file_paths: AnyPath):
         """
         Open files in the LSP client.
-
-        This is required to be call before performing any requests that will modify the file content.
 
         Usually, file-change operations will automatically open the files, perform the operations, and close the files.
 
@@ -168,31 +249,37 @@ class LSPCapabilityClientBase(
             file_paths(Sequence[AnyPath]): The file paths to open.
         """
 
-        self._check_closed()
-
-        abs_file_paths = [
-            AbsPath(file_path, base_path=self._repo_path) for file_path in file_paths
-        ]
-
-        if not abs_file_paths:
+        # do not sync file if specified
+        if not self._args.sync_file:
             yield
             return
 
-        try:
-            buffer_items = self.file_buffer.open(abs_file_paths)
-            await gather_all(
-                self.notify_text_document_opened(
-                    file_path=item.file_path,
-                    file_content=item.content,
-                )
-                for item in buffer_items
+        self._check_closed()
+
+        file_uris = [self.as_uri(file_path) for file_path in file_paths]
+
+        if not file_uris:
+            yield
+            return
+
+        buffer_items = self.file_buffer.open(file_uris)
+        await gather_all(
+            self.notify_text_document_opened(
+                file_path=item.file_path,
+                file_content=item.content,
             )
+            for item in buffer_items
+        )
+
+        try:
             yield
         finally:
-            closed_files = self.file_buffer.close(abs_file_paths)
+            closed_items = self.file_buffer.close(
+                item.file_uri for item in buffer_items
+            )
             await gather_all(
-                self.notify_text_document_closed(file_path=path)
-                for path in closed_files
+                self.notify_text_document_closed(file_path=item.file_path)
+                for item in closed_items
             )
 
     @override
@@ -246,37 +333,11 @@ class LSPCapabilityClientBase(
 
         return self._request_tg.create_task(coro)
 
-    async def initialize(self, initialization_options: dict[str, Any] | None = None):
+    async def initialize(self, params: types.InitializeParams):
         """Initialize parameters for the LSP client."""
 
-        root_uri = self._repo_path.as_uri()
-        root_path_posix = self._repo_path.as_posix()
-
-        initialize_params = types.InitializeParams(
-            capabilities=self.client_capabilities(),
-            process_id=os.getpid(),
-            client_info=types.ClientInfo(
-                name="LSP Client",
-                version="1.81.0-insider",
-            ),
-            locale="en-us",
-            root_path=root_path_posix,
-            root_uri=root_uri,
-            initialization_options=initialization_options,
-            trace=types.TraceValue.Verbose,
-            workspace_folders=[
-                types.WorkspaceFolder(
-                    uri=root_uri,
-                    name=self._repo_path.name,
-                )
-            ],
-        )
-
         results = await self.request_all(
-            types.InitializeRequest(
-                id="intialize",
-                params=initialize_params,
-            ),
+            types.InitializeRequest(id="intialize", params=params),
             schema=types.InitializeResponse,
         )
 
@@ -294,6 +355,8 @@ class LSPCapabilityClientBase(
                 result.capabilities,
                 result.server_info,
             )
+
+            self.check_server_compatibility(result.server_info)
 
         await self.notify_all(
             types.InitializedNotification(

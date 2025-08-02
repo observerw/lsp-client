@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Any, Protocol, final, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from lsprotocol import types
 
@@ -14,6 +14,10 @@ from lsp_client.utils.path import AbsPath
 
 @runtime_checkable
 class LSPCapabilityProtocol(Protocol):
+    """
+    Protocol defining the interface for LSP capability implementation.
+    """
+
     @classmethod
     @abstractmethod
     def client_capability(cls) -> types.ClientCapabilities:
@@ -44,10 +48,6 @@ class LSPCapabilityClientProtocol(Protocol):
     Language Server Protocol capabilities. Concrete implementations should
     inherit from this class along with specific capability mixins.
     """
-
-    @property
-    @abstractmethod
-    def repo_path(self) -> AbsPath: ...
 
     @property
     @abstractmethod
@@ -112,12 +112,10 @@ class LSPCapabilityClientProtocol(Protocol):
             params (Any | None, optional): The parameters for the method. Defaults to None.
         """
 
-    @final
+    @abstractmethod
     def as_uri(self, file_path: AnyPath) -> str:
         """Convert any file path to a absolute URI."""
-        return AbsPath(file_path, base_path=self.repo_path).as_uri()
 
-    @final
+    @abstractmethod
     def from_uri(self, uri: str) -> AbsPath:
         """Convert a URI to an absolute file path."""
-        return AbsPath.from_uri(uri)
