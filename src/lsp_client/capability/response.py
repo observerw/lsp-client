@@ -225,3 +225,44 @@ class WithRespondWorkspaceFolders(
             id=req.id,
             result=None,
         )
+
+
+@runtime_checkable
+class WithRespondWorkspaceConfiguration(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
+    """
+    `workspace/configuration` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_configuration
+    """
+
+    @override
+    @classmethod
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            workspace=types.WorkspaceClientCapabilities(
+                configuration=True,
+                workspace_folders=True,
+            )
+        )
+
+    @override
+    @classmethod
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
+        logger.debug("Server supports workspace/configuration checked")
+
+    async def respond_workspace_configuration(
+        self, req: types.ConfigurationRequest
+    ) -> types.ConfigurationResponse:
+        self.logger.debug("Responding to workspace configuration request")
+        # Return empty configuration values for all requested items
+        # In a real implementation, this would fetch actual configuration values
+        return types.ConfigurationResponse(
+            id=req.id,
+            result=[],
+        )
