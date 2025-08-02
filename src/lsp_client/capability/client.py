@@ -236,6 +236,14 @@ class LSPCapabilityClientBase[
         """Convert a URI to an absolute file path."""
         return AbsPath.from_uri(uri)
 
+    def resolve_file_path(self, file_path: AnyPath) -> Path:
+        """
+        Resolve a file path to an absolute path based on the workspace folders.
+        """
+
+        uri = self.as_uri(file_path)
+        return Path.from_uri(uri)
+
     @asynccontextmanager
     async def open_files(self, *file_paths: AnyPath):
         """

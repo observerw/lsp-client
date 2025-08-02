@@ -38,7 +38,7 @@ async def requet_reference(loc: Locate, ctx: Context):
     position = loc.resolve(repo_path)
 
     return await client.request_references(
-        file_path=loc.rel_file_path,
+        file_path=loc.relative_file_path,
         position=position,
     )
 
