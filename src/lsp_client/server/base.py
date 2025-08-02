@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio as aio
 import logging
+import os
 import random
 from collections.abc import Generator, Sequence
 from contextlib import asynccontextmanager, contextmanager
@@ -45,7 +46,7 @@ class LSPServerPool:
             case {"result": _} | {"error": _} as resp:
                 await self.manager.respond(resp)
             case {"id": id, "method": method} as req:
-                assert id, f"Invalid server request package: {package}"
+                assert id is not None, f"Invalid server request package: {package}"
                 async with self.manager.request(
                     SingleRequestEvent(id=id, method=method)
                 ) as event:
@@ -69,11 +70,13 @@ class LSPServerPool:
         cls,
         server_cmd: Sequence[str],
         server_req_queue: ServerRequestQueue,
-        *,
-        process_count: int = 1,
-        info: LSPServerInfo | None = None,
-        pending_timeout: float | None = None,
+        process_count: int | None,
+        info: LSPServerInfo,
+        pending_timeout: float,
     ):
+        process_count = process_count or os.cpu_count() or 1
+        assert process_count >= 1, f"Invalid process count: {process_count}"
+
         processes = await gather_all(
             LSPServerProcess.create(
                 *server_cmd,
@@ -82,7 +85,6 @@ class LSPServerPool:
             )
             for i in range(process_count)
         )
-        logger.info("LSPServerPool initialized with %d processes", len(processes))
 
         server_pool = cls(
             processes=processes,
@@ -90,6 +92,7 @@ class LSPServerPool:
             manager=RequestManager(timeout=pending_timeout),
         )
 
+        logger.info("LSPServerPool initialized with %d processes", len(processes))
         yield server_pool
 
         await gather_all(process.shutdown() for process in processes)
@@ -107,15 +110,19 @@ class LSPServerPool:
                 for process in self.processes
             ]
 
+            logger.info("LSPServerPool started")
+
             yield
             # all client side requests are registered, and client requests to shutdown
 
             await self.manager.wait_complete()
             # all client side requests are responded
+            logger.info("all client side requests are completed")
 
             for task in tasks:
                 assert task.cancel()
             # safely cancel all server side request workers
+            logger.info("all server side request workers are finished")
 
     @contextmanager
     def next_server(self) -> Generator[LSPServerProcess, Any]:

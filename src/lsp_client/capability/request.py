@@ -9,29 +9,38 @@ from lsprotocol import types
 
 from lsp_client.types import AnyPath, Position
 
-from .client import LSPCapabilityClient
+from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 from .utils import jsonrpc_uuid
 
 logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
-class WithRequestInlineCompletions(LSPCapabilityClient, Protocol):
+class WithRequestInlineCompletions(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `textDocument/inlineCompletion` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_inlineCompletion
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.inline_completion
-
-        logger.debug("Client supports for textDocument/inlineCompletion checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                inline_completion=types.InlineCompletionClientCapabilities()
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.inline_completion_provider
         logger.debug("Server supports textDocument/inlineCompletion checked")
 
@@ -54,30 +63,39 @@ class WithRequestInlineCompletions(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.InlineCompletionResponse,
+            file_paths=[file_path],
         ):
             case types.InlineCompletionList(items=items) | items:
                 return items
 
 
 @runtime_checkable
-class WithRequestExecuteCommand(LSPCapabilityClient, Protocol):
+class WithRequestExecuteCommand(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `workspace/executeCommand` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_executeCommand
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (workspace := cls.client_capabilities.workspace)
-        assert workspace.execute_command
-
-        logger.debug("Client supports workspace/executeCommand checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            workspace=types.WorkspaceClientCapabilities(
+                execute_command=types.ExecuteCommandClientCapabilities()
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.execute_command_provider
-
         logger.debug("Server supports workspace/executeCommand checked")
 
     async def request_execute_command(
@@ -96,34 +114,48 @@ class WithRequestExecuteCommand(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithRequestReferences(LSPCapabilityClient, Protocol):
+class WithRequestReferences(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `textDocument/references` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_references
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.references
-
-        logger.debug("Client supports textDocument/references checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                references=types.ReferenceClientCapabilities()
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.references_provider
-
         logger.debug("Server supports textDocument/references checked")
 
     async def request_references(
-        self, file_path: AnyPath, position: Position
+        self,
+        file_path: AnyPath,
+        position: Position,
+        *,
+        include_declaration: bool = False,
     ) -> Sequence[types.Location] | None:
         return await self.request(
             types.ReferencesRequest(
                 id=jsonrpc_uuid(),
                 params=types.ReferenceParams(
-                    context=types.ReferenceContext(include_declaration=False),
+                    context=types.ReferenceContext(
+                        include_declaration=include_declaration
+                    ),
                     text_document=types.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
@@ -131,24 +163,37 @@ class WithRequestReferences(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.ReferencesResponse,
+            file_paths=[file_path],
         )
 
 
 @runtime_checkable
-class WithRequestDefinition(LSPCapabilityClient, Protocol):
+class WithRequestDefinition(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
+    """
+    `textDocument/definition` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition
+    """
+
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.definition
-
-        logger.debug("Client supports textDocument/definition checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                definition=types.DefinitionClientCapabilities(link_support=True)
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.definition_provider
-
         logger.debug("Server supports textDocument/definition checked")
 
     @staticmethod
@@ -173,6 +218,7 @@ class WithRequestDefinition(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.DefinitionResponse,
+            # file_paths=[file_path],
         ):
             case types.Location() as location:
                 return [location]
@@ -204,15 +250,6 @@ class WithRequestDefinitionLink(WithRequestDefinition, Protocol):
     Client should use this instead of {@WithRequestDefinitionLocation} whenever the server supports.
     """
 
-    @override
-    @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.definition
-        assert text_document.definition.link_support
-
-        logger.debug("Client supports textDocument/definition with linkSupport checked")
-
     async def request_definition_link(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[types.LocationLink] | None:
@@ -222,22 +259,32 @@ class WithRequestDefinitionLink(WithRequestDefinition, Protocol):
 
 
 @runtime_checkable
-class WithRequestHover(LSPCapabilityClient, Protocol):
+class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Protocol):
     """
     `textDocument/hover` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.hover
-
-        logger.debug("Client supports textDocument/hover checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                hover=types.HoverClientCapabilities(
+                    content_format=[
+                        types.MarkupKind.Markdown,
+                        types.MarkupKind.PlainText,
+                    ]
+                )
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.hover_provider
 
         logger.debug("Server supports textDocument/hover checked")
@@ -256,11 +303,16 @@ class WithRequestHover(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.HoverResponse,
+            file_paths=[file_path],
         )
 
 
 @runtime_checkable
-class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
+class WithRequestCallHierarchy(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `callHierarchy/prepare` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_prepareCallHierarchy
     `callHierarchy/incomingCalls` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#callHierarchy_incomingCalls
@@ -269,15 +321,20 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.call_hierarchy
-
-        logger.debug("Client supports textDocument/callHierarchy checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                call_hierarchy=types.CallHierarchyClientCapabilities()
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.call_hierarchy_provider
 
         logger.debug("Server supports textDocument/callHierarchy checked")
@@ -296,6 +353,7 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.CallHierarchyPrepareResponse,
+            file_paths=[file_path],
         )
 
     async def request_call_hierarchy_incoming_call(
@@ -318,6 +376,7 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
                     params=types.CallHierarchyIncomingCallsParams(item=prepare_result),
                 ),
                 schema=types.CallHierarchyIncomingCallsResponse,
+                file_paths=[file_path],
             )
             for prepare_result in prepare_results
         )
@@ -349,6 +408,7 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
                     params=types.CallHierarchyOutgoingCallsParams(item=prepare_result),
                 ),
                 schema=types.CallHierarchyOutgoingCallsResponse,
+                file_paths=[file_path],
             )
             for prepare_result in prepare_results
         )
@@ -362,22 +422,45 @@ class WithRequestCallHierarchy(LSPCapabilityClient, Protocol):
 
 
 @runtime_checkable
-class WithRequestCompletions(LSPCapabilityClient, Protocol):
+class WithRequestCompletions(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `textDocument/completion` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.completion
-
-        logger.debug("Client supports textDocument/completion checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                completion=types.CompletionClientCapabilities(
+                    completion_item=types.ClientCompletionItemOptions(
+                        snippet_support=True,
+                        commit_characters_support=True,
+                        documentation_format=[
+                            types.MarkupKind.Markdown,
+                            types.MarkupKind.PlainText,
+                        ],
+                        deprecated_support=True,
+                        preselect_support=True,
+                        tag_support=types.CompletionItemTagOptions(
+                            value_set=[types.CompletionItemTag.Deprecated]
+                        ),
+                    ),
+                ),
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.completion_provider
 
         logger.debug("Server supports textDocument/completion checked")
@@ -396,28 +479,38 @@ class WithRequestCompletions(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.CompletionResponse,
+            file_paths=[file_path],
         ):
             case types.CompletionList(items=items) | items:
                 return items
 
 
 @runtime_checkable
-class WithRequestSignatureHelp(LSPCapabilityClient, Protocol):
+class WithRequestSignatureHelp(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     """
     `textDocument/signatureHelp` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_signatureHelp
     """
 
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.signature_help
-
-        logger.debug("Client supports textDocument/signatureHelp checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                signature_help=types.SignatureHelpClientCapabilities()
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.signature_help_provider
 
         logger.debug("Server supports textDocument/signatureHelp checked")
@@ -436,22 +529,42 @@ class WithRequestSignatureHelp(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.SignatureHelpResponse,
+            file_paths=[file_path],
         )
 
 
 @runtime_checkable
-class WithRequestDocumentSymbols(LSPCapabilityClient, Protocol):
+class WithRequestDocumentSymbols(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.document_symbol
-
-        logger.debug("Client supports textDocument/documentSymbol checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            text_document=types.TextDocumentClientCapabilities(
+                document_symbol=types.DocumentSymbolClientCapabilities(
+                    symbol_kind=types.ClientSymbolKindOptions(
+                        value_set=[*types.SymbolKind],
+                    ),
+                    tag_support=types.ClientSymbolTagOptions(
+                        value_set=[
+                            types.SymbolTag.Deprecated,
+                        ]
+                    ),
+                    hierarchical_document_symbol_support=True,
+                ),
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.document_symbol_provider
 
         logger.debug("Server supports textDocument/documentSymbol checked")
@@ -469,6 +582,7 @@ class WithRequestDocumentSymbols(LSPCapabilityClient, Protocol):
                 ),
             ),
             schema=types.DocumentSymbolResponse,
+            file_paths=[file_path],
         )
 
 
@@ -496,17 +610,6 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
     `textDocument/documentSymbol` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol
     """
 
-    @override
-    @classmethod
-    def check_client_capability(cls):
-        assert (text_document := cls.client_capabilities.text_document)
-        assert text_document.document_symbol
-        assert text_document.document_symbol.hierarchical_document_symbol_support
-
-        logger.debug(
-            "Client supports textDocument/documentSymbol with hierarchical support checked"
-        )
-
     @staticmethod
     def is_document_symbols(result: list) -> TypeGuard[list[types.DocumentSymbol]]:
         return all(isinstance(item, types.DocumentSymbol) for item in result)
@@ -520,18 +623,41 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
 
 
 @runtime_checkable
-class WithRequestWorkspaceSymbols(LSPCapabilityClient, Protocol):
+class WithRequestWorkspaceSymbols(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
     @override
     @classmethod
-    def check_client_capability(cls):
-        assert (workspace := cls.client_capabilities.workspace)
-        assert workspace.symbol
-
-        logger.debug("Client supports workspace/symbol checked")
+    def client_capability(cls) -> types.ClientCapabilities:
+        return types.ClientCapabilities(
+            workspace=types.WorkspaceClientCapabilities(
+                symbol=types.WorkspaceSymbolClientCapabilities(
+                    symbol_kind=types.ClientSymbolKindOptions(
+                        value_set=[*types.SymbolKind],
+                    ),
+                    tag_support=types.ClientSymbolTagOptions(
+                        value_set=[
+                            types.SymbolTag.Deprecated,
+                        ]
+                    ),
+                    resolve_support=types.ClientSymbolResolveOptions(
+                        properties=[
+                            "location.range",
+                        ]
+                    ),
+                )
+            )
+        )
 
     @override
     @classmethod
-    def check_server_capability(cls, capability: types.ServerCapabilities):
+    def check_server_capability(
+        cls,
+        capability: types.ServerCapabilities,
+        info: types.ServerInfo | None,
+    ):
         assert capability.workspace_symbol_provider
 
         logger.debug("Server supports workspace/symbol checked")
@@ -541,7 +667,8 @@ class WithRequestWorkspaceSymbols(LSPCapabilityClient, Protocol):
     ) -> Sequence[types.SymbolInformation] | Sequence[types.WorkspaceSymbol] | None:
         return await self.request(
             types.WorkspaceSymbolRequest(
-                id=jsonrpc_uuid(), params=types.WorkspaceSymbolParams(query=query)
+                id=jsonrpc_uuid(),
+                params=types.WorkspaceSymbolParams(query=query),
             ),
             schema=types.WorkspaceSymbolResponse,
         )
@@ -570,15 +697,6 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
     """
     `workspace/symbol` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_symbol
     """
-
-    @override
-    @classmethod
-    def check_client_capability(cls):
-        assert (workspace := cls.client_capabilities.workspace)
-        assert workspace.symbol
-        assert workspace.symbol.resolve_support
-
-        logger.debug("Client supports workspace/symbol with resolveSupport checked")
 
     @staticmethod
     def is_workspace_symbols(result: list) -> TypeGuard[list[types.WorkspaceSymbol]]:

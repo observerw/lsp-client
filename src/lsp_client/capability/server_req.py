@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import asyncio as aio
+import logging
+from abc import ABC
 from dataclasses import dataclass
-from typing import Protocol
 
 from lsprotocol import types
 
 import lsp_client.capability as cap
-from lsp_client.jsonrpc import (
-    JsonRpcRawReqPackage,
-    JsonRpcResponse,
-    lsp_converter,
-)
+from lsp_client.jsonrpc import JsonRpcRawReqPackage, JsonRpcResponse, lsp_converter
 from lsp_client.server import ServerRequestQueue
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ServerRequestClient(cap.LSPCapabilityClient, Protocol):
+class ServerRequestClient(cap.LSPCapabilityClientProtocol, ABC):
     """Client mixin for handling server-side requests."""
 
     server_req_queue: ServerRequestQueue
@@ -56,9 +55,19 @@ class ServerRequestClient(cap.LSPCapabilityClient, Protocol):
                     raw_req, types.PublishDiagnosticsNotification
                 )
                 await self.process_notification(self.notify_publish_diagnostics(req))
+            case {"method": types.WORKSPACE_WORKSPACE_FOLDERS} if isinstance(
+                self, cap.WithRespondWorkspaceFolders
+            ):
+                req = lsp_converter.structure(raw_req, types.WorkspaceFoldersRequest)
+                await self.process_request(self.respond_workspace_folders(req))
+            case {"method": types.WORKSPACE_CONFIGURATION} if isinstance(
+                self, cap.WithRespondWorkspaceConfiguration
+            ):
+                req = lsp_converter.structure(raw_req, types.ConfigurationRequest)
+                await self.process_request(self.respond_workspace_configuration(req))
             # TODO add more server request handlers here
             case other_req:
-                self.logger.warning(
+                self.logger.debug(
                     "Received unhandled server request: %s",
                     other_req,
                 )
@@ -67,7 +76,7 @@ class ServerRequestClient(cap.LSPCapabilityClient, Protocol):
     async def _server_req_worker(self):
         """Worker to handle server side requests."""
 
+        logger.info("Starting to receive server requests")
         async with aio.TaskGroup() as tg:
-            while True:
-                raw_req = await self.server_req_queue.get()
+            while raw_req := await self.server_req_queue.get():
                 tg.create_task(self.handle_server_request(raw_req))
