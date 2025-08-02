@@ -114,7 +114,7 @@ class RequestManager:
         """Respond to a request with the given id."""
 
         id = resp["id"]
-        assert id, f"Unexpected response without id: {resp}"
+        assert id is not None, f"Unexpected response without id: {resp}"
         assert id in self._pending, (
             f"Response {resp} with id {id} not found in pending requests"
         )

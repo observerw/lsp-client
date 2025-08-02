@@ -46,7 +46,7 @@ class LSPServerPool:
             case {"result": _} | {"error": _} as resp:
                 await self.manager.respond(resp)
             case {"id": id, "method": method} as req:
-                assert id, f"Invalid server request package: {package}"
+                assert id is not None, f"Invalid server request package: {package}"
                 async with self.manager.request(
                     SingleRequestEvent(id=id, method=method)
                 ) as event:
