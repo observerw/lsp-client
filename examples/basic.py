@@ -17,7 +17,7 @@ curr_path = Path(__file__)
 
 
 async def main():
-    async with BasedPyrightClient().start(repo_path=repo_path) as client:
+    async with BasedPyrightClient().start(workspace=repo_path) as client:
         # found all references of `BasedPyrightClient` class
         refs = await client.request_references(
             file_path="src/lsp_client/clients/based_pyright.py",
