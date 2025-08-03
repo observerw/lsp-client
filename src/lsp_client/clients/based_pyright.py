@@ -40,7 +40,7 @@ class BasedPyrightCapabilityClient(
         version = info.version
         assert version, "Server version is required for compatibility check"
 
-        assert Version.parse(version).match(">=1.29")
+        assert Version.parse(version).match(">=1.29.0")
         logger.debug(
             "Server version %s supports BasedPyrightClient capabilities",
             version,
