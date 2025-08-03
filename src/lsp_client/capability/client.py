@@ -236,6 +236,7 @@ class LSPCapabilityClientBase[
         """Convert a URI to an absolute file path."""
         return AbsPath.from_uri(uri)
 
+    @override
     @asynccontextmanager
     async def open_files(self, *file_paths: AnyPath):
         """

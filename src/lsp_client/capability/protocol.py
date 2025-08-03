@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
+from contextlib import asynccontextmanager
 from typing import Any, Protocol, runtime_checkable
 
 from lsprotocol import types
@@ -56,6 +57,10 @@ class LSPCapabilityClientProtocol(Protocol):
     @property
     @abstractmethod
     def language_id(self) -> types.LanguageKind: ...
+
+    @abstractmethod
+    @asynccontextmanager
+    def open_files(self, *file_paths: AnyPath) -> AsyncGenerator[None]: ...
 
     @abstractmethod
     async def request[R](
