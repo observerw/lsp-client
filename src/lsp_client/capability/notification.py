@@ -164,3 +164,13 @@ class WithNotifyChangeWorkspaceFolders(
                 )
             ),
         )
+
+    async def notify_added_workspace_folders(
+        self, added: Sequence[types.WorkspaceFolder]
+    ) -> None:
+        return await self.notify_change_workspace_folders(added=added, removed=[])
+
+    async def notify_removed_workspace_folders(
+        self, removed: Sequence[types.WorkspaceFolder]
+    ) -> None:
+        return await self.notify_change_workspace_folders(added=[], removed=removed)
