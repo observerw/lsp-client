@@ -30,7 +30,7 @@ class LSPClientBase[Client: LSPCapabilityClientBase](ABC):
     server_info: LSPServerInfo = field(default_factory=LSPServerInfo)
     """Runtime information for the LSP server."""
 
-    pending_timeout: float = 10
+    pending_timeout: float | None = 10
     """Timeout for pending requests in seconds."""
 
     @cached_property

@@ -72,7 +72,7 @@ class LSPServerPool:
         server_req_queue: ServerRequestQueue,
         process_count: int | None,
         info: LSPServerInfo,
-        pending_timeout: float,
+        pending_timeout: float | None,
     ):
         process_count = process_count or os.cpu_count() or 1
         assert process_count >= 1, f"Invalid process count: {process_count}"

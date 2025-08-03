@@ -80,7 +80,7 @@ type RequestEvent = SingleRequestEvent | BatchRequestEvent
 
 @dataclass
 class RequestManager:
-    timeout: float | None = 5.0
+    timeout: float | None
 
     _cond: aio.Condition = field(default_factory=aio.Condition)
     """If all pending requests are handled"""
@@ -115,6 +115,8 @@ class RequestManager:
 
         id = resp["id"]
         assert id is not None, f"Unexpected response without id: {resp}"
+        if id not in self._pending:
+            return
         assert id in self._pending, (
             f"Response {resp} with id {id} not found in pending requests"
         )
