@@ -12,12 +12,13 @@ from loguru import logger
 from semver import Version
 
 from lsp_client import (
+    ClientArgs,
+    ClientRuntimeArgs,
     FullFeaturedCapabilityGroup,
     LSPCapabilityClientBase,
     LSPClientBase,
     lsp_type,
 )
-from lsp_client.capability.client import ClientArgs, ClientRuntimeArgs
 
 
 class BasedPyrightCapabilityClient(

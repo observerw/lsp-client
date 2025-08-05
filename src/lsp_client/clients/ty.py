@@ -16,12 +16,13 @@ from loguru import logger
 from semver import Version
 
 from lsp_client import (
+    ClientArgs,
+    ClientRuntimeArgs,
     LSPCapabilityClientBase,
     LSPClientBase,
     lsp_cap,
     lsp_type,
 )
-from lsp_client.capability.client import ClientArgs, ClientRuntimeArgs
 
 
 @dataclass(frozen=True)

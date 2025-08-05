@@ -3,6 +3,8 @@ from __future__ import annotations
 import lsprotocol.types as lsp_type
 from loguru import logger
 
+from lsp_client.capability.client import ClientArgs, ClientRuntimeArgs
+
 from . import capability as lsp_cap
 from .capability.client import (
     LSPCapabilityClientBase,
@@ -16,6 +18,8 @@ from .types import Position, Range
 logger.disable("lsp_client")
 
 __all__ = [
+    "ClientArgs",
+    "ClientRuntimeArgs",
     "FullFeaturedCapabilityGroup",
     "LSPCapabilityClientBase",
     "LSPClientBase",
