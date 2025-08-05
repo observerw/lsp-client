@@ -5,8 +5,8 @@ from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Protocol, runtime_checkable
 
-from lsp_client import jsonrpc, lsp_cap, lsp_type
-from lsp_client.types import AnyPath, Notification, Request
+from lsp_client import jsonrpc
+from lsp_client.types import AnyPath, Notification, Request, lsp_type
 from lsp_client.utils.path import AbsPath
 
 
@@ -97,22 +97,3 @@ class LSPCapabilityClientProtocol(Protocol):
     @abstractmethod
     def from_uri(self, uri: str) -> AbsPath:
         """Convert a URI to an absolute file path."""
-
-
-class FullFeaturedCapabilityGroup(
-    lsp_cap.WithRequestReferences,
-    lsp_cap.WithRequestDefinition,
-    lsp_cap.WithRequestHover,
-    lsp_cap.WithRequestCallHierarchy,
-    lsp_cap.WithRequestCompletions,
-    lsp_cap.WithRequestSignatureHelp,
-    lsp_cap.WithRequestDocumentSymbols,
-    lsp_cap.WithRequestWorkspaceSymbols,
-    lsp_cap.WithReceiveLogMessage,
-    lsp_cap.WithReceiveShowMessage,
-    lsp_cap.WithReceiveLogTrace,
-    lsp_cap.WithReceivePublishDiagnostics,
-    Protocol,
-    # TODO sync with implemented capabilities
-):
-    """All capabilities."""

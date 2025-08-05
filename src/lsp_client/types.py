@@ -6,10 +6,10 @@ import os
 from typing import Protocol
 
 from attrs import AttrsInstance
-from lsprotocol import types
+from lsprotocol import types as lsp_type
 
-Position = types.Position
-Range = types.Range
+Position = lsp_type.Position
+Range = lsp_type.Range
 
 AnyPath = str | os.PathLike[str]
 

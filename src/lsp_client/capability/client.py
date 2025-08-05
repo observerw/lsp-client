@@ -16,7 +16,8 @@ from asyncio_addon import gather_all
 from loguru import logger
 from lsprotocol import types
 
-from lsp_client import jsonrpc, lsp_cap, lsp_type
+import lsp_client.capability as lsp_cap
+from lsp_client import jsonrpc, lsp_type
 from lsp_client.types import AnyPath, Notification
 from lsp_client.utils.attrs import attrs_merges
 from lsp_client.utils.path import AbsPath
