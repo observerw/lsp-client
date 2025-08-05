@@ -10,7 +10,7 @@ from .capability.client import (
     LSPCapabilityClientBase,
     WorkspaceFolder,
 )
-from .capability.group import FullFeaturedCapabilityGroup
+from .capability.protocol import FullFeaturedCapabilityGroup
 from .client import LSPClientBase
 from .server import LSPServerInfo
 from .types import Position, Range
