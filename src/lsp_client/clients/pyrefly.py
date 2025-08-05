@@ -4,25 +4,21 @@ pyrefly: Type checker and language server for Python - https://pyrefly.org/
 
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import override
 
+from loguru import logger
 from semver import Version
 
 from lsp_client import (
-    BaseLSPCapabilityClientArgs,
     LSPCapabilityClientBase,
     LSPClientBase,
-    WorkspaceFolder,
     lsp_cap,
     lsp_type,
 )
-from lsp_client.server import LSPServerPool
-
-logger = logging.getLogger(__name__)
+from lsp_client.capability.client import ClientArgs, ClientRuntimeArgs
 
 
 class PyReflyCapabilityClient(
@@ -34,7 +30,7 @@ class PyReflyCapabilityClient(
     lsp_cap.WithReceiveLogMessage,
     lsp_cap.WithReceiveShowMessage,
     lsp_cap.WithReceiveLogTrace,
-    LSPCapabilityClientBase,
+    LSPCapabilityClientBase[None],
 ):
     """
     Keep track of <https://github.com/facebook/pyrefly/issues/344> for LSP features support.
@@ -87,15 +83,10 @@ class PyReflyClient(LSPClientBase[PyReflyCapabilityClient]):
     @asynccontextmanager
     async def _start_client(
         self,
-        server: LSPServerPool,
-        workspace: Sequence[WorkspaceFolder],
+        args: ClientArgs,
+        runtime_args: ClientRuntimeArgs,
     ) -> AsyncGenerator[PyReflyCapabilityClient]:
         async with PyReflyCapabilityClient.start(
-            server=server,
-            args=BaseLSPCapabilityClientArgs(
-                workspace_folders=workspace,
-                initialization_options={},
-                sync_file=self.sync_file,
-            ),
+            args=args, runtime_args=runtime_args
         ) as client:
             yield client

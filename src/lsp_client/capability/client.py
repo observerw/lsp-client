@@ -1,94 +1,87 @@
 from __future__ import annotations
 
 import asyncio as aio
-import logging
 import os
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import cached_property
 from itertools import product
 from pathlib import Path
-from typing import Any, Self, override
+from typing import Any, Self, final, override
 
+import attrs
 from asyncio_addon import gather_all
+from loguru import logger
 from lsprotocol import types
 
-from lsp_client import lsp_type
-from lsp_client.jsonrpc import JsonRpcResponse, lsp_converter, response_deserialize
-from lsp_client.server import LSPServerPool
-from lsp_client.types import AnyPath
+from lsp_client import jsonrpc, lsp_cap, lsp_type
+from lsp_client.types import AnyPath, Notification
 from lsp_client.utils.attrs import attrs_merges
 from lsp_client.utils.path import AbsPath
 
 from .file_buffer import LSPFileBuffer
 from .notification import WithNotifyTextDocumentSynchronize
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
-from .server_req import ServerRequestClient
 
 ROOT_FOLDER_NAME = "__root__"
 
 
-@dataclass(frozen=True)
-class WorkspaceFolder:
-    path: AbsPath
-    name: str
-
+@attrs.define
+class WorkspaceFolder(lsp_type.WorkspaceFolder):
     @cached_property
-    def uri(self) -> str:
-        return self.path.as_uri()
+    def path(self) -> AbsPath:
+        return AbsPath.from_uri(self.uri)
 
-    def as_lsp(self) -> lsp_type.WorkspaceFolder:
-        return lsp_type.WorkspaceFolder(
-            uri=self.path.as_uri(),
-            name=self.name,
-        )
+
+@final
+@dataclass(frozen=True)
+class ClientRuntimeArgs:
+    server_count: int
+    sender: jsonrpc.RequestSender
+    receiver: jsonrpc.RequestReceiver
+    workspace_folders: Sequence[WorkspaceFolder]
 
 
 @dataclass(frozen=True)
-class BaseLSPCapabilityClientArgs:
-    # initialization settings
-    workspace_folders: Sequence[WorkspaceFolder]
-    initialization_options: dict[str, Any]
-
-    # extra settings
-    sync_file: bool
+class ClientArgs:
+    sync_file: bool = True
+    """Whether to synchronize file (open, close, changed, etc.) when performing file-related operations."""
 
 
-@dataclass
-class LSPCapabilityClientBase[
-    Args: BaseLSPCapabilityClientArgs = BaseLSPCapabilityClientArgs,
-](
+@dataclass(kw_only=True)
+class LSPCapabilityClientBase[T](
     # Client support for `textDocument/didOpen`, `textDocument/didChange` and `textDocument/didClose`
     # notifications is mandatory
     WithNotifyTextDocumentSynchronize,
-    ServerRequestClient,
     LSPCapabilityClientProtocol,
+    ABC,
 ):
-    _args: Args
+    _rt_args: ClientRuntimeArgs
+    _args: ClientArgs
+    _extra: T | None
 
-    _server: LSPServerPool
     _request_tg: aio.TaskGroup
     """Tasks of sending requests to the server and receiving responses."""
-
-    _logger: logging.Logger
 
     _closed: bool = False
 
     @property
-    def args(self) -> Args:
-        return self._args
-
-    @property
     @override
-    def logger(self) -> logging.Logger:
-        return self._logger
+    def workspace_folders(self) -> Sequence[lsp_type.WorkspaceFolder]:
+        return [
+            lsp_type.WorkspaceFolder(
+                uri=folder.path.as_uri(),
+                name=folder.name,
+            )
+            for folder in self._rt_args.workspace_folders
+        ]
 
     @cached_property
     def workspace(self) -> dict[str, WorkspaceFolder]:
         """Workspace folders indexed by their URIs."""
-        return {folder.name: folder for folder in self._args.workspace_folders}
+        return {folder.name: folder for folder in self._rt_args.workspace_folders}
 
     @cached_property
     def is_single_root(self) -> bool:
@@ -115,6 +108,10 @@ class LSPCapabilityClientBase[
         assert isinstance(merged, types.ClientCapabilities)
         return merged
 
+    @property
+    def initialization_options(self) -> dict[str, Any]:
+        return {}
+
     def auto_install(self, base_path: AnyPath | None = None) -> None:
         """
         Automatically install the LSP server.
@@ -130,60 +127,58 @@ class LSPCapabilityClientBase[
     @classmethod
     @asynccontextmanager
     async def start(
-        cls, server: LSPServerPool, args: Args
+        cls,
+        args: ClientArgs,
+        runtime_args: ClientRuntimeArgs,
+        *,
+        extra: T | None = None,
     ) -> AsyncGenerator[Self, Any]:
-        logger = logging.getLogger(cls.__name__)
-
-        async with server.start(), aio.TaskGroup() as tg:
-            client = cls(
+        async with aio.TaskGroup() as tg:
+            instance = cls(
+                _rt_args=runtime_args,
                 _args=args,
-                server_req_queue=server.server_req_queue,
-                _server=server,
+                _extra=extra,
                 _request_tg=tg,
-                _logger=logger,
             )
 
             initialize_params = types.InitializeParams(
-                capabilities=client.client_capabilities(),
+                capabilities=instance.client_capabilities(),
                 process_id=os.getpid(),
                 client_info=types.ClientInfo(
                     name="LSP Client",
                     version="1.81.0-insider",
                 ),
                 locale="en-us",
-                initialization_options=args.initialization_options,
+                initialization_options=instance.initialization_options,
                 trace=types.TraceValue.Verbose,
-                workspace_folders=[
-                    folder.as_lsp() for folder in args.workspace_folders
-                ],
+                workspace_folders=list(runtime_args.workspace_folders),
             )
 
             # initialize repo
-            _ = await client.initialize(initialize_params)
-            logger.info("LSP client initialized successfully.")
+            _ = await instance.initialize(initialize_params)
 
             # prepare for server side requests
-            server_req_worker_task = tg.create_task(client._server_req_worker())
+            server_req_worker_task = tg.create_task(instance._server_request_worker())
 
             try:
-                yield client
+                yield instance
                 # all client side requests are sent
             finally:
                 try:
-                    _ = await client.shutdown()
+                    _ = await instance.shutdown()
                 except TimeoutError as e:
                     raise TimeoutError(
                         "LSP client shutdown timed out, server failed to exit gracefully."
                     ) from e
                 # request server to shutdown (but not exit)
 
-                await client.server_req_queue.join()
+                await instance._rt_args.receiver.join()
                 assert server_req_worker_task.cancel()
                 # all server side requests are handled
             # all client side requests are sent
         # all client side requests are responded
-        await client.exit()  # request server to exit
-        client._closed = True
+        await instance.exit()  # request server to exit
+        instance._closed = True
 
     # all server processes are exited
 
@@ -286,50 +281,48 @@ class LSPCapabilityClientBase[
     @override
     async def request[R](
         self,
-        req: Any,
-        schema: type[JsonRpcResponse[R]],
+        req: attrs.AttrsInstance,
+        schema: type[jsonrpc.Response[R]],
         *,
         file_paths: Sequence[AnyPath] = (),
     ) -> R:
-        """
-        Note that the `params` are required to be a `attr` model defined in `lsprotocol.types`.
-        """
-
         self._check_closed()
 
         async with self.open_files(*file_paths):
-            raw_resp = await self._server.request(lsp_converter.unstructure(req))
-            return response_deserialize(raw_resp, schema)
+            req = jsonrpc.request_serialize(req)
+            tx, rx = jsonrpc.response_channel.create()
+            await self._rt_args.sender.send((req, tx))
+            raw_resp = await rx.receive()
+            return jsonrpc.response_deserialize(raw_resp, schema)
 
-    async def request_all[R](
+    async def _request_many[R](
         self,
-        req: Any,
-        schema: type[JsonRpcResponse[R]],
-        *,
-        file_paths: Sequence[AnyPath] = (),
+        req: attrs.AttrsInstance,
+        schema: type[jsonrpc.Response[R]],
     ) -> Sequence[R]:
         """
-        Similar to `request`, but sends the request to all servers in the pool.
-        This is useful for operations that need to be performed across all servers.
+        This is not a public API. Only use to send `initialize` and `shutdown` request.
         """
 
         self._check_closed()
 
-        async with self.open_files(*file_paths):
-            raw_resps = await self._server.request_all(lsp_converter.unstructure(req))
-            return [response_deserialize(raw_resp, schema) for raw_resp in raw_resps]
+        req = jsonrpc.request_serialize(req)
+        tx, rx = jsonrpc.many_response_channel.create(
+            expect_count=self._rt_args.server_count
+        )
+        await self._rt_args.sender.send((req, tx))
 
-    async def notify_all(self, msg: Any) -> None:
+        raw_resp = await rx.receive()
+        return [jsonrpc.response_deserialize(item, schema) for item in raw_resp]
+
+    @override
+    async def notify_all(self, msg: Notification) -> None:
         self._check_closed()
 
-        return await self._server.notify_all(lsp_converter.unstructure(msg))
+        noti = jsonrpc.notification_serialize(msg)
+        await self._rt_args.sender.send(noti)
 
-    async def respond(self, resp: Any) -> None:
-        self._check_closed()
-
-        return await self._server.respond(lsp_converter.unstructure(resp))
-
-    def create_request[T](self, coro: aio._CoroutineLike[T]) -> aio.Task[T]:
+    def create_request[Task](self, coro: aio._CoroutineLike[Task]) -> aio.Task[Task]:
         self._check_closed()
 
         return self._request_tg.create_task(coro)
@@ -337,7 +330,7 @@ class LSPCapabilityClientBase[
     async def initialize(self, params: types.InitializeParams):
         """Initialize parameters for the LSP client."""
 
-        results = await self.request_all(
+        results = await self._request_many(
             types.InitializeRequest(id="intialize", params=params),
             schema=types.InitializeResponse,
         )
@@ -370,7 +363,7 @@ class LSPCapabilityClientBase[
         `shutdown` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
         """
 
-        await self.request_all(
+        await self._request_many(
             types.ShutdownRequest(
                 id="shutdown",
             ),
@@ -387,3 +380,67 @@ class LSPCapabilityClientBase[
     @abstractmethod
     def check_server_compatibility(self, info: types.ServerInfo | None):
         """Check if the available server capabilities are compatible with the client."""
+
+    async def _server_request_worker(self):
+        async def dispatch(req: jsonrpc.ChannelRequest):
+            match req:
+                case {"method": types.WINDOW_LOG_MESSAGE} if isinstance(
+                    self, lsp_cap.WithReceiveLogMessage
+                ):
+                    await self.receive_log_message(
+                        jsonrpc.request_deserialize(
+                            req, lsp_type.LogMessageNotification
+                        )
+                    )
+                case {"method": types.WINDOW_SHOW_MESSAGE} if isinstance(
+                    self, lsp_cap.WithReceiveShowMessage
+                ):
+                    await self.receive_show_message(
+                        jsonrpc.request_deserialize(
+                            req, lsp_type.ShowMessageNotification
+                        )
+                    )
+                case ({"method": types.WINDOW_SHOW_MESSAGE_REQUEST} as raw_req, tx) if (
+                    isinstance(self, lsp_cap.WithRespondShowMessageRequest)
+                ):
+                    resp = await self.respond_show_message(
+                        jsonrpc.request_deserialize(
+                            raw_req, lsp_type.ShowMessageRequest
+                        )
+                    )
+                    tx.send(jsonrpc.response_serialize(resp))
+                case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
+                    self, lsp_cap.WithReceivePublishDiagnostics
+                ):
+                    await self.receive_publish_diagnostics(
+                        jsonrpc.request_deserialize(
+                            req, lsp_type.PublishDiagnosticsNotification
+                        )
+                    )
+                case ({"method": types.WORKSPACE_WORKSPACE_FOLDERS} as raw_req, tx) if (
+                    isinstance(self, lsp_cap.WithRespondWorkspaceFolders)
+                ):
+                    resp = await self.respond_workspace_folders(
+                        jsonrpc.request_deserialize(
+                            raw_req, lsp_type.WorkspaceFoldersRequest
+                        )
+                    )
+                    tx.send(jsonrpc.response_serialize(resp))
+                case (
+                    {"method": types.WORKSPACE_CONFIGURATION} as raw_req,
+                    tx,
+                ) if isinstance(self, lsp_cap.WithRespondWorkspaceConfiguration):
+                    resp = await self.respond_workspace_configuration(
+                        jsonrpc.request_deserialize(
+                            raw_req, lsp_type.ConfigurationRequest
+                        )
+                    )
+                    tx.send(jsonrpc.response_serialize(resp))
+                case (raw_req, _):
+                    logger.warning("Unknown request: {}", raw_req)
+                case noti:
+                    logger.warning("Unknown notification: {}", noti)
+
+        async with aio.TaskGroup() as tg:
+            while req := await self._rt_args.receiver.receive():
+                tg.create_task(dispatch(req))

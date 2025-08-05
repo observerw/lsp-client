@@ -18,13 +18,13 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from loguru import logger
 from lsprotocol import converters, types
 
 # Type aliases for better readability
 type MockResponseGenerator = Callable[[dict[str, Any]], dict[str, Any]]
 type RequestHandler = Callable[[str, dict[str, Any] | None], Any]
 
-logger = logging.getLogger(__name__)
 
 # Get the LSP converter for serialization
 lsp_converter = converters.get_converter()
@@ -130,8 +130,6 @@ class MockLSPServer:
     _text_documents: dict[str, str] = field(default_factory=dict, init=False)
 
     def __post_init__(self):
-        self.logger = logging.getLogger("MockLSPServer")
-
         # Add default response providers for standard LSP methods
         self._add_default_providers()
 
@@ -216,7 +214,7 @@ class MockLSPServer:
                 return provider.generate_response(method, params)
 
         # Default fallback for unknown methods
-        self.logger.warning(f"No response provider found for method: {method}")
+        logger.warning(f"No response provider found for method: {method}")
         return {"error": f"Method not supported: {method}"}
 
     def _create_response_message(
@@ -278,7 +276,7 @@ class MockLSPServer:
             match = re.match(r"Content-Length:\s*(\d+)\r\n", header)
 
             if not match:
-                self.logger.error(f"Invalid header: {header}")
+                logger.error(f"Invalid header: {header}")
                 return None
 
             content_length = int(match.group(1))
@@ -295,7 +293,7 @@ class MockLSPServer:
             return json.loads(content)
 
         except Exception as e:
-            self.logger.error(f"Error reading message: {e}")
+            logger.error(f"Error reading message: {e}")
             return None
 
     async def _handle_request(self, message: dict[str, Any]) -> None:
@@ -305,10 +303,10 @@ class MockLSPServer:
         request_id = message.get("id")
 
         if method is None:
-            self.logger.error("Received message without method")
+            logger.error("Received message without method")
             return
 
-        self.logger.debug(f"Handling request: {method} (id: {request_id})")
+        logger.debug(f"Handling request: {method} (id: {request_id})")
 
         # Generate response
         result = self._generate_response(method, params)
@@ -320,7 +318,7 @@ class MockLSPServer:
 
     async def run(self) -> None:
         """Run the mock LSP server."""
-        self.logger.info("Starting MockLSPServer")
+        logger.info("Starting MockLSPServer")
 
         try:
             while not self._shutdown_requested:
@@ -332,11 +330,11 @@ class MockLSPServer:
                 await self._handle_request(message)
 
         except KeyboardInterrupt:
-            self.logger.info("Received keyboard interrupt")
+            logger.info("Received keyboard interrupt")
         except Exception as e:
-            self.logger.error(f"Error in server loop: {e}")
+            logger.error(f"Error in server loop: {e}")
         finally:
-            self.logger.info("MockLSPServer shutting down")
+            logger.info("MockLSPServer shutting down")
 
 
 # Utility functions for creating mock servers with common configurations

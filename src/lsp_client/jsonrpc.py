@@ -108,7 +108,7 @@ def response_deserialize[R](
             raise ValueError(f"Unexpected response: {unexpected}")
 
 
-def response_serialize(response: Response) -> RawResponsePackage:
+def response_serialize(response: Response[Any]) -> RawResponsePackage:
     return cast(RawResponsePackage, converter.unstructure(response))
 
 

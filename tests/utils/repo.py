@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio as aio
-import logging
 import shutil
 import tempfile
 import zipfile
@@ -9,8 +8,7 @@ from pathlib import Path
 
 import aiofiles
 import httpx
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 async def run_command(

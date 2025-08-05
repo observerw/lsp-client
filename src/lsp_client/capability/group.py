@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Protocol
+
 from lsp_client import lsp_cap
 
 
@@ -15,7 +17,8 @@ class FullFeaturedCapabilityGroup(
     lsp_cap.WithReceiveLogMessage,
     lsp_cap.WithReceiveShowMessage,
     lsp_cap.WithReceiveLogTrace,
-    lsp_cap.WithNotifyPublishDiagnostics,
+    lsp_cap.WithReceivePublishDiagnostics,
+    Protocol,
     # TODO sync with implemented capabilities
 ):
     """All capabilities."""

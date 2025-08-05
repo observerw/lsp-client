@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import asyncio as aio
-import logging
 from asyncio import Event
 from collections.abc import AsyncGenerator, Hashable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import NamedTuple, Self
-
-logger = logging.getLogger(__name__)
 
 
 class DataEvent[T](Event):
@@ -91,10 +88,13 @@ class OneShotReceiver[T]:
     _event: DataEvent[T]
 
     async def receive(self) -> T:
-        if not self._event.is_set():
-            raise RuntimeError("OneShotReceiver can only be used once")
-
         return await self._event.wait_data()
+
+    def try_receive(self) -> T | None:
+        if not self._event.is_set():
+            return None
+
+        return self._event.get_data()
 
     @property
     def closed(self) -> bool:
@@ -133,9 +133,6 @@ class ManyShotReceiver[T]:
     _event: ManyDataEvent[T]
 
     async def receive(self) -> list[T]:
-        if not self._event.is_set():
-            raise RuntimeError("ManyShotReceiver can only be used once")
-
         return await self._event.wait_data()
 
     @property

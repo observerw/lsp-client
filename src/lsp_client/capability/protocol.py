@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import logging
 from abc import abstractmethod
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from lsprotocol import types
-
-from lsp_client.jsonrpc import JsonRpcResponse
-from lsp_client.types import AnyPath
+from lsp_client import jsonrpc, lsp_type
+from lsp_client.types import AnyPath, Notification, Request
 from lsp_client.utils.path import AbsPath
 
 
@@ -21,7 +18,7 @@ class LSPCapabilityProtocol(Protocol):
 
     @classmethod
     @abstractmethod
-    def client_capability(cls) -> types.ClientCapabilities:
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
         """
         Return the client capabilities for this capability.
         This is used to register the capability with the LSP server.
@@ -31,8 +28,8 @@ class LSPCapabilityProtocol(Protocol):
     @abstractmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         """
         Check if the server supports this capability.
@@ -52,11 +49,11 @@ class LSPCapabilityClientProtocol(Protocol):
 
     @property
     @abstractmethod
-    def logger(self) -> logging.Logger: ...
+    def language_id(self) -> lsp_type.LanguageKind: ...
 
     @property
     @abstractmethod
-    def language_id(self) -> types.LanguageKind: ...
+    def workspace_folders(self) -> Sequence[lsp_type.WorkspaceFolder]: ...
 
     @abstractmethod
     @asynccontextmanager
@@ -65,8 +62,8 @@ class LSPCapabilityClientProtocol(Protocol):
     @abstractmethod
     async def request[R](
         self,
-        req: Any,
-        schema: type[JsonRpcResponse[R]],
+        req: Request,
+        schema: type[jsonrpc.Response[R]],
         *,
         file_paths: Sequence[AnyPath] = ...,
     ) -> R:
@@ -84,31 +81,7 @@ class LSPCapabilityClientProtocol(Protocol):
         """
 
     @abstractmethod
-    async def request_all[R](
-        self,
-        req: Any,
-        schema: type[JsonRpcResponse[R]],
-        *,
-        file_paths: Sequence[AnyPath] = ...,
-    ) -> Sequence[R]:
-        """
-        Send a request to all LSP servers. Only used for methods that needs to be sent to all servers, such as `initialize` and `shutdown`.
-
-        Returns:
-            Sequence[Any]: The responses from all LSP servers.
-        """
-
-    @abstractmethod
-    async def respond(self, resp: Any):
-        """
-        Respond the request from the LSP server.
-
-        Args:
-            resp (Any): The response to send back to the LSP server.
-        """
-
-    @abstractmethod
-    async def notify_all(self, msg: Any):
+    async def notify_all(self, msg: Notification):
         """
         Notify all LSP servers. Only used for methods that need to be sent to all servers, such as `initialized`.
 

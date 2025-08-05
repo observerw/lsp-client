@@ -7,25 +7,28 @@ References:
 
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Literal, final, override
+from typing import Any, Literal, final, override
 
+from loguru import logger
 from semver import Version
 
 from lsp_client import (
-    BaseLSPCapabilityClientArgs,
     LSPCapabilityClientBase,
     LSPClientBase,
-    WorkspaceFolder,
     lsp_cap,
     lsp_type,
 )
-from lsp_client.server import LSPServerPool
+from lsp_client.capability.client import ClientArgs, ClientRuntimeArgs
 
-logger = logging.getLogger(__name__)
+
+@dataclass(frozen=True)
+class TyConfig:
+    diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
+    log_level: Literal["error", "warn", "info", "debug", "trace"] = "info"
+    import_strategy: Literal["fromEnvironment", "useBundled"] = "fromEnvironment"
 
 
 @final
@@ -33,12 +36,31 @@ logger = logging.getLogger(__name__)
 class TyCapabilityClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRespondWorkspaceConfiguration,
-    LSPCapabilityClientBase,
+    LSPCapabilityClientBase[TyConfig],
 ):
     @property
     @override
     def language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.Python
+
+    @property
+    @override
+    def initialization_options(self) -> dict[str, Any]:
+        if not (config := self._extra):
+            return {}
+
+        return {
+            "settings": [
+                {
+                    "cwd": f.path,
+                    "workspace": f.uri,
+                    "importStrategy": config.import_strategy,
+                    "diagnosticMode": config.diagnostic_mode,
+                    "logLevel": config.log_level,
+                }
+                for f in self.workspace.values()
+            ]
+        }
 
     @override
     async def respond_workspace_configuration(
@@ -74,9 +96,7 @@ class TyCapabilityClient(
 @final
 @dataclass(frozen=True)
 class TyClient(LSPClientBase[TyCapabilityClient]):
-    diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
-    log_level: Literal["error", "warn", "info", "debug", "trace"] = "info"
-    import_strategy: Literal["fromEnvironment", "useBundled"] = "fromEnvironment"
+    config: TyConfig = TyConfig()
 
     @property
     @override
@@ -90,30 +110,12 @@ class TyClient(LSPClientBase[TyCapabilityClient]):
     @asynccontextmanager
     async def _start_client(
         self,
-        server: LSPServerPool,
-        workspace: Sequence[WorkspaceFolder],
+        args: ClientArgs,
+        runtime_args: ClientRuntimeArgs,
     ) -> AsyncGenerator[TyCapabilityClient]:
-        settings = [
-            {
-                "cwd": f.path,
-                "workspace": f.uri,
-                "importStrategy": self.import_strategy,
-                "diagnosticMode": self.diagnostic_mode,
-                "logLevel": self.log_level,
-            }
-            for f in workspace
-        ]
-
-        initialization_options = {
-            "settings": settings,
-        }
-
         async with TyCapabilityClient.start(
-            server=server,
-            args=BaseLSPCapabilityClientArgs(
-                workspace_folders=workspace,
-                initialization_options=initialization_options,
-                sync_file=self.sync_file,
-            ),
+            args=args,
+            runtime_args=runtime_args,
+            extra=self.config,
         ) as client:
             yield client

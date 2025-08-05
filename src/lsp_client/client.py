@@ -1,50 +1,43 @@
 from __future__ import annotations
 
-import logging
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Mapping, Sequence
+from collections.abc import AsyncGenerator, Mapping
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from functools import cached_property
+from dataclasses import dataclass
+from typing import Any
 
-from lsp_client.server import LSPServerInfo, LSPServerPool, ServerRequestQueue
+from lsp_client import jsonrpc
+from lsp_client.server import LSPServerPool
+from lsp_client.server.base import ServerArgs, ServerRuntimeArgs
 from lsp_client.types import AnyPath
 from lsp_client.utils.path import AbsPath
 
 from .capability.client import (
     ROOT_FOLDER_NAME,
+    ClientArgs,
+    ClientRuntimeArgs,
     LSPCapabilityClientBase,
     WorkspaceFolder,
 )
 
 
 @dataclass(frozen=True)
-class LSPClientBase[Client: LSPCapabilityClientBase](ABC):
-    sync_file: bool = True
-    """Whether to synchronize file (open, close, changed, etc.) when performing file-related operations."""
+class LSPClientBase[Client: LSPCapabilityClientBase[Any]](
+    ServerArgs,
+    ClientArgs,
+    ABC,
+):
+    buffer_size: int = 0
 
-    server_count: int | None = 1
-    """The number of LSP server processes to start. If None, defaults to the number of CPU cores."""
-
-    server_info: LSPServerInfo = field(default_factory=LSPServerInfo)
-    """Runtime information for the LSP server."""
-
-    pending_timeout: float | None = 10
-    """Timeout for pending requests in seconds."""
-
-    @cached_property
-    def logger(self) -> logging.Logger:
-        return logging.getLogger(self.__name__)
-
-    @abstractmethod
     @asynccontextmanager
+    @abstractmethod
     def _start_client(
         self,
-        server: LSPServerPool,
-        workspace: Sequence[WorkspaceFolder],
+        args: ClientArgs,
+        runtime_args: ClientRuntimeArgs,
     ) -> AsyncGenerator[Client]:
-        """Start the LSP client and yield the client instance."""
+        """Start the LSP capability client."""
 
     @asynccontextmanager
     async def start(
@@ -94,33 +87,37 @@ class LSPClientBase[Client: LSPCapabilityClientBase](ABC):
             case str() | os.PathLike() as root_folder_path:
                 workspace_folders = [
                     WorkspaceFolder(
-                        path=AbsPath(root_folder_path),
+                        uri=AbsPath(root_folder_path).as_uri(),
                         name=ROOT_FOLDER_NAME,
                     )
                 ]
             case _ as mapping:
                 workspace_folders = [
-                    WorkspaceFolder(path=AbsPath(path), name=name)
+                    WorkspaceFolder(uri=AbsPath(path).as_uri(), name=name)
                     for name, path in mapping.items()
                 ]
 
-        server_req_queue = ServerRequestQueue()
+        # client-side request channel
+        ctx, srx = jsonrpc.request_channel.create(self.buffer_size)
+        # server-side request channel
+        stx, crx = jsonrpc.request_channel.create(self.buffer_size)
+
         async with (
-            LSPServerPool.load(
-                server_cmd=self.server_cmd,
-                server_req_queue=server_req_queue,
-                process_count=self.server_count,
-                info=self.server_info,
-                pending_timeout=self.pending_timeout,
+            LSPServerPool.start(
+                args=self,
+                runtime_args=ServerRuntimeArgs(
+                    sender=stx,
+                    receiver=srx,
+                ),
             ) as server,
             self._start_client(
-                server,
-                workspace_folders,
+                args=self,
+                runtime_args=ClientRuntimeArgs(
+                    sender=ctx,
+                    receiver=crx,
+                    server_count=server.process_count,
+                    workspace_folders=workspace_folders,
+                ),
             ) as client,
         ):
             yield client
-
-    @property
-    @abstractmethod
-    def server_cmd(self) -> Sequence[str]:
-        """The command to start the LSP server."""

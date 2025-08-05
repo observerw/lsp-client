@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
+from loguru import logger
 from lsprotocol import types
 
 from lsp_client.types import AnyPath
 
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
-
-logger = logging.getLogger(__name__)
 
 
 @runtime_checkable

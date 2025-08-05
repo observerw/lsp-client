@@ -13,7 +13,8 @@ class RelPath(Path):
         *args: str | PathLike[str],
         base_path: str | PathLike | None = None,
     ) -> None:
-        if (path := Path(*args)).is_absolute():
+        path = Path(*args)
+        if path.is_absolute():
             base_path = Path(base_path) if base_path else Path.cwd()
             super().__init__(path.relative_to(base_path))
         else:
@@ -42,7 +43,8 @@ class AbsPath(Path):
         *args: str | PathLike[str],
         base_path: str | PathLike | None = None,
     ) -> None:
-        if (path := Path(*args)).is_absolute():
+        path = Path(*args)
+        if path.is_absolute():
             super().__init__(path)
         else:
             base_path = Path(base_path) if base_path else Path.cwd()

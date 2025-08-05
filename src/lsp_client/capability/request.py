@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from typing import Any, Protocol, TypeGuard, override, runtime_checkable
 
 from asyncio_addon import gather_all
+from loguru import logger
 
 from lsp_client import lsp_type
 from lsp_client.types import AnyPath, Position
 
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 from .utils import jsonrpc_uuid
-
-logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -200,11 +198,13 @@ class WithRequestDefinition(
         logger.debug("Server supports textDocument/definition checked")
 
     @staticmethod
-    def is_locations(result: list) -> TypeGuard[list[lsp_type.Location]]:
+    def is_locations(result: list[Any]) -> TypeGuard[list[lsp_type.Location]]:
         return all(isinstance(item, lsp_type.Location) for item in result)
 
     @staticmethod
-    def is_definition_links(result: list) -> TypeGuard[list[lsp_type.DefinitionLink]]:
+    def is_definition_links(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.DefinitionLink]]:
         return all(isinstance(item, lsp_type.LocationLink) for item in result)
 
     async def request_definition(
@@ -229,6 +229,8 @@ class WithRequestDefinition(
                 return locations
             case list() as links if self.is_definition_links(links):
                 return links
+            case _:
+                return
 
 
 @runtime_checkable
@@ -624,7 +626,7 @@ class WithRequestDocumentSymbolInformation(WithRequestDocumentSymbols, Protocol)
 
     @staticmethod
     def is_symbol_information(
-        result: list,
+        result: list[Any],
     ) -> TypeGuard[list[lsp_type.SymbolInformation]]:
         return all(isinstance(item, lsp_type.SymbolInformation) for item in result)
 
@@ -643,7 +645,9 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
     """
 
     @staticmethod
-    def is_document_symbols(result: list) -> TypeGuard[list[lsp_type.DocumentSymbol]]:
+    def is_document_symbols(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.DocumentSymbol]]:
         return all(isinstance(item, lsp_type.DocumentSymbol) for item in result)
 
     async def request_document_symbols(
@@ -652,6 +656,8 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
         match await self._request_document_symbols(file_path):
             case list() as symbols if self.is_document_symbols(symbols):
                 return symbols
+            case _:
+                return
 
 
 @runtime_checkable
@@ -716,7 +722,7 @@ class WithRequestWorkspaceSymbolInformation(WithRequestWorkspaceSymbols, Protoco
 
     @staticmethod
     def is_symbol_information(
-        result: list,
+        result: list[Any],
     ) -> TypeGuard[list[lsp_type.SymbolInformation]]:
         return all(isinstance(item, lsp_type.SymbolInformation) for item in result)
 
@@ -726,6 +732,8 @@ class WithRequestWorkspaceSymbolInformation(WithRequestWorkspaceSymbols, Protoco
         match await self._request_workspace_symbols(query):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
+            case _:
+                return
 
 
 @runtime_checkable
@@ -735,7 +743,9 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
     """
 
     @staticmethod
-    def is_workspace_symbols(result: list) -> TypeGuard[list[lsp_type.WorkspaceSymbol]]:
+    def is_workspace_symbols(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.WorkspaceSymbol]]:
         return all(isinstance(item, lsp_type.WorkspaceSymbol) for item in result)
 
     async def request_workspace_symbols(
@@ -744,3 +754,5 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
         match await self._request_workspace_symbols(query):
             case list() as symbols if self.is_workspace_symbols(symbols):
                 return symbols
+            case _:
+                return
