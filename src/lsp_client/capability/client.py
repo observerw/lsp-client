@@ -49,6 +49,9 @@ class ClientArgs:
     sync_file: bool = True
     """Whether to synchronize file (open, close, changed, etc.) when performing file-related operations."""
 
+    pending_timeout: float | None = 10.0
+    """Timeout for pending requests."""
+
 
 @dataclass(kw_only=True)
 class LSPCapabilityClientBase[T](
@@ -292,7 +295,7 @@ class LSPCapabilityClientBase[T](
             req = jsonrpc.request_serialize(req)
             tx, rx = jsonrpc.response_channel.create()
             await self._rt_args.sender.send((req, tx))
-            raw_resp = await rx.receive()
+            raw_resp = await rx.receive(timeout=self._args.pending_timeout)
             return jsonrpc.response_deserialize(raw_resp, schema)
 
     async def _request_many[R](
@@ -312,7 +315,7 @@ class LSPCapabilityClientBase[T](
         )
         await self._rt_args.sender.send((req, tx))
 
-        raw_resp = await rx.receive()
+        raw_resp = await rx.receive(timeout=self._args.pending_timeout)
         return [jsonrpc.response_deserialize(item, schema) for item in raw_resp]
 
     @override
@@ -440,6 +443,8 @@ class LSPCapabilityClientBase[T](
                     logger.warning("Unknown request: {}", raw_req)
                 case noti:
                     logger.warning("Unknown notification: {}", noti)
+
+            self._rt_args.receiver.task_done()
 
         async with aio.TaskGroup() as tg:
             while req := await self._rt_args.receiver.receive():

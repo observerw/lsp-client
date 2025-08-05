@@ -87,8 +87,8 @@ class OneShotSender[T]:
 class OneShotReceiver[T]:
     _event: DataEvent[T]
 
-    async def receive(self) -> T:
-        return await self._event.wait_data()
+    async def receive(self, *, timeout: float | None = None) -> T:
+        return await aio.wait_for(self._event.wait_data(), timeout=timeout)
 
     def try_receive(self) -> T | None:
         if not self._event.is_set():
@@ -132,8 +132,8 @@ class ManyShotSender[T]:
 class ManyShotReceiver[T]:
     _event: ManyDataEvent[T]
 
-    async def receive(self) -> list[T]:
-        return await self._event.wait_data()
+    async def receive(self, *, timeout: float | None = None) -> list[T]:
+        return await aio.wait_for(self._event.wait_data(), timeout=timeout)
 
     @property
     def closed(self) -> bool:

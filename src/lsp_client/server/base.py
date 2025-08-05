@@ -32,9 +32,6 @@ class ServerArgs:
     server_info: LSPServerInfo = field(default_factory=LSPServerInfo)
     """Runtime information for the LSP server."""
 
-    pending_timeout: float | None = 10
-    """Timeout for pending requests in seconds."""
-
     @property
     @abstractmethod
     def server_cmd(self) -> Sequence[str]:
@@ -163,6 +160,8 @@ class LSPServerPool:
             await instance._client_req_table.wait_complete()
             # all client side requests are responded
             logger.info("all client side requests are completed")
+
+            await instance._rt_args.receiver.join()
 
             for task in process_tasks:
                 assert task.cancel()
