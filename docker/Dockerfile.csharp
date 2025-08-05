@@ -1,0 +1,70 @@
+# Multi-platform C# development environment with language server support
+# Based on official Microsoft .NET SDK image
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine
+
+# Install additional packages for development
+RUN apk add --no-cache \
+    git \
+    curl \
+    bash \
+    vim \
+    nano \
+    unzip \
+    ca-certificates
+
+# Set environment variables
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+    DOTNET_NOLOGO=1 \
+    DOTNET_GENERATE_ASPNET_CERTIFICATE=false \
+    DOTNET_USE_POLLING_FILE_WATCHER=true \
+    NUGET_XMLDOC_MODE=skip
+
+# Install global .NET tools for development
+RUN dotnet tool install --global dotnet-format && \
+    dotnet tool install --global dotnet-ef && \
+    dotnet tool install --global Microsoft.dotnet-httprepl && \
+    dotnet tool install --global dotnet-outdated-tool && \
+    dotnet tool install --global dotnet-reportgenerator-globaltool
+
+# Add .NET tools to PATH
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+# Install OmniSharp language server (latest version) with multi-platform support
+ARG TARGETARCH
+RUN mkdir -p /opt/omnisharp && \
+    OMNISHARP_VERSION=$(curl -s https://api.github.com/repos/OmniSharp/omnisharp-roslyn/releases/latest | grep '"tag_name"' | cut -d'"' -f4) && \
+    case ${TARGETARCH} in \
+        amd64) OMNISHARP_ARCH="x64" ;; \
+        arm64) OMNISHARP_ARCH="arm64" ;; \
+        arm) OMNISHARP_ARCH="arm" ;; \
+        386) OMNISHARP_ARCH="x86" ;; \
+        *) OMNISHARP_ARCH="x64" ;; \
+    esac && \
+    echo "Installing OmniSharp for architecture: ${OMNISHARP_ARCH}" && \
+    curl -L "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/${OMNISHARP_VERSION}/omnisharp-linux-musl-${OMNISHARP_ARCH}-net6.0.tar.gz" -o /tmp/omnisharp.tar.gz && \
+    tar -xzf /tmp/omnisharp.tar.gz -C /opt/omnisharp && \
+    chmod +x /opt/omnisharp/OmniSharp && \
+    rm /tmp/omnisharp.tar.gz
+
+# Add OmniSharp to PATH
+ENV PATH="$PATH:/opt/omnisharp"
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Verify installations
+RUN dotnet --version && \
+    dotnet tool list --global && \
+    /opt/omnisharp/OmniSharp --version
+
+# Default command
+CMD ["/bin/bash"]
+
+# Labels for metadata
+LABEL maintainer="LSP Client Project" \
+      description="C# development environment with .NET SDK and OmniSharp language server" \
+      version="1.0" \
+      dotnet.version="9.0" \
+      omnisharp.included="true"

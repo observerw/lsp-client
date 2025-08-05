@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio as aio
 
-from lsp_client import Position
+from lsp_client import Position, logger
 from lsp_client.clients.ty import TyClient, TyConfig
+
+logger.enable("lsp_client")
 
 
 async def main():
