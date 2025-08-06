@@ -71,16 +71,14 @@ class LSPCapabilityClientBase[T](
 
     _closed: bool = False
 
+    @abstractmethod
+    def check_server_compatibility(self, info: types.ServerInfo | None):
+        """Check if the available server capabilities are compatible with the client."""
+
     @property
     @override
-    def workspace_folders(self) -> Sequence[lsp_type.WorkspaceFolder]:
-        return [
-            lsp_type.WorkspaceFolder(
-                uri=folder.path.as_uri(),
-                name=folder.name,
-            )
-            for folder in self._runtime.workspace_folders
-        ]
+    def workspace_folders(self) -> Sequence[WorkspaceFolder]:
+        return [*self.workspace.values()]
 
     @cached_property
     def workspace(self) -> dict[str, WorkspaceFolder]:
@@ -116,18 +114,6 @@ class LSPCapabilityClientBase[T](
     def initialization_options(self) -> dict[str, Any]:
         return {}
 
-    def auto_install(self, base_path: AnyPath | None = None) -> None:
-        """
-        Automatically install the LSP server.
-
-        Args:
-            base_path (AnyPath | None): The base path to install the server. If None, the server will be installed in the default location.
-        """
-
-        raise NotImplementedError(
-            f"{self.__class__.__name__} does not provide auto-installation of LSP server. Please install the server manually."
-        )
-
     @classmethod
     @asynccontextmanager
     async def start(
@@ -155,11 +141,11 @@ class LSPCapabilityClientBase[T](
                 locale="en-us",
                 initialization_options=instance.initialization_options,
                 trace=types.TraceValue.Verbose,
-                workspace_folders=list(runtime_args.workspace_folders),
+                workspace_folders=runtime_args.workspace_folders,
             )
 
             # initialize repo
-            _ = await instance.initialize(initialize_params)
+            _ = await instance._initialize(initialize_params)
 
             # prepare for server side requests
             server_req_worker_task = tg.create_task(instance._server_request_worker())
@@ -169,7 +155,7 @@ class LSPCapabilityClientBase[T](
                 # all client side requests are sent
             finally:
                 try:
-                    _ = await instance.shutdown()
+                    _ = await instance._shutdown()
                 except TimeoutError as e:
                     raise TimeoutError(
                         "LSP client shutdown timed out, server failed to exit gracefully."
@@ -181,7 +167,7 @@ class LSPCapabilityClientBase[T](
                 # all server side requests are handled
             # all client side requests are sent
         # all client side requests are responded
-        await instance.exit()  # request server to exit
+        await instance._exit()  # request server to exit
         instance._closed = True
 
     # all server processes are exited
@@ -331,7 +317,7 @@ class LSPCapabilityClientBase[T](
 
         return self._request_tg.create_task(coro)
 
-    async def initialize(self, params: types.InitializeParams):
+    async def _initialize(self, params: types.InitializeParams):
         """Initialize parameters for the LSP client."""
 
         results = await self._request_many(
@@ -362,7 +348,7 @@ class LSPCapabilityClientBase[T](
             )
         )
 
-    async def shutdown(self):
+    async def _shutdown(self):
         """
         `shutdown` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
         """
@@ -374,79 +360,68 @@ class LSPCapabilityClientBase[T](
             schema=types.ShutdownResponse,
         )
 
-    async def exit(self) -> None:
+    async def _exit(self) -> None:
         """
         `exit` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit
         """
 
         await self.notify_all(types.ExitNotification())
 
-    @abstractmethod
-    def check_server_compatibility(self, info: types.ServerInfo | None):
-        """Check if the available server capabilities are compatible with the client."""
+    async def _dispatch_server_request(self, req: jsonrpc.ChannelRequest):
+        match req:
+            case {"method": types.WINDOW_LOG_MESSAGE} if isinstance(
+                self, lsp_cap.WithReceiveLogMessage
+            ):
+                await self.receive_log_message(
+                    jsonrpc.request_deserialize(req, lsp_type.LogMessageNotification)
+                )
+            case {"method": types.WINDOW_SHOW_MESSAGE} if isinstance(
+                self, lsp_cap.WithReceiveShowMessage
+            ):
+                await self.receive_show_message(
+                    jsonrpc.request_deserialize(req, lsp_type.ShowMessageNotification)
+                )
+            case ({"method": types.WINDOW_SHOW_MESSAGE_REQUEST} as raw_req, tx) if (
+                isinstance(self, lsp_cap.WithRespondShowMessageRequest)
+            ):
+                resp = await self.respond_show_message(
+                    jsonrpc.request_deserialize(raw_req, lsp_type.ShowMessageRequest)
+                )
+                tx.send(jsonrpc.response_serialize(resp))
+            case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
+                self, lsp_cap.WithReceivePublishDiagnostics
+            ):
+                await self.receive_publish_diagnostics(
+                    jsonrpc.request_deserialize(
+                        req, lsp_type.PublishDiagnosticsNotification
+                    )
+                )
+            case ({"method": types.WORKSPACE_WORKSPACE_FOLDERS} as raw_req, tx) if (
+                isinstance(self, lsp_cap.WithRespondWorkspaceFolders)
+            ):
+                resp = await self.respond_workspace_folders(
+                    jsonrpc.request_deserialize(
+                        raw_req, lsp_type.WorkspaceFoldersRequest
+                    )
+                )
+                tx.send(jsonrpc.response_serialize(resp))
+            case (
+                {"method": types.WORKSPACE_CONFIGURATION} as raw_req,
+                tx,
+            ) if isinstance(self, lsp_cap.WithRespondWorkspaceConfiguration):
+                resp = await self.respond_workspace_configuration(
+                    jsonrpc.request_deserialize(raw_req, lsp_type.ConfigurationRequest)
+                )
+                tx.send(jsonrpc.response_serialize(resp))
+            case (raw_req, _):
+                # if server sent a request that client can't handle, raise an error
+                raise ValueError(f"Unexpected server-side request: {raw_req}")
+            case noti:
+                logger.warning("Unknown notification: {}", noti)
+
+        self._runtime.receiver.task_done()
 
     async def _server_request_worker(self):
-        async def dispatch(req: jsonrpc.ChannelRequest):
-            match req:
-                case {"method": types.WINDOW_LOG_MESSAGE} if isinstance(
-                    self, lsp_cap.WithReceiveLogMessage
-                ):
-                    await self.receive_log_message(
-                        jsonrpc.request_deserialize(
-                            req, lsp_type.LogMessageNotification
-                        )
-                    )
-                case {"method": types.WINDOW_SHOW_MESSAGE} if isinstance(
-                    self, lsp_cap.WithReceiveShowMessage
-                ):
-                    await self.receive_show_message(
-                        jsonrpc.request_deserialize(
-                            req, lsp_type.ShowMessageNotification
-                        )
-                    )
-                case ({"method": types.WINDOW_SHOW_MESSAGE_REQUEST} as raw_req, tx) if (
-                    isinstance(self, lsp_cap.WithRespondShowMessageRequest)
-                ):
-                    resp = await self.respond_show_message(
-                        jsonrpc.request_deserialize(
-                            raw_req, lsp_type.ShowMessageRequest
-                        )
-                    )
-                    tx.send(jsonrpc.response_serialize(resp))
-                case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
-                    self, lsp_cap.WithReceivePublishDiagnostics
-                ):
-                    await self.receive_publish_diagnostics(
-                        jsonrpc.request_deserialize(
-                            req, lsp_type.PublishDiagnosticsNotification
-                        )
-                    )
-                case ({"method": types.WORKSPACE_WORKSPACE_FOLDERS} as raw_req, tx) if (
-                    isinstance(self, lsp_cap.WithRespondWorkspaceFolders)
-                ):
-                    resp = await self.respond_workspace_folders(
-                        jsonrpc.request_deserialize(
-                            raw_req, lsp_type.WorkspaceFoldersRequest
-                        )
-                    )
-                    tx.send(jsonrpc.response_serialize(resp))
-                case (
-                    {"method": types.WORKSPACE_CONFIGURATION} as raw_req,
-                    tx,
-                ) if isinstance(self, lsp_cap.WithRespondWorkspaceConfiguration):
-                    resp = await self.respond_workspace_configuration(
-                        jsonrpc.request_deserialize(
-                            raw_req, lsp_type.ConfigurationRequest
-                        )
-                    )
-                    tx.send(jsonrpc.response_serialize(resp))
-                case (raw_req, _):
-                    logger.warning("Unknown request: {}", raw_req)
-                case noti:
-                    logger.warning("Unknown notification: {}", noti)
-
-            self._runtime.receiver.task_done()
-
         async with aio.TaskGroup() as tg:
             while req := await self._runtime.receiver.receive():
-                tg.create_task(dispatch(req))
+                tg.create_task(self._dispatch_server_request(req))
