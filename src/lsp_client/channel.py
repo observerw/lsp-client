@@ -135,6 +135,12 @@ class ManyShotReceiver[T]:
     async def receive(self, *, timeout: float | None = None) -> list[T]:
         return await aio.wait_for(self._event.wait_data(), timeout=timeout)
 
+    def try_receive(self) -> list[T] | None:
+        if not self._event.is_set():
+            return None
+
+        return self._event.get_data()
+
     @property
     def closed(self) -> bool:
         return self._event.is_set()
@@ -161,8 +167,6 @@ type ShotReceiver[T] = OneShotReceiver[T] | ManyShotReceiver[T]
 class ShotTable[T]:
     """Dispatch data to one-shot senders by ID."""
 
-    timeout: float | None = None
-
     _cond: aio.Condition = field(default_factory=aio.Condition)
     _pending: dict[Hashable, ShotSender[T]] = field(default_factory=dict)
 
@@ -188,9 +192,12 @@ class ShotTable[T]:
         sender.send(data)
 
         async with self._cond:
-            if sender.closed:
-                self._pending.pop(id)
-                self._cond.notify_all()
+            if not sender.closed:
+                return
+            self._pending.pop(id)
+            if self._pending:
+                return
+            self._cond.notify_all()
 
     async def wait_complete(self) -> None:
         """Wait until all pending one-shot senders are resolved."""
@@ -226,6 +233,11 @@ class Receiver[T]:
             self._queue.task_done()
 
     async def receive(self) -> T:
+        return await self._queue.get()
+
+    async def try_receive(self) -> T | None:
+        if self._queue.empty():
+            return None
         return await self._queue.get()
 
     def task_done(self) -> None:

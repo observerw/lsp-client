@@ -129,26 +129,6 @@ class StdioServer(LSPServerBase):
 
         return self._runtime
 
-    async def _process_worker(self, process: StdioProcess):
-        """Worker to handle incoming packages from the LSP server's stdout. Must terminate by cancellation."""
-
-        async def handle(package: jsonrpc.RawPackage):
-            match package:
-                case {"result": _, "id": id} | {"error": _, "id": id} as resp:
-                    await self.runtime.resp_table.send(id, resp)
-                case {"id": id, "method": _} as req:
-                    tx, rx = jsonrpc.response_channel.create()
-                    await self.runtime.sender.send((req, tx))
-                    resp = await rx.receive()
-                    await process.send_package(resp)
-                case {"method": _} as noti:
-                    await self.runtime.sender.send(noti)
-
-        async with aio.TaskGroup() as tg:
-            while True:
-                package = await process.receive_package()
-                tg.create_task(handle(package))
-
     @contextmanager
     def next_server(self) -> Generator[StdioProcess]:
         yield random.choice(self.runtime.processes)
@@ -238,3 +218,23 @@ class StdioServer(LSPServerBase):
             await gather_all(process.shutdown() for process in self.runtime.processes)
 
             self._runtime = None
+
+    async def _process_worker(self, process: StdioProcess):
+        """Worker to handle incoming packages from the LSP server's stdout. Must terminate by cancellation."""
+
+        async def handle(package: jsonrpc.RawPackage):
+            match package:
+                case {"result": _, "id": id} | {"error": _, "id": id} as resp:
+                    await self.runtime.resp_table.send(id, resp)
+                case {"id": id, "method": _} as req:
+                    tx, rx = jsonrpc.response_channel.create()
+                    await self.runtime.sender.send((req, tx))
+                    resp = await rx.receive()
+                    await process.send_package(resp)
+                case {"method": _} as noti:
+                    await self.runtime.sender.send(noti)
+
+        async with aio.TaskGroup() as tg:
+            while True:
+                package = await process.receive_package()
+                tg.create_task(handle(package))

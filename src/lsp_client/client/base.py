@@ -74,9 +74,9 @@ class LSPClientBase(
     @abstractmethod
     def create_initialization_options(self) -> dict[str, Any] | None: ...
 
+    @abstractmethod
     def check_server_compatibility(self, info: types.ServerInfo | None):
         """Check if the available server capabilities are compatible with the client."""
-        return
 
     @property
     def runtime(self) -> ClientRuntime:
@@ -261,7 +261,9 @@ class LSPClientBase(
             )
 
     def create_request[Task](self, coro: aio._CoroutineLike[Task]) -> aio.Task[Task]:
-        return self.runtime.tg.create_task(coro)
+        return self.runtime.tg.create_task(
+            aio.wait_for(coro, timeout=self.pending_timeout)
+        )
 
     @override
     async def _request[R](
