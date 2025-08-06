@@ -175,7 +175,6 @@ class LSPClientBase(
                 # all client side requests are sent
             # all client side requests are responded
             await self._exit()  # request server to exit
-            self._closed = True
 
     # all server processes are exited
 
@@ -274,7 +273,10 @@ class LSPClientBase(
     ) -> R:
         async with self.open_files(*file_paths):
             req = jsonrpc.request_serialize(req)
-            raw_resp = await self.runtime.server.request(req)
+            raw_resp = await aio.wait_for(
+                self.runtime.server.request(req),
+                timeout=self.pending_timeout,
+            )
             return jsonrpc.response_deserialize(raw_resp, schema)
 
     async def _request_all[R](
@@ -287,13 +289,19 @@ class LSPClientBase(
         """
 
         req = jsonrpc.request_serialize(req)
-        raw_resp = await self.runtime.server.request_all(req)
+        raw_resp = await aio.wait_for(
+            self.runtime.server.request_all(req),
+            timeout=self.pending_timeout,
+        )
         return [jsonrpc.response_deserialize(item, schema) for item in raw_resp]
 
     @override
     async def _notify(self, msg: Notification) -> None:
         noti = jsonrpc.notification_serialize(msg)
-        await self.runtime.server.notify(noti)
+        await aio.wait_for(
+            self.runtime.server.notify(noti),
+            timeout=self.pending_timeout,
+        )
 
     async def _initialize(self, params: types.InitializeParams):
         """Initialize parameters for the LSP client."""
@@ -402,4 +410,9 @@ class LSPClientBase(
     async def _server_request_worker(self):
         async with aio.TaskGroup() as tg:
             while req := await self.runtime.server.server_request_receiver.receive():
-                tg.create_task(self._dispatch_server_request(req))
+                tg.create_task(
+                    aio.wait_for(
+                        self._dispatch_server_request(req),
+                        timeout=self.pending_timeout,
+                    )
+                )
