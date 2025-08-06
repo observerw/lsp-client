@@ -53,7 +53,14 @@ class LSPCapabilityClientProtocol(Protocol):
 
     @abstractmethod
     @asynccontextmanager
-    def open_files(self, *file_paths: AnyPath) -> AsyncGenerator[None]: ...
+    def open_files(self, *file_paths: AnyPath) -> AsyncGenerator[None]:
+        """Open files in the client.
+
+        This method is used to indicate that the files are opened in the client.
+
+        Args:
+            file_paths (Sequence[AnyPath]): The file paths to open.
+        """
 
     @abstractmethod
     async def _request[R](
