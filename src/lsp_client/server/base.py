@@ -40,7 +40,7 @@ class ServerArgs:
 
 @dataclass
 class LSPServerPool:
-    _rt_args: ServerRuntimeArgs
+    _runtime: ServerRuntimeArgs
     _args: ServerArgs
 
     _client_req_table: jsonrpc.ResponseTable
@@ -67,11 +67,11 @@ class LSPServerPool:
                     await self._client_req_table.send(id, resp)
                 case {"id": id, "method": _} as req:
                     tx, rx = jsonrpc.response_channel.create()
-                    await self._rt_args.sender.send((req, tx))
+                    await self._runtime.sender.send((req, tx))
                     resp = await rx.receive()
                     await process.send_package(resp)
                 case {"method": _} as noti:
-                    await self._rt_args.sender.send(noti)
+                    await self._runtime.sender.send(noti)
 
         async with aio.TaskGroup() as tg:
             while True:
@@ -110,11 +110,11 @@ class LSPServerPool:
                     )
 
             # don't forget!
-            self._rt_args.receiver.task_done()
+            self._runtime.receiver.task_done()
 
         async with aio.TaskGroup() as tg:
             while True:
-                req = await self._rt_args.receiver.receive()
+                req = await self._runtime.receiver.receive()
                 tg.create_task(handle(req))
 
     @classmethod
@@ -137,7 +137,7 @@ class LSPServerPool:
         )
 
         instance = cls(
-            _rt_args=runtime_args,
+            _runtime=runtime_args,
             _args=args,
             _client_req_table=jsonrpc.ResponseTable(),
             _processes=processes,
@@ -161,7 +161,7 @@ class LSPServerPool:
             # all client side requests are responded
             logger.info("all client side requests are completed")
 
-            await instance._rt_args.receiver.join()
+            await instance._runtime.receiver.join()
 
             for task in process_tasks:
                 assert task.cancel()

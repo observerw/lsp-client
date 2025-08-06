@@ -62,7 +62,7 @@ class LSPCapabilityClientBase[T](
     LSPCapabilityClientProtocol,
     ABC,
 ):
-    _rt_args: ClientRuntimeArgs
+    _runtime: ClientRuntimeArgs
     _args: ClientArgs
     _extra: T | None
 
@@ -79,13 +79,13 @@ class LSPCapabilityClientBase[T](
                 uri=folder.path.as_uri(),
                 name=folder.name,
             )
-            for folder in self._rt_args.workspace_folders
+            for folder in self._runtime.workspace_folders
         ]
 
     @cached_property
     def workspace(self) -> dict[str, WorkspaceFolder]:
         """Workspace folders indexed by their URIs."""
-        return {folder.name: folder for folder in self._rt_args.workspace_folders}
+        return {folder.name: folder for folder in self._runtime.workspace_folders}
 
     @cached_property
     def is_single_root(self) -> bool:
@@ -139,7 +139,7 @@ class LSPCapabilityClientBase[T](
     ) -> AsyncGenerator[Self, Any]:
         async with aio.TaskGroup() as tg:
             instance = cls(
-                _rt_args=runtime_args,
+                _runtime=runtime_args,
                 _args=args,
                 _extra=extra,
                 _request_tg=tg,
@@ -176,7 +176,7 @@ class LSPCapabilityClientBase[T](
                     ) from e
                 # request server to shutdown (but not exit)
 
-                await instance._rt_args.receiver.join()
+                await instance._runtime.receiver.join()
                 assert server_req_worker_task.cancel()
                 # all server side requests are handled
             # all client side requests are sent
@@ -295,7 +295,7 @@ class LSPCapabilityClientBase[T](
         async with self.open_files(*file_paths):
             req = jsonrpc.request_serialize(req)
             tx, rx = jsonrpc.response_channel.create()
-            await self._rt_args.sender.send((req, tx))
+            await self._runtime.sender.send((req, tx))
             raw_resp = await rx.receive(timeout=self._args.pending_timeout)
             return jsonrpc.response_deserialize(raw_resp, schema)
 
@@ -312,9 +312,9 @@ class LSPCapabilityClientBase[T](
 
         req = jsonrpc.request_serialize(req)
         tx, rx = jsonrpc.many_response_channel.create(
-            expect_count=self._rt_args.server_count
+            expect_count=self._runtime.server_count
         )
-        await self._rt_args.sender.send((req, tx))
+        await self._runtime.sender.send((req, tx))
 
         raw_resp = await rx.receive(timeout=self._args.pending_timeout)
         return [jsonrpc.response_deserialize(item, schema) for item in raw_resp]
@@ -324,7 +324,7 @@ class LSPCapabilityClientBase[T](
         self._check_closed()
 
         noti = jsonrpc.notification_serialize(msg)
-        await self._rt_args.sender.send(noti)
+        await self._runtime.sender.send(noti)
 
     def create_request[Task](self, coro: aio._CoroutineLike[Task]) -> aio.Task[Task]:
         self._check_closed()
@@ -445,8 +445,8 @@ class LSPCapabilityClientBase[T](
                 case noti:
                     logger.warning("Unknown notification: {}", noti)
 
-            self._rt_args.receiver.task_done()
+            self._runtime.receiver.task_done()
 
         async with aio.TaskGroup() as tg:
-            while req := await self._rt_args.receiver.receive():
+            while req := await self._runtime.receiver.receive():
                 tg.create_task(dispatch(req))
