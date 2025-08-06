@@ -12,8 +12,8 @@ from loguru import logger
 from semver import Version
 
 from lsp_client import lsp_cap, lsp_type
-from lsp_client.client.stdio import StdioClient
-from lsp_client.server.stdio import StdioServer
+from lsp_client.client.stdio import DockerStdioClient
+from lsp_client.server.stdio import DockerStdioServer, StdioServer
 
 
 @final
@@ -30,9 +30,21 @@ class BasedPyrightServer(StdioServer):
 
 @final
 @dataclass
+class BasedPyrightDockerServer(DockerStdioServer):
+    @property
+    @override
+    def docker_args(self) -> Sequence[str]:
+        return (
+            "mcr.microsoft.com/pyright/langserver:1.29.0",
+            "--stdio",
+        )
+
+
+@final
+@dataclass
 class BasedPyrightClient(
     lsp_cap.FullFeaturedCapabilityGroup,
-    StdioClient,
+    DockerStdioClient,
 ):
     @property
     @override
@@ -58,7 +70,8 @@ class BasedPyrightClient(
 
     @override
     def create_server(self) -> StdioServer:
-        return BasedPyrightServer(
+        Server = BasedPyrightDockerServer if self.docker else BasedPyrightServer
+        return Server(
             process_count=self.server_count,
             info=self.server_info,
         )

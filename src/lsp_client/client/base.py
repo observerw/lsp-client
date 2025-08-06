@@ -25,31 +25,19 @@ from lsp_client.capability.protocol import (
     LSPCapabilityProtocol,
 )
 from lsp_client.server.base import LSPServerBase
-from lsp_client.types import AnyPath, Notification
+from lsp_client.types import AnyPath, Notification, Workspace, WorkspaceFolder
 from lsp_client.utils.attrs import attrs_merges
 from lsp_client.utils.path import AbsPath
 
 ROOT_FOLDER_NAME = "__root__"
 
 
-@attrs.define
-class WorkspaceFolder(lsp_type.WorkspaceFolder):
-    @cached_property
-    def path(self) -> AbsPath:
-        return AbsPath.from_uri(self.uri)
-
-
 @final
 @dataclass(frozen=True)
 class ClientRuntime:
     server: LSPServerBase
-    workspace_folders: Sequence[WorkspaceFolder]
+    workspace: Workspace
     tg: aio.TaskGroup
-
-    @cached_property
-    def workspace(self) -> dict[str, WorkspaceFolder]:
-        """Workspace folders indexed by their URIs."""
-        return {folder.name: folder for folder in self.workspace_folders}
 
 
 @dataclass(kw_only=True)
@@ -88,7 +76,7 @@ class LSPClientBase(
     @property
     @override
     def workspace_folders(self) -> Sequence[WorkspaceFolder]:
-        return self.runtime.workspace_folders
+        return [*self.runtime.workspace.values()]
 
     @classmethod
     def client_capabilities(cls) -> types.ClientCapabilities:
@@ -116,24 +104,24 @@ class LSPClientBase(
     ) -> AsyncGenerator[Self]:
         match workspace:
             case str() | os.PathLike() as root_folder_path:
-                workspace_folders = [
-                    WorkspaceFolder(
+                formatted_workspace = {
+                    ROOT_FOLDER_NAME: WorkspaceFolder(
                         uri=AbsPath(root_folder_path).as_uri(),
                         name=ROOT_FOLDER_NAME,
                     )
-                ]
+                }
             case _ as mapping:
-                workspace_folders = [
-                    WorkspaceFolder(uri=AbsPath(path).as_uri(), name=name)
+                formatted_workspace = {
+                    name: WorkspaceFolder(uri=AbsPath(path).as_uri(), name=name)
                     for name, path in mapping.items()
-                ]
+                }
 
         server = self.create_server()
-        async with server.serve() as server:
+        async with server.serve(workspace=formatted_workspace) as server:
             async with aio.TaskGroup() as tg:
                 self._runtime = ClientRuntime(
                     server=server,
-                    workspace_folders=workspace_folders,
+                    workspace=formatted_workspace,
                     tg=tg,
                 )
 
@@ -147,7 +135,7 @@ class LSPClientBase(
                     locale="en-us",
                     initialization_options=self.create_initialization_options(),
                     trace=types.TraceValue.Verbose,
-                    workspace_folders=workspace_folders,
+                    workspace_folders=self.workspace_folders,
                 )
 
                 # initialize repo

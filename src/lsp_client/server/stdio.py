@@ -15,6 +15,7 @@ from asyncio_addon import gather_all
 from loguru import logger
 
 from lsp_client import jsonrpc
+from lsp_client.types import Workspace
 
 from .base import LSPServerBase
 from .jsonrpc import read_raw_package, write_raw_package
@@ -101,6 +102,7 @@ class StdioProcess:
 
 @dataclass
 class StdioServerRuntime:
+    workspace: Workspace
     resp_table: jsonrpc.ResponseTable
     processes: list[StdioProcess]
     tg: aio.TaskGroup
@@ -169,7 +171,7 @@ class StdioServer(LSPServerBase):
 
     @override
     @asynccontextmanager
-    async def serve(self) -> AsyncGenerator[Self]:
+    async def serve(self, workspace: Workspace) -> AsyncGenerator[Self]:
         if self._runtime:
             yield self
 
@@ -189,6 +191,7 @@ class StdioServer(LSPServerBase):
             async with aio.TaskGroup() as tg:
                 self._runtime = StdioServerRuntime(
                     resp_table=jsonrpc.ResponseTable(),
+                    workspace=workspace,
                     tg=tg,
                     processes=[*processes],
                     sender=sender,
@@ -238,3 +241,21 @@ class StdioServer(LSPServerBase):
             while True:
                 package = await process.receive_package()
                 tg.create_task(handle(package))
+
+
+@dataclass
+class DockerStdioServer(StdioServer):
+    @property
+    @abstractmethod
+    def docker_args(self) -> Sequence[str]: ...
+
+    @property
+    @override
+    def server_cmd(self) -> Sequence[str]:
+        return (
+            "docker",
+            "run",
+            "--rm",
+            "-i",
+            *self.docker_args,
+        )

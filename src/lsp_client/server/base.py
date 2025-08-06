@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Self
 
 from lsp_client import jsonrpc
+from lsp_client.types import Workspace
 
 
 @dataclass(kw_only=True)
@@ -30,4 +31,4 @@ class LSPServerBase(ABC):
 
     @asynccontextmanager
     @abstractmethod
-    def serve(self) -> AsyncGenerator[Self]: ...
+    def serve(self, workspace: Workspace) -> AsyncGenerator[Self]: ...

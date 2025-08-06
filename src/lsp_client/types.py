@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
+from functools import cached_property
+from pathlib import Path
 from typing import Protocol
 
+import attrs
 from attrs import AttrsInstance
 from lsprotocol import types as lsp_type
 
@@ -30,3 +34,13 @@ class Response[T](Protocol):
     """
 
     result: T
+
+
+@attrs.define
+class WorkspaceFolder(lsp_type.WorkspaceFolder):
+    @cached_property
+    def path(self) -> Path:
+        return Path.from_uri(self.uri)
+
+
+type Workspace = Mapping[str, WorkspaceFolder]

@@ -21,3 +21,11 @@ class StdioClient(LSPClientBase):
     @abstractmethod
     def create_server(self) -> StdioServer:
         """Create a stdio server instance."""
+
+
+@dataclass
+class DockerStdioClient(StdioClient):
+    """LSP client with docker support."""
+
+    docker: bool = False
+    """Whether to run the lsp server in a docker container."""
