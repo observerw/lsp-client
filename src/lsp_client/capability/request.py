@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from typing import Any, Protocol, TypeGuard, override, runtime_checkable
 
 from asyncio_addon import gather_all
-from lsprotocol import types
+from loguru import logger
 
+from lsp_client import lsp_type
 from lsp_client.types import AnyPath, Position
 
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 from .utils import jsonrpc_uuid
-
-logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -27,10 +25,10 @@ class WithRequestInlineCompletions(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                inline_completion=types.InlineCompletionClientCapabilities()
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                inline_completion=lsp_type.InlineCompletionClientCapabilities()
             )
         )
 
@@ -38,8 +36,8 @@ class WithRequestInlineCompletions(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.inline_completion_provider
         logger.debug("Server supports textDocument/inlineCompletion checked")
@@ -48,24 +46,27 @@ class WithRequestInlineCompletions(
         self,
         file_path: AnyPath,
         position: Position,
-    ) -> Sequence[types.InlineCompletionItem] | None:
-        match await self.request(
-            types.InlineCompletionRequest(
+        *,
+        info: lsp_type.SelectedCompletionInfo | None = None,
+    ) -> Sequence[lsp_type.InlineCompletionItem] | None:
+        match await self._request(
+            lsp_type.InlineCompletionRequest(
                 id=jsonrpc_uuid(),
-                params=types.InlineCompletionParams(
-                    context=types.InlineCompletionContext(
-                        trigger_kind=types.InlineCompletionTriggerKind.Automatic,
+                params=lsp_type.InlineCompletionParams(
+                    context=lsp_type.InlineCompletionContext(
+                        trigger_kind=lsp_type.InlineCompletionTriggerKind.Automatic,
+                        selected_completion_info=info,
                     ),
-                    text_document=types.TextDocumentIdentifier(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                 ),
             ),
-            schema=types.InlineCompletionResponse,
+            schema=lsp_type.InlineCompletionResponse,
             file_paths=[file_path],
         ):
-            case types.InlineCompletionList(items=items) | items:
+            case lsp_type.InlineCompletionList(items=items) | items:
                 return items
 
 
@@ -81,10 +82,10 @@ class WithRequestExecuteCommand(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            workspace=types.WorkspaceClientCapabilities(
-                execute_command=types.ExecuteCommandClientCapabilities()
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            workspace=lsp_type.WorkspaceClientCapabilities(
+                execute_command=lsp_type.ExecuteCommandClientCapabilities()
             )
         )
 
@@ -92,24 +93,24 @@ class WithRequestExecuteCommand(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.execute_command_provider
         logger.debug("Server supports workspace/executeCommand checked")
 
     async def request_execute_command(
-        self, command: str, arguments: Sequence[Any] | None = None
+        self, command: str, *arguments: Any
     ) -> Any | None:
-        return await self.request(
-            types.ExecuteCommandRequest(
+        return await self._request(
+            lsp_type.ExecuteCommandRequest(
                 id=jsonrpc_uuid(),
-                params=types.ExecuteCommandParams(
+                params=lsp_type.ExecuteCommandParams(
                     command=command,
                     arguments=arguments,
                 ),
             ),
-            schema=types.ExecuteCommandResponse,
+            schema=lsp_type.ExecuteCommandResponse,
         )
 
 
@@ -125,10 +126,10 @@ class WithRequestReferences(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                references=types.ReferenceClientCapabilities()
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                references=lsp_type.ReferenceClientCapabilities()
             )
         )
 
@@ -136,8 +137,8 @@ class WithRequestReferences(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.references_provider
         logger.debug("Server supports textDocument/references checked")
@@ -147,22 +148,22 @@ class WithRequestReferences(
         file_path: AnyPath,
         position: Position,
         *,
-        include_declaration: bool = False,
-    ) -> Sequence[types.Location] | None:
-        return await self.request(
-            types.ReferencesRequest(
+        include_declaration: bool = True,
+    ) -> Sequence[lsp_type.Location] | None:
+        return await self._request(
+            lsp_type.ReferencesRequest(
                 id=jsonrpc_uuid(),
-                params=types.ReferenceParams(
-                    context=types.ReferenceContext(
+                params=lsp_type.ReferenceParams(
+                    context=lsp_type.ReferenceContext(
                         include_declaration=include_declaration
                     ),
-                    text_document=types.TextDocumentIdentifier(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                 ),
             ),
-            schema=types.ReferencesResponse,
+            schema=lsp_type.ReferencesResponse,
             file_paths=[file_path],
         )
 
@@ -179,10 +180,10 @@ class WithRequestDefinition(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                definition=types.DefinitionClientCapabilities(link_support=True)
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                definition=lsp_type.DefinitionClientCapabilities(link_support=True)
             )
         )
 
@@ -190,42 +191,46 @@ class WithRequestDefinition(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.definition_provider
         logger.debug("Server supports textDocument/definition checked")
 
     @staticmethod
-    def is_locations(result: list) -> TypeGuard[list[types.Location]]:
-        return all(isinstance(item, types.Location) for item in result)
+    def is_locations(result: list[Any]) -> TypeGuard[list[lsp_type.Location]]:
+        return all(isinstance(item, lsp_type.Location) for item in result)
 
     @staticmethod
-    def is_definition_links(result: list) -> TypeGuard[list[types.DefinitionLink]]:
-        return all(isinstance(item, types.LocationLink) for item in result)
+    def is_definition_links(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.DefinitionLink]]:
+        return all(isinstance(item, lsp_type.LocationLink) for item in result)
 
     async def request_definition(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.Location] | Sequence[types.DefinitionLink] | None:
-        match await self.request(
-            types.DefinitionRequest(
+    ) -> Sequence[lsp_type.Location] | Sequence[lsp_type.DefinitionLink] | None:
+        match await self._request(
+            lsp_type.DefinitionRequest(
                 id=jsonrpc_uuid(),
-                params=types.DefinitionParams(
-                    text_document=types.TextDocumentIdentifier(
+                params=lsp_type.DefinitionParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                 ),
             ),
-            schema=types.DefinitionResponse,
-            # file_paths=[file_path],
+            schema=lsp_type.DefinitionResponse,
+            file_paths=[file_path],
         ):
-            case types.Location() as location:
+            case lsp_type.Location() as location:
                 return [location]
             case list() as locations if self.is_locations(locations):
                 return locations
             case list() as links if self.is_definition_links(links):
                 return links
+            case _:
+                return
 
 
 @runtime_checkable
@@ -236,7 +241,7 @@ class WithRequestDefinitionLocation(WithRequestDefinition, Protocol):
 
     async def request_definition_location(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.Location] | None:
+    ) -> Sequence[lsp_type.Location] | None:
         match await self.request_definition(file_path, position):
             case list() as result if self.is_locations(result):
                 return result
@@ -252,7 +257,7 @@ class WithRequestDefinitionLink(WithRequestDefinition, Protocol):
 
     async def request_definition_link(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.LocationLink] | None:
+    ) -> Sequence[lsp_type.LocationLink] | None:
         match await self.request_definition(file_path, position):
             case list() as result if self.is_definition_links(result):
                 return result
@@ -266,13 +271,13 @@ class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Proto
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                hover=types.HoverClientCapabilities(
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                hover=lsp_type.HoverClientCapabilities(
                     content_format=[
-                        types.MarkupKind.Markdown,
-                        types.MarkupKind.PlainText,
+                        lsp_type.MarkupKind.Markdown,
+                        lsp_type.MarkupKind.PlainText,
                     ]
                 )
             )
@@ -282,8 +287,8 @@ class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Proto
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.hover_provider
 
@@ -291,18 +296,18 @@ class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Proto
 
     async def request_hover(
         self, file_path: AnyPath, position: Position
-    ) -> types.Hover | None:
-        return await self.request(
-            types.HoverRequest(
+    ) -> lsp_type.Hover | None:
+        return await self._request(
+            lsp_type.HoverRequest(
                 id=jsonrpc_uuid(),
-                params=types.HoverParams(
-                    text_document=types.TextDocumentIdentifier(
+                params=lsp_type.HoverParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                 ),
             ),
-            schema=types.HoverResponse,
+            schema=lsp_type.HoverResponse,
             file_paths=[file_path],
         )
 
@@ -321,10 +326,10 @@ class WithRequestCallHierarchy(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                call_hierarchy=types.CallHierarchyClientCapabilities()
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                call_hierarchy=lsp_type.CallHierarchyClientCapabilities()
             )
         )
 
@@ -332,8 +337,8 @@ class WithRequestCallHierarchy(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.call_hierarchy_provider
 
@@ -341,24 +346,24 @@ class WithRequestCallHierarchy(
 
     async def _prepare_call_hierarchy(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.CallHierarchyItem] | None:
-        return await self.request(
-            types.CallHierarchyPrepareRequest(
+    ) -> Sequence[lsp_type.CallHierarchyItem] | None:
+        return await self._request(
+            lsp_type.CallHierarchyPrepareRequest(
                 id=jsonrpc_uuid(),
-                params=types.CallHierarchyPrepareParams(
-                    text_document=types.TextDocumentIdentifier(
+                params=lsp_type.CallHierarchyPrepareParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                 ),
             ),
-            schema=types.CallHierarchyPrepareResponse,
+            schema=lsp_type.CallHierarchyPrepareResponse,
             file_paths=[file_path],
         )
 
     async def request_call_hierarchy_incoming_call(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.CallHierarchyIncomingCall] | None:
+    ) -> Sequence[lsp_type.CallHierarchyIncomingCall] | None:
         """
         Note: For symbol with multiple definitions, this method will return a list of
         all incoming calls for each definition.
@@ -370,12 +375,14 @@ class WithRequestCallHierarchy(
             return
 
         result_groups = await gather_all(
-            self.request(
-                types.CallHierarchyIncomingCallsRequest(
+            self._request(
+                lsp_type.CallHierarchyIncomingCallsRequest(
                     id=jsonrpc_uuid(),
-                    params=types.CallHierarchyIncomingCallsParams(item=prepare_result),
+                    params=lsp_type.CallHierarchyIncomingCallsParams(
+                        item=prepare_result
+                    ),
                 ),
-                schema=types.CallHierarchyIncomingCallsResponse,
+                schema=lsp_type.CallHierarchyIncomingCallsResponse,
                 file_paths=[file_path],
             )
             for prepare_result in prepare_results
@@ -390,7 +397,7 @@ class WithRequestCallHierarchy(
 
     async def request_call_hierarchy_outgoing_call(
         self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.CallHierarchyOutgoingCall] | None:
+    ) -> Sequence[lsp_type.CallHierarchyOutgoingCall] | None:
         """
         Note: For symbol with multiple definitions, this method will return a list of
         all outgoing calls for each definition.
@@ -402,12 +409,14 @@ class WithRequestCallHierarchy(
             return
 
         result_groups = await gather_all(
-            self.request(
-                types.CallHierarchyOutgoingCallsRequest(
+            self._request(
+                lsp_type.CallHierarchyOutgoingCallsRequest(
                     id=jsonrpc_uuid(),
-                    params=types.CallHierarchyOutgoingCallsParams(item=prepare_result),
+                    params=lsp_type.CallHierarchyOutgoingCallsParams(
+                        item=prepare_result
+                    ),
                 ),
-                schema=types.CallHierarchyOutgoingCallsResponse,
+                schema=lsp_type.CallHierarchyOutgoingCallsResponse,
                 file_paths=[file_path],
             )
             for prepare_result in prepare_results
@@ -433,21 +442,21 @@ class WithRequestCompletions(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                completion=types.CompletionClientCapabilities(
-                    completion_item=types.ClientCompletionItemOptions(
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                completion=lsp_type.CompletionClientCapabilities(
+                    completion_item=lsp_type.ClientCompletionItemOptions(
                         snippet_support=True,
                         commit_characters_support=True,
                         documentation_format=[
-                            types.MarkupKind.Markdown,
-                            types.MarkupKind.PlainText,
+                            lsp_type.MarkupKind.Markdown,
+                            lsp_type.MarkupKind.PlainText,
                         ],
                         deprecated_support=True,
                         preselect_support=True,
-                        tag_support=types.CompletionItemTagOptions(
-                            value_set=[types.CompletionItemTag.Deprecated]
+                        tag_support=lsp_type.CompletionItemTagOptions(
+                            value_set=[lsp_type.CompletionItemTag.Deprecated]
                         ),
                     ),
                 ),
@@ -458,30 +467,38 @@ class WithRequestCompletions(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.completion_provider
-
         logger.debug("Server supports textDocument/completion checked")
 
     async def request_completions(
-        self, file_path: AnyPath, position: Position
-    ) -> Sequence[types.CompletionItem] | None:
-        match await self.request(
-            types.CompletionRequest(
+        self,
+        file_path: AnyPath,
+        position: Position,
+        *,
+        trigger_kind: lsp_type.CompletionTriggerKind = lsp_type.CompletionTriggerKind.Invoked,
+        trigger_character: str | None = None,
+    ) -> Sequence[lsp_type.CompletionItem] | None:
+        match await self._request(
+            lsp_type.CompletionRequest(
                 id=jsonrpc_uuid(),
-                params=types.CompletionParams(
-                    text_document=types.TextDocumentIdentifier(
+                params=lsp_type.CompletionParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
+                    context=lsp_type.CompletionContext(
+                        trigger_kind=trigger_kind,
+                        trigger_character=trigger_character,
+                    ),
                 ),
             ),
-            schema=types.CompletionResponse,
+            schema=lsp_type.CompletionResponse,
             file_paths=[file_path],
         ):
-            case types.CompletionList(items=items) | items:
+            case lsp_type.CompletionList(items=items) | items:
                 return items
 
 
@@ -497,10 +514,10 @@ class WithRequestSignatureHelp(
 
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                signature_help=types.SignatureHelpClientCapabilities()
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                signature_help=lsp_type.SignatureHelpClientCapabilities()
             )
         )
 
@@ -508,27 +525,40 @@ class WithRequestSignatureHelp(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.signature_help_provider
 
         logger.debug("Server supports textDocument/signatureHelp checked")
 
     async def request_signature_help(
-        self, file_path: AnyPath, position: Position
-    ) -> types.SignatureHelp | None:
-        return await self.request(
-            types.SignatureHelpRequest(
+        self,
+        file_path: AnyPath,
+        position: Position,
+        *,
+        trigger_kind: lsp_type.SignatureHelpTriggerKind = lsp_type.SignatureHelpTriggerKind.Invoked,
+        is_retrigger: bool = False,
+        trigger_character: str | None = None,
+        active_signature_help: lsp_type.SignatureHelp | None = None,
+    ) -> lsp_type.SignatureHelp | None:
+        return await self._request(
+            lsp_type.SignatureHelpRequest(
                 id=jsonrpc_uuid(),
-                params=types.SignatureHelpParams(
-                    text_document=types.TextDocumentIdentifier(
+                params=lsp_type.SignatureHelpParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
+                    context=lsp_type.SignatureHelpContext(
+                        trigger_kind=trigger_kind,
+                        is_retrigger=is_retrigger,
+                        trigger_character=trigger_character,
+                        active_signature_help=active_signature_help,
+                    ),
                 ),
             ),
-            schema=types.SignatureHelpResponse,
+            schema=lsp_type.SignatureHelpResponse,
             file_paths=[file_path],
         )
 
@@ -541,16 +571,16 @@ class WithRequestDocumentSymbols(
 ):
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            text_document=types.TextDocumentClientCapabilities(
-                document_symbol=types.DocumentSymbolClientCapabilities(
-                    symbol_kind=types.ClientSymbolKindOptions(
-                        value_set=[*types.SymbolKind],
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                document_symbol=lsp_type.DocumentSymbolClientCapabilities(
+                    symbol_kind=lsp_type.ClientSymbolKindOptions(
+                        value_set=[*lsp_type.SymbolKind],
                     ),
-                    tag_support=types.ClientSymbolTagOptions(
+                    tag_support=lsp_type.ClientSymbolTagOptions(
                         value_set=[
-                            types.SymbolTag.Deprecated,
+                            lsp_type.SymbolTag.Deprecated,
                         ]
                     ),
                     hierarchical_document_symbol_support=True,
@@ -562,8 +592,8 @@ class WithRequestDocumentSymbols(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.document_symbol_provider
 
@@ -571,17 +601,19 @@ class WithRequestDocumentSymbols(
 
     async def _request_document_symbols(
         self, file_path: AnyPath
-    ) -> Sequence[types.SymbolInformation] | Sequence[types.DocumentSymbol] | None:
-        return await self.request(
-            types.DocumentSymbolRequest(
+    ) -> (
+        Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.DocumentSymbol] | None
+    ):
+        return await self._request(
+            lsp_type.DocumentSymbolRequest(
                 id=jsonrpc_uuid(),
-                params=types.DocumentSymbolParams(
-                    text_document=types.TextDocumentIdentifier(
+                params=lsp_type.DocumentSymbolParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                 ),
             ),
-            schema=types.DocumentSymbolResponse,
+            schema=lsp_type.DocumentSymbolResponse,
             file_paths=[file_path],
         )
 
@@ -593,12 +625,14 @@ class WithRequestDocumentSymbolInformation(WithRequestDocumentSymbols, Protocol)
     """
 
     @staticmethod
-    def is_symbol_information(result: list) -> TypeGuard[list[types.SymbolInformation]]:
-        return all(isinstance(item, types.SymbolInformation) for item in result)
+    def is_symbol_information(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.SymbolInformation]]:
+        return all(isinstance(item, lsp_type.SymbolInformation) for item in result)
 
     async def request_document_symbol_information(
         self, file_path: AnyPath
-    ) -> Sequence[types.SymbolInformation] | None:
+    ) -> Sequence[lsp_type.SymbolInformation] | None:
         match await self._request_document_symbols(file_path):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
@@ -611,15 +645,19 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
     """
 
     @staticmethod
-    def is_document_symbols(result: list) -> TypeGuard[list[types.DocumentSymbol]]:
-        return all(isinstance(item, types.DocumentSymbol) for item in result)
+    def is_document_symbols(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.DocumentSymbol]]:
+        return all(isinstance(item, lsp_type.DocumentSymbol) for item in result)
 
     async def request_document_symbols(
         self, file_path: AnyPath
-    ) -> Sequence[types.DocumentSymbol] | None:
+    ) -> Sequence[lsp_type.DocumentSymbol] | None:
         match await self._request_document_symbols(file_path):
             case list() as symbols if self.is_document_symbols(symbols):
                 return symbols
+            case _:
+                return
 
 
 @runtime_checkable
@@ -630,19 +668,19 @@ class WithRequestWorkspaceSymbols(
 ):
     @override
     @classmethod
-    def client_capability(cls) -> types.ClientCapabilities:
-        return types.ClientCapabilities(
-            workspace=types.WorkspaceClientCapabilities(
-                symbol=types.WorkspaceSymbolClientCapabilities(
-                    symbol_kind=types.ClientSymbolKindOptions(
-                        value_set=[*types.SymbolKind],
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            workspace=lsp_type.WorkspaceClientCapabilities(
+                symbol=lsp_type.WorkspaceSymbolClientCapabilities(
+                    symbol_kind=lsp_type.ClientSymbolKindOptions(
+                        value_set=[*lsp_type.SymbolKind],
                     ),
-                    tag_support=types.ClientSymbolTagOptions(
+                    tag_support=lsp_type.ClientSymbolTagOptions(
                         value_set=[
-                            types.SymbolTag.Deprecated,
+                            lsp_type.SymbolTag.Deprecated,
                         ]
                     ),
-                    resolve_support=types.ClientSymbolResolveOptions(
+                    resolve_support=lsp_type.ClientSymbolResolveOptions(
                         properties=[
                             "location.range",
                         ]
@@ -655,8 +693,8 @@ class WithRequestWorkspaceSymbols(
     @classmethod
     def check_server_capability(
         cls,
-        capability: types.ServerCapabilities,
-        info: types.ServerInfo | None,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
     ):
         assert capability.workspace_symbol_provider
 
@@ -664,13 +702,15 @@ class WithRequestWorkspaceSymbols(
 
     async def _request_workspace_symbols(
         self, query: str
-    ) -> Sequence[types.SymbolInformation] | Sequence[types.WorkspaceSymbol] | None:
-        return await self.request(
-            types.WorkspaceSymbolRequest(
+    ) -> (
+        Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.WorkspaceSymbol] | None
+    ):
+        return await self._request(
+            lsp_type.WorkspaceSymbolRequest(
                 id=jsonrpc_uuid(),
-                params=types.WorkspaceSymbolParams(query=query),
+                params=lsp_type.WorkspaceSymbolParams(query=query),
             ),
-            schema=types.WorkspaceSymbolResponse,
+            schema=lsp_type.WorkspaceSymbolResponse,
         )
 
 
@@ -681,15 +721,19 @@ class WithRequestWorkspaceSymbolInformation(WithRequestWorkspaceSymbols, Protoco
     """
 
     @staticmethod
-    def is_symbol_information(result: list) -> TypeGuard[list[types.SymbolInformation]]:
-        return all(isinstance(item, types.SymbolInformation) for item in result)
+    def is_symbol_information(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.SymbolInformation]]:
+        return all(isinstance(item, lsp_type.SymbolInformation) for item in result)
 
     async def request_workspace_symbol_information(
         self, query: str
-    ) -> Sequence[types.SymbolInformation] | None:
+    ) -> Sequence[lsp_type.SymbolInformation] | None:
         match await self._request_workspace_symbols(query):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
+            case _:
+                return
 
 
 @runtime_checkable
@@ -699,12 +743,16 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
     """
 
     @staticmethod
-    def is_workspace_symbols(result: list) -> TypeGuard[list[types.WorkspaceSymbol]]:
-        return all(isinstance(item, types.WorkspaceSymbol) for item in result)
+    def is_workspace_symbols(
+        result: list[Any],
+    ) -> TypeGuard[list[lsp_type.WorkspaceSymbol]]:
+        return all(isinstance(item, lsp_type.WorkspaceSymbol) for item in result)
 
     async def request_workspace_symbols(
         self, query: str
-    ) -> Sequence[types.WorkspaceSymbol] | None:
+    ) -> Sequence[lsp_type.WorkspaceSymbol] | None:
         match await self._request_workspace_symbols(query):
             case list() as symbols if self.is_workspace_symbols(symbols):
                 return symbols
+            case _:
+                return

@@ -4,29 +4,47 @@ basedpyright: Language Server for Python - https://docs.basedpyright.com
 
 from __future__ import annotations
 
-import logging
-from collections.abc import AsyncGenerator, Sequence
-from contextlib import asynccontextmanager
-from typing import override
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, final, override
 
+from loguru import logger
 from semver import Version
 
-from lsp_client import (
-    BaseLSPCapabilityClientArgs,
-    FullFeaturedCapabilityGroup,
-    LSPCapabilityClientBase,
-    LSPClientBase,
-    WorkspaceFolder,
-    lsp_type,
-)
-from lsp_client.server import LSPServerPool
-
-logger = logging.getLogger(__name__)
+from lsp_client import lsp_cap, lsp_type
+from lsp_client.client.stdio import DockerStdioClient
+from lsp_client.server.stdio import DockerStdioServer, StdioServer
 
 
-class BasedPyrightCapabilityClient(
-    FullFeaturedCapabilityGroup,
-    LSPCapabilityClientBase,
+@final
+@dataclass
+class BasedPyrightServer(StdioServer):
+    @property
+    @override
+    def server_cmd(self) -> Sequence[str]:
+        return (
+            "basedpyright-langserver",
+            "--stdio",
+        )
+
+
+@final
+@dataclass
+class BasedPyrightDockerServer(DockerStdioServer):
+    @property
+    @override
+    def docker_args(self) -> Sequence[str]:
+        return (
+            "mcr.microsoft.com/pyright/langserver:1.29.0",
+            "--stdio",
+        )
+
+
+@final
+@dataclass
+class BasedPyrightClient(
+    lsp_cap.FullFeaturedCapabilityGroup,
+    DockerStdioClient,
 ):
     @property
     @override
@@ -40,35 +58,20 @@ class BasedPyrightCapabilityClient(
         version = info.version
         assert version, "Server version is required for compatibility check"
 
-        assert Version.parse(version).match(">=1.29")
+        assert Version.parse(version).match(">=1.29.0")
         logger.debug(
             "Server version %s supports BasedPyrightClient capabilities",
             version,
         )
 
-
-class BasedPyrightClient(LSPClientBase[BasedPyrightCapabilityClient]):
-    @property
     @override
-    def server_cmd(self) -> Sequence[str]:
-        return (
-            "basedpyright-langserver",
-            "--stdio",
+    def create_initialization_options(self) -> dict[str, Any] | None:
+        return None
+
+    @override
+    def create_server(self) -> StdioServer:
+        Server = BasedPyrightDockerServer if self.docker else BasedPyrightServer
+        return Server(
+            process_count=self.server_count,
+            info=self.server_info,
         )
-
-    @override
-    @asynccontextmanager
-    async def _start_client(
-        self,
-        server: LSPServerPool,
-        workspace: Sequence[WorkspaceFolder],
-    ) -> AsyncGenerator[BasedPyrightCapabilityClient]:
-        async with BasedPyrightCapabilityClient.start(
-            server=server,
-            args=BaseLSPCapabilityClientArgs(
-                workspace_folders=workspace,
-                initialization_options={},
-                sync_file=self.sync_file,
-            ),
-        ) as client:
-            yield client

@@ -4,27 +4,45 @@ pyrefly: Type checker and language server for Python - https://pyrefly.org/
 
 from __future__ import annotations
 
-import logging
-from collections.abc import AsyncGenerator, Sequence
-from contextlib import asynccontextmanager
-from typing import override
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, final, override
 
+from loguru import logger
 from semver import Version
 
-from lsp_client import (
-    BaseLSPCapabilityClientArgs,
-    LSPCapabilityClientBase,
-    LSPClientBase,
-    WorkspaceFolder,
-    lsp_cap,
-    lsp_type,
-)
-from lsp_client.server import LSPServerPool
-
-logger = logging.getLogger(__name__)
+from lsp_client import lsp_cap, lsp_type
+from lsp_client.client.stdio import StdioClient
+from lsp_client.server.stdio import StdioServer
 
 
-class PyReflyCapabilityClient(
+@final
+@dataclass
+class PyReflyServer(StdioServer):
+    num_threads: int = 0
+
+    @property
+    @override
+    def server_cmd(self) -> Sequence[str]:
+        threads = (
+            (
+                "-j",
+                f"{self.num_threads}",
+            )
+            if self.num_threads > 0
+            else ()
+        )
+
+        return (
+            "pyrefly",
+            "lsp",
+            *threads,
+        )
+
+
+@final
+@dataclass
+class PyReflyClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRequestDocumentSymbols,
     lsp_cap.WithRequestHover,
@@ -33,11 +51,13 @@ class PyReflyCapabilityClient(
     lsp_cap.WithReceiveLogMessage,
     lsp_cap.WithReceiveShowMessage,
     lsp_cap.WithReceiveLogTrace,
-    LSPCapabilityClientBase,
+    StdioClient,
 ):
     """
     Keep track of <https://github.com/facebook/pyrefly/issues/344> for LSP features support.
     """
+
+    server_threads: int = 0
 
     @property
     @override
@@ -46,44 +66,27 @@ class PyReflyCapabilityClient(
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None):
-        assert info, "Server info must be provided to check compatibility"
+        # TODO for now, pyrefly does not provide server info
+        if not info:
+            return
 
         version = info.version
         assert version, "Server version is required for compatibility check"
 
-        assert Version.parse(version).match(">=0.24")
+        assert Version.parse(version).match(">=0.24.0")
         logger.debug(
-            "Server version %s supports BasedPyrightClient capabilities",
+            "Server version {} supports PyReflyClient capabilities",
             version,
         )
 
-
-class PyReflyClient(LSPClientBase[PyReflyCapabilityClient]):
-    thread_count: int = 8
-
-    @property
     @override
-    def server_cmd(self) -> Sequence[str]:
-        return (
-            "pyrefly",
-            "lsp",
-            "-j",
-            f"{self.thread_count}",
+    def create_initialization_options(self) -> dict[str, Any] | None:
+        return
+
+    @override
+    def create_server(self) -> PyReflyServer:
+        return PyReflyServer(
+            process_count=self.server_count,
+            info=self.server_info,
+            num_threads=self.server_threads,
         )
-
-    @override
-    @asynccontextmanager
-    async def _start_client(
-        self,
-        server: LSPServerPool,
-        workspace: Sequence[WorkspaceFolder],
-    ) -> AsyncGenerator[PyReflyCapabilityClient]:
-        async with PyReflyCapabilityClient.start(
-            server=server,
-            args=BaseLSPCapabilityClientArgs(
-                workspace_folders=workspace,
-                initialization_options={},
-                sync_file=self.sync_file,
-            ),
-        ) as client:
-            yield client

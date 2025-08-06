@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
+from loguru import logger
 from lsprotocol import types
 
 from lsp_client.types import AnyPath
 
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
-
-logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -54,7 +52,7 @@ class WithNotifyTextDocumentSynchronize(
     async def notify_text_document_opened(
         self, file_path: AnyPath, file_content: str
     ) -> None:
-        await self.notify_all(
+        await self._notify(
             msg=types.DidOpenTextDocumentNotification(
                 params=types.DidOpenTextDocumentParams(
                     text_document=types.TextDocumentItem(
@@ -68,7 +66,7 @@ class WithNotifyTextDocumentSynchronize(
         )
 
     async def notify_text_document_closed(self, file_path: AnyPath) -> None:
-        await self.notify_all(
+        await self._notify(
             types.DidCloseTextDocumentNotification(
                 params=types.DidCloseTextDocumentParams(
                     text_document=types.TextDocumentIdentifier(
@@ -110,7 +108,7 @@ class WithNotifyChangeConfiguration(
     async def notify_change_configuration(
         self, settings: types.ConfigurationParams
     ) -> None:
-        return await self.notify_all(
+        return await self._notify(
             types.DidChangeConfigurationNotification(
                 params=types.DidChangeConfigurationParams(settings=settings)
             ),
@@ -154,7 +152,7 @@ class WithNotifyChangeWorkspaceFolders(
         added: Sequence[types.WorkspaceFolder],
         removed: Sequence[types.WorkspaceFolder],
     ) -> None:
-        return await self.notify_all(
+        return await self._notify(
             types.DidChangeWorkspaceFoldersNotification(
                 params=types.DidChangeWorkspaceFoldersParams(
                     event=types.WorkspaceFoldersChangeEvent(
@@ -164,3 +162,13 @@ class WithNotifyChangeWorkspaceFolders(
                 )
             ),
         )
+
+    async def notify_added_workspace_folders(
+        self, added: Sequence[types.WorkspaceFolder]
+    ) -> None:
+        return await self.notify_change_workspace_folders(added=added, removed=[])
+
+    async def notify_removed_workspace_folders(
+        self, removed: Sequence[types.WorkspaceFolder]
+    ) -> None:
+        return await self.notify_change_workspace_folders(added=[], removed=removed)
