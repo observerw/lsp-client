@@ -7,7 +7,8 @@ from typing import Any, TypedDict, cast
 
 from lsprotocol import converters, types
 
-from lsp_client.channel import (
+from lsp_client.types import Notification, Request, Response
+from lsp_client.utils.channel import (
     ManyShotReceiver,
     ManyShotSender,
     OneShotReceiver,
@@ -19,7 +20,6 @@ from lsp_client.channel import (
     manyshot_channel,
     oneshot_channel,
 )
-from lsp_client.types import Notification, Request, Response
 
 # --------------------------------- base type -------------------------------- #
 
