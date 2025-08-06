@@ -116,8 +116,9 @@ class StdioServerRuntime:
 class StdioServer(LSPServerBase):
     _runtime: StdioServerRuntime | None = field(default=None, init=False)
 
-    process_count: int | None = 1
-    info: LSPServerInfo = field(default_factory=LSPServerInfo)
+    process_count: int | None
+    info: LSPServerInfo
+
     buffer_size: int = 0
 
     @property
