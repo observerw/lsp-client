@@ -100,7 +100,7 @@ class WithReceiveShowMessage(
         logger.debug("Server supports window/showMessage checked")
 
     async def receive_show_message(self, req: lsp_type.ShowMessageNotification):
-        logger.debug("Received show message: %s", req.params.message)
+        logger.debug("Received show message: {}", req.params.message)
 
 
 @runtime_checkable
@@ -143,7 +143,7 @@ class WithReceivePublishDiagnostics(
     ) -> None:
         # TODO add support for diagnostic handling
         logger.debug(
-            "Received publish diagnostics for %s",
+            "Received publish diagnostics for {}",
             req.params.uri,
         )
 
@@ -183,7 +183,7 @@ class WithRespondShowMessageRequest(
     async def respond_show_message(
         self, req: lsp_type.ShowMessageRequest
     ) -> lsp_type.ShowMessageResponse:
-        logger.debug("Responding to show message: %s", req.params.message)
+        logger.debug("Responding to show message: {}", req.params.message)
         return lsp_type.ShowMessageResponse(id=req.id)
 
 

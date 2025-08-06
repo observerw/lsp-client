@@ -60,7 +60,7 @@ class BasedPyrightClient(
 
         assert Version.parse(version).match(">=1.29.0")
         logger.debug(
-            "Server version %s supports BasedPyrightClient capabilities",
+            "Server version {} supports BasedPyrightClient capabilities",
             version,
         )
 

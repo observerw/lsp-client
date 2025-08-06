@@ -36,6 +36,7 @@ class TyServer(StdioServer):
 class TyClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRespondWorkspaceConfiguration,
+    lsp_cap.WithReceivePublishDiagnostics,
     StdioClient,
 ):
     diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"

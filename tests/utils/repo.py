@@ -39,13 +39,13 @@ async def run_command(
 async def prepare_repo(repo_id: str, commit: str, save_path: Path) -> Path:
     """Download and init github repo from commit."""
 
-    logger.debug("Preparing repo %s at commit %s", repo_id, commit)
+    logger.debug("Preparing repo {} at commit {}", repo_id, commit)
 
     _, repo_name = repo_id.split("/", 1)
     # zipball folder format: <repo_id>-<commit_hash>
     repo_path = save_path / f"{repo_id.replace('/', '-')}-{commit[:7]}"
     if repo_path.exists():
-        logger.debug("Repo %s already exists, skipping download", repo_path)
+        logger.debug("Repo {} already exists, skipping download", repo_path)
         return repo_path
 
     download_url = (
@@ -75,7 +75,7 @@ async def prepare_repo(repo_id: str, commit: str, save_path: Path) -> Path:
     extract_path = save_path / f"{repo_name}-{commit}"
     shutil.move(extract_path, repo_path)
 
-    logger.debug("Extracted repo to %s", repo_path)
+    logger.debug("Extracted repo to {}", repo_path)
 
     await run_command(
         "git",
@@ -99,6 +99,6 @@ async def prepare_repo(repo_id: str, commit: str, save_path: Path) -> Path:
         error_msg="Failed to commit changes",
     )
 
-    logger.debug("Initialized git repository at %s", repo_path)
+    logger.debug("Initialized git repository at {}", repo_path)
 
     return repo_path

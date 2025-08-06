@@ -89,13 +89,13 @@ class StdioProcess:
                 )
         except TimeoutError:
             logger.warning(
-                "Process %s shutdown timeout reached, killing process",
+                "Process {} shutdown timeout reached, killing process",
                 self.id,
             )
             self.process.kill()
             _ = await self.process.wait()
             logger.debug(
-                "Process %s killed after timeout",
+                "Process {} killed after timeout",
                 self.id,
             )
 
