@@ -4,26 +4,35 @@ basedpyright: Language Server for Python - https://docs.basedpyright.com
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Sequence
-from contextlib import asynccontextmanager
-from typing import override
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, final, override
 
 from loguru import logger
 from semver import Version
 
-from lsp_client import (
-    ClientArgs,
-    ClientRuntimeArgs,
-    FullFeaturedCapabilityGroup,
-    LSPCapabilityClientBase,
-    LSPClientBase,
-    lsp_type,
-)
+from lsp_client import LSPServerBase, lsp_cap, lsp_type
+from lsp_client.client.stdio import StdioClient
+from lsp_client.server.stdio import StdioServer
 
 
-class BasedPyrightCapabilityClient(
-    FullFeaturedCapabilityGroup,
-    LSPCapabilityClientBase[None],
+@final
+@dataclass
+class BasedPyrightServer(StdioServer):
+    @property
+    @override
+    def server_cmd(self) -> Sequence[str]:
+        return (
+            "basedpyright-langserver",
+            "--stdio",
+        )
+
+
+@final
+@dataclass
+class BasedPyrightClient(
+    lsp_cap.FullFeaturedCapabilityGroup,
+    StdioClient,
 ):
     @property
     @override
@@ -43,25 +52,13 @@ class BasedPyrightCapabilityClient(
             version,
         )
 
-
-class BasedPyrightClient(LSPClientBase[BasedPyrightCapabilityClient]):
-    @property
     @override
-    def server_cmd(self) -> Sequence[str]:
-        return (
-            "basedpyright-langserver",
-            "--stdio",
+    def create_initialization_options(self) -> dict[str, Any] | None:
+        return
+
+    @override
+    def create_server(self) -> LSPServerBase:
+        return BasedPyrightServer(
+            process_count=self.server_count,
+            info=self.server_info,
         )
-
-    @override
-    @asynccontextmanager
-    async def _start_client(
-        self,
-        args: ClientArgs,
-        runtime_args: ClientRuntimeArgs,
-    ) -> AsyncGenerator[BasedPyrightCapabilityClient]:
-        async with BasedPyrightCapabilityClient.start(
-            args=args,
-            runtime_args=runtime_args,
-        ) as client:
-            yield client

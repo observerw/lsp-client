@@ -133,5 +133,5 @@ ResponseTable = ShotTable[ChannelResponse]
 type ChannelRequest = tuple[RawRequest, RespSender | ManyRespSender] | RawNotification
 
 request_channel = channel[ChannelRequest]
-type RequestSender = Sender[ChannelRequest]
-type RequestReceiver = Receiver[ChannelRequest]
+type ReqSender = Sender[ChannelRequest]
+type ReqReceiver = Receiver[ChannelRequest]

@@ -208,6 +208,9 @@ class Sender[T]:
     async def send(self, item: T) -> None:
         await self._queue.put(item)
 
+    async def join(self) -> None:
+        await self._queue.join()
+
 
 @dataclass(frozen=True)
 class Receiver[T]:

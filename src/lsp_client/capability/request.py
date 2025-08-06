@@ -49,7 +49,7 @@ class WithRequestInlineCompletions(
         *,
         info: lsp_type.SelectedCompletionInfo | None = None,
     ) -> Sequence[lsp_type.InlineCompletionItem] | None:
-        match await self.request(
+        match await self._request(
             lsp_type.InlineCompletionRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.InlineCompletionParams(
@@ -102,7 +102,7 @@ class WithRequestExecuteCommand(
     async def request_execute_command(
         self, command: str, *arguments: Any
     ) -> Any | None:
-        return await self.request(
+        return await self._request(
             lsp_type.ExecuteCommandRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.ExecuteCommandParams(
@@ -150,7 +150,7 @@ class WithRequestReferences(
         *,
         include_declaration: bool = True,
     ) -> Sequence[lsp_type.Location] | None:
-        return await self.request(
+        return await self._request(
             lsp_type.ReferencesRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.ReferenceParams(
@@ -210,7 +210,7 @@ class WithRequestDefinition(
     async def request_definition(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.Location] | Sequence[lsp_type.DefinitionLink] | None:
-        match await self.request(
+        match await self._request(
             lsp_type.DefinitionRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.DefinitionParams(
@@ -297,7 +297,7 @@ class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Proto
     async def request_hover(
         self, file_path: AnyPath, position: Position
     ) -> lsp_type.Hover | None:
-        return await self.request(
+        return await self._request(
             lsp_type.HoverRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.HoverParams(
@@ -347,7 +347,7 @@ class WithRequestCallHierarchy(
     async def _prepare_call_hierarchy(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.CallHierarchyItem] | None:
-        return await self.request(
+        return await self._request(
             lsp_type.CallHierarchyPrepareRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.CallHierarchyPrepareParams(
@@ -375,7 +375,7 @@ class WithRequestCallHierarchy(
             return
 
         result_groups = await gather_all(
-            self.request(
+            self._request(
                 lsp_type.CallHierarchyIncomingCallsRequest(
                     id=jsonrpc_uuid(),
                     params=lsp_type.CallHierarchyIncomingCallsParams(
@@ -409,7 +409,7 @@ class WithRequestCallHierarchy(
             return
 
         result_groups = await gather_all(
-            self.request(
+            self._request(
                 lsp_type.CallHierarchyOutgoingCallsRequest(
                     id=jsonrpc_uuid(),
                     params=lsp_type.CallHierarchyOutgoingCallsParams(
@@ -481,7 +481,7 @@ class WithRequestCompletions(
         trigger_kind: lsp_type.CompletionTriggerKind = lsp_type.CompletionTriggerKind.Invoked,
         trigger_character: str | None = None,
     ) -> Sequence[lsp_type.CompletionItem] | None:
-        match await self.request(
+        match await self._request(
             lsp_type.CompletionRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.CompletionParams(
@@ -542,7 +542,7 @@ class WithRequestSignatureHelp(
         trigger_character: str | None = None,
         active_signature_help: lsp_type.SignatureHelp | None = None,
     ) -> lsp_type.SignatureHelp | None:
-        return await self.request(
+        return await self._request(
             lsp_type.SignatureHelpRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.SignatureHelpParams(
@@ -604,7 +604,7 @@ class WithRequestDocumentSymbols(
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.DocumentSymbol] | None
     ):
-        return await self.request(
+        return await self._request(
             lsp_type.DocumentSymbolRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.DocumentSymbolParams(
@@ -705,7 +705,7 @@ class WithRequestWorkspaceSymbols(
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.WorkspaceSymbol] | None
     ):
-        return await self.request(
+        return await self._request(
             lsp_type.WorkspaceSymbolRequest(
                 id=jsonrpc_uuid(),
                 params=lsp_type.WorkspaceSymbolParams(query=query),

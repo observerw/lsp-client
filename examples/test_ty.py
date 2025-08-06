@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import asyncio as aio
 
-from lsp_client import Position
-from lsp_client.clients.ty import TyClient, TyConfig
+from lsp_client import Position, logger
+from lsp_client.clients.ty import TyClient
+
+logger.enable("lsp_client")
 
 
 async def main():
-    async with TyClient(
-        config=TyConfig(
-            diagnostic_mode="workspace",
-        )
-    ).start(workspace=".") as client:
+    async with TyClient(diagnostic_mode="workspace").start(workspace=".") as client:
         refs = await client.request_references(
             file_path="examples/test_ty.py",
             position=Position(9, 23),

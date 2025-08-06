@@ -40,11 +40,7 @@ class LSPCapabilityProtocol(Protocol):
 @runtime_checkable
 class LSPCapabilityClientProtocol(Protocol):
     """
-    Minimal interface to implement LSP capabilities.
-
-    This abstract base class provides the foundation for implementing various
-    Language Server Protocol capabilities. Concrete implementations should
-    inherit from this class along with specific capability mixins.
+    Minimal interface for a client to perform LSP operations.
     """
 
     @property
@@ -60,7 +56,7 @@ class LSPCapabilityClientProtocol(Protocol):
     def open_files(self, *file_paths: AnyPath) -> AsyncGenerator[None]: ...
 
     @abstractmethod
-    async def request[R](
+    async def _request[R](
         self,
         req: Request,
         schema: type[jsonrpc.Response[R]],
@@ -81,7 +77,7 @@ class LSPCapabilityClientProtocol(Protocol):
         """
 
     @abstractmethod
-    async def notify_all(self, msg: Notification):
+    async def _notify(self, msg: Notification):
         """
         Notify all LSP servers. Only used for methods that need to be sent to all servers, such as `initialized`.
 
