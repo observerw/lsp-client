@@ -389,6 +389,14 @@ class LSPClientBase(
                     jsonrpc.request_deserialize(raw_req, lsp_type.ConfigurationRequest)
                 )
                 tx.send(jsonrpc.response_serialize(resp))
+            case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
+                self, lsp_cap.WithReceivePublishDiagnostics
+            ):
+                await self.receive_publish_diagnostics(
+                    jsonrpc.request_deserialize(
+                        req, lsp_type.PublishDiagnosticsNotification
+                    )
+                )
             case (raw_req, _):
                 # if server sent a request that client can't handle, raise an error
                 raise ValueError(f"Unexpected server-side request: {raw_req}")
