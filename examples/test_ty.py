@@ -12,7 +12,7 @@ async def main():
     async with TyClient(diagnostic_mode="workspace").start(workspace=".") as client:
         refs = await client.request_references(
             file_path="examples/test_ty.py",
-            position=Position(9, 23),
+            position=Position(11, 23),
             include_declaration=False,
         )
         print(refs)

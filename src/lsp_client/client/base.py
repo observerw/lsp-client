@@ -74,9 +74,9 @@ class LSPClientBase(
     @abstractmethod
     def create_initialization_options(self) -> dict[str, Any] | None: ...
 
-    @abstractmethod
     def check_server_compatibility(self, info: types.ServerInfo | None):
         """Check if the available server capabilities are compatible with the client."""
+        return
 
     @property
     def runtime(self) -> ClientRuntime:
@@ -89,11 +89,6 @@ class LSPClientBase(
     @override
     def workspace_folders(self) -> Sequence[WorkspaceFolder]:
         return self.runtime.workspace_folders
-
-    @cached_property
-    def is_single_root(self) -> bool:
-        """Whether the workspace has a single root folder."""
-        return len(self.runtime.workspace) == 1
 
     @classmethod
     def client_capabilities(cls) -> types.ClientCapabilities:
@@ -132,53 +127,55 @@ class LSPClientBase(
                     WorkspaceFolder(uri=AbsPath(path).as_uri(), name=name)
                     for name, path in mapping.items()
                 ]
+
         server = self.create_server()
+        async with server.serve() as server:
+            async with aio.TaskGroup() as tg:
+                self._runtime = ClientRuntime(
+                    server=server,
+                    workspace_folders=workspace_folders,
+                    tg=tg,
+                )
 
-        async with aio.TaskGroup() as tg, server.serve() as server:
-            self._runtime = ClientRuntime(
-                server=server,
-                workspace_folders=workspace_folders,
-                tg=tg,
-            )
+                initialize_params = types.InitializeParams(
+                    capabilities=self.client_capabilities(),
+                    process_id=os.getpid(),
+                    client_info=types.ClientInfo(
+                        name="LSP Client",
+                        version="1.81.0-insider",
+                    ),
+                    locale="en-us",
+                    initialization_options=self.create_initialization_options(),
+                    trace=types.TraceValue.Verbose,
+                    workspace_folders=workspace_folders,
+                )
 
-            initialize_params = types.InitializeParams(
-                capabilities=self.client_capabilities(),
-                process_id=os.getpid(),
-                client_info=types.ClientInfo(
-                    name="LSP Client",
-                    version="1.81.0-insider",
-                ),
-                locale="en-us",
-                initialization_options=self.create_initialization_options(),
-                trace=types.TraceValue.Verbose,
-                workspace_folders=workspace_folders,
-            )
+                # initialize repo
+                _ = await self._initialize(initialize_params)
 
-            # initialize repo
-            _ = await self._initialize(initialize_params)
+                # prepare for server side requests
+                server_req_worker_task = tg.create_task(self._server_request_worker())
 
-            # prepare for server side requests
-            server_req_worker_task = tg.create_task(self._server_request_worker())
-
-            try:
-                yield self
-                # all client side requests are sent
-            finally:
                 try:
-                    _ = await self._shutdown()
-                except TimeoutError as e:
-                    raise TimeoutError(
-                        "LSP client shutdown timed out, server failed to exit gracefully."
-                    ) from e
-                # request server to shutdown (but not exit)
+                    yield self
+                    # all client side requests are sent
+                finally:
+                    try:
+                        _ = await self._shutdown()
+                    except TimeoutError as e:
+                        raise TimeoutError(
+                            "LSP client shutdown timed out, server failed to exit gracefully."
+                        ) from e
+                    # request server to shutdown (but not exit)
 
-                await self.runtime.server.server_request_receiver.join()
-                assert server_req_worker_task.cancel()
-                # all server side requests are handled
-            # all client side requests are sent
-        # all client side requests are responded
-        await self._exit()  # request server to exit
-        self._closed = True
+                    await self.runtime.server.server_request_receiver.join()
+                    canceled = server_req_worker_task.cancel()
+                    assert canceled, "Server request worker task is not canceled"
+                    # all server side requests are handled
+                # all client side requests are sent
+            # all client side requests are responded
+            await self._exit()  # request server to exit
+            self._closed = True
 
     # all server processes are exited
 
@@ -205,11 +202,10 @@ class LSPClientBase(
 
             return file_path.as_uri()
 
-        if self.is_single_root:
+        if len(self.runtime.workspace) == 1:  # single root workspace
             folder = workspace[ROOT_FOLDER_NAME]
         else:
-            root = file_path.parts[0]
-            if root not in workspace:
+            if (root := file_path.parts[0]) not in workspace:
                 raise ValueError(f"{root} is not a valid workspace folder")
             folder = workspace[root]
 
@@ -335,7 +331,7 @@ class LSPClientBase(
         `shutdown` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
         """
 
-        await self._request_all(
+        _ = await self._request_all(
             types.ShutdownRequest(
                 id="shutdown",
             ),

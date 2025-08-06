@@ -14,7 +14,7 @@ from typing import Any, Literal, final, override
 from loguru import logger
 from semver import Version
 
-from lsp_client import LSPServerBase, lsp_cap, lsp_type
+from lsp_client import lsp_cap, lsp_type
 from lsp_client.client.stdio import StdioClient
 from lsp_client.server.stdio import StdioServer
 
@@ -48,7 +48,7 @@ class TyClient(
         return lsp_type.LanguageKind.Python
 
     @override
-    def create_server(self) -> LSPServerBase:
+    def create_server(self) -> StdioServer:
         return TyServer(
             process_count=self.server_count,
             info=self.server_info,
@@ -81,7 +81,7 @@ class TyClient(
 
         assert Version.parse(version).match(">=0.0.1-alpha.16")
         logger.debug(
-            "Server version %s supports TyClient capabilities",
+            "Server version {} supports TyClient capabilities",
             version,
         )
 

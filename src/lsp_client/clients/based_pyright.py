@@ -11,7 +11,7 @@ from typing import Any, final, override
 from loguru import logger
 from semver import Version
 
-from lsp_client import LSPServerBase, lsp_cap, lsp_type
+from lsp_client import lsp_cap, lsp_type
 from lsp_client.client.stdio import StdioClient
 from lsp_client.server.stdio import StdioServer
 
@@ -54,10 +54,10 @@ class BasedPyrightClient(
 
     @override
     def create_initialization_options(self) -> dict[str, Any] | None:
-        return
+        return None
 
     @override
-    def create_server(self) -> LSPServerBase:
+    def create_server(self) -> StdioServer:
         return BasedPyrightServer(
             process_count=self.server_count,
             info=self.server_info,

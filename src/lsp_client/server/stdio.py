@@ -217,9 +217,22 @@ class StdioServer(LSPServerBase):
                 logger.info(
                     "LSPServerPool initialized with {} processes", len(processes)
                 )
+
+                process_worker_tasks = [
+                    tg.create_task(self._process_worker(process))
+                    for process in self.runtime.processes
+                ]
+
                 yield self
 
-        finally:
+                # if client yielded with no exception,
+                # safely cancel all process worker tasks
+                # or TaskGroup will help us cancel them
+                for task in process_worker_tasks:
+                    canceled = task.cancel()
+                    assert canceled, "Process worker task is not canceled"
+
+        finally:  # clean up runtime
             await self.runtime.sender.join()
             await self.runtime.resp_table.wait_complete()
             await gather_all(process.shutdown() for process in self.runtime.processes)
