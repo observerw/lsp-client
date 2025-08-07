@@ -86,9 +86,11 @@ class LSPClientBase(
         The final client capabilities are merged from all capabilities defined in the class hierarchy.
         """
 
+        # reverse mro order so derived capabilities takes precedence
+        reversed_mro = reversed(cls.mro())
         caps = [
             cap_cls.client_capability()
-            for cap_cls in cls.mro()
+            for cap_cls in reversed_mro
             if issubclass(cap_cls, LSPCapabilityProtocol)  #
             and cap_cls is not LSPCapabilityClientProtocol
             and cap_cls is not cls
