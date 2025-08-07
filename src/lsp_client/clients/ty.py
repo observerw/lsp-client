@@ -20,7 +20,7 @@ from lsp_client.server.stdio import StdioServer
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class TyServer(StdioServer):
     @property
     @override
@@ -32,7 +32,7 @@ class TyServer(StdioServer):
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class TyClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRespondWorkspaceConfiguration,

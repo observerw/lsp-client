@@ -17,7 +17,7 @@ from lsp_client.server.stdio import DockerStdioServer, StdioServer
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class BasedPyrightServer(StdioServer):
     @property
     @override
@@ -29,7 +29,7 @@ class BasedPyrightServer(StdioServer):
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class BasedPyrightDockerServer(DockerStdioServer):
     @property
     @override
@@ -41,7 +41,7 @@ class BasedPyrightDockerServer(DockerStdioServer):
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class BasedPyrightClient(
     lsp_cap.FullFeaturedCapabilityGroup,
     DockerStdioClient,

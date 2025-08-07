@@ -17,7 +17,7 @@ from lsp_client.server.stdio import StdioServer
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class PyReflyServer(StdioServer):
     num_threads: int = 0
 
@@ -41,7 +41,7 @@ class PyReflyServer(StdioServer):
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class PyReflyClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRequestDocumentSymbols,
