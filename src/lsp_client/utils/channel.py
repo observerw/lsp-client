@@ -75,7 +75,8 @@ class OneShotSender[T]:
 
     def send(self, item: T) -> None:
         if self._event.is_set():
-            raise RuntimeError("OneShotSender can only be used once")
+            raise RuntimeError("Receiver already closed")
+
         self._event.set_data(item)
 
     @property
@@ -95,6 +96,9 @@ class OneShotReceiver[T]:
             return None
 
         return self._event.get_data()
+
+    def close(self) -> None:
+        self._event.set()
 
     @property
     def closed(self) -> bool:
@@ -215,9 +219,6 @@ class Sender[T]:
     async def send(self, item: T) -> None:
         await self._queue.put(item)
 
-    async def join(self) -> None:
-        await self._queue.join()
-
 
 @dataclass(frozen=True)
 class Receiver[T]:
@@ -232,20 +233,20 @@ class Receiver[T]:
         finally:
             self._queue.task_done()
 
-    async def receive(self) -> T:
-        return await self._queue.get()
-
-    async def try_receive(self) -> T | None:
-        if self._queue.empty():
+    async def receive(self) -> T | None:
+        try:
+            return await self._queue.get()
+        except (aio.QueueEmpty, aio.QueueShutDown):
             return None
-        return await self._queue.get()
 
-    def task_done(self) -> None:
-        self._queue.task_done()
+    def try_receive(self) -> T | None:
+        try:
+            return self._queue.get_nowait()
+        except (aio.QueueEmpty, aio.QueueShutDown):
+            return None
 
-    async def join(self) -> None:
-        """Wait until all received items have been processed."""
-        await self._queue.join()
+    def close(self) -> None:
+        self._queue.shutdown()
 
 
 class channel[T](NamedTuple):

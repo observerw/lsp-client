@@ -16,8 +16,9 @@ from loguru import logger
 
 from lsp_client import jsonrpc
 from lsp_client.types import Workspace
+from lsp_client.utils.channel import Receiver, Sender, channel
 
-from .base import LSPServerBase
+from .base import LSPServerBase, ServerRequest
 from .jsonrpc import read_raw_package, write_raw_package
 
 
@@ -70,10 +71,14 @@ class StdioProcess:
         assert stderr, "Process stderr is not available"
         return stderr
 
-    async def receive_package(self) -> jsonrpc.RawPackage:
-        package = await read_raw_package(self.stdout)
-        logger.debug("Received package: {}", package)
-        return package
+    async def receive_package(self) -> jsonrpc.RawPackage | None:
+        try:
+            package = await read_raw_package(self.stdout)
+            logger.debug("Received package: {}", package)
+            return package
+        except EOFError:
+            logger.debug("Process {} stdout closed", self.id)
+            return None
 
     async def send_package(self, package: jsonrpc.RawPackage) -> None:
         await write_raw_package(self.stdin, package)
@@ -105,11 +110,10 @@ class StdioServerRuntime:
     workspace: Workspace
     resp_table: jsonrpc.ResponseTable
     processes: list[StdioProcess]
-    tg: aio.TaskGroup
 
-    # for server-side requests
-    sender: jsonrpc.ReqSender
-    receiver: jsonrpc.ReqReceiver
+    # server-side requests
+    sender: Sender[ServerRequest]
+    receiver: Receiver[ServerRequest]
 
 
 @dataclass
@@ -134,6 +138,7 @@ class StdioServer(LSPServerBase):
 
     @contextmanager
     def next_server(self) -> Generator[StdioProcess]:
+        # TODO implement more sophisticated load-balancing strategy
         yield random.choice(self.runtime.processes)
 
     @override
@@ -165,10 +170,9 @@ class StdioServer(LSPServerBase):
             for process in self.runtime.processes
         )
 
-    @property
     @override
-    def server_request_receiver(self) -> jsonrpc.ReqReceiver:
-        return self.runtime.receiver
+    async def receive(self) -> ServerRequest | None:
+        return await self.runtime.receiver.receive()
 
     @override
     @asynccontextmanager
@@ -186,46 +190,34 @@ class StdioServer(LSPServerBase):
             )
             for i in range(process_count)
         )
-        sender, receiver = jsonrpc.request_channel.create(buffer_size=self.buffer_size)
+        sender, receiver = channel.create(buffer_size=self.buffer_size)
 
-        try:
-            async with aio.TaskGroup() as tg:
-                self._runtime = StdioServerRuntime(
-                    resp_table=jsonrpc.ResponseTable(),
-                    workspace=workspace,
-                    tg=tg,
-                    processes=[*processes],
-                    sender=sender,
-                    receiver=receiver,
-                )
-                logger.info(
-                    "LSPServerPool initialized with {} processes", len(processes)
-                )
+        async with aio.TaskGroup() as worker_tg:
+            self._runtime = StdioServerRuntime(
+                resp_table=jsonrpc.ResponseTable(),
+                workspace=workspace,
+                processes=[*processes],
+                sender=sender,
+                receiver=receiver,
+            )
+            logger.info("LSPServerPool initialized with {} processes", len(processes))
 
-                process_worker_tasks = [
-                    tg.create_task(self._process_worker(process))
-                    for process in self.runtime.processes
-                ]
+            for process in self.runtime.processes:
+                worker_tg.create_task(self._process_worker(process))
 
+            try:
                 yield self
+            finally:  # clean up runtime
+                self.runtime.receiver.close()
+                await self.runtime.resp_table.wait_complete()
+                await gather_all(
+                    process.shutdown() for process in self.runtime.processes
+                )
 
-                # if client yielded with no exception,
-                # safely cancel all process worker tasks
-                # or TaskGroup will help us cancel them
-                for task in process_worker_tasks:
-                    canceled = task.cancel()
-                    assert canceled, "Process worker task is not canceled"
-
-        finally:  # clean up runtime
-            await self.runtime.sender.join()
-            await self.runtime.resp_table.wait_complete()
-            await gather_all(process.shutdown() for process in self.runtime.processes)
-
-            self._runtime = None
+        self._runtime = None
+        logger.info("LSPServerPool gracefully shutdown")
 
     async def _process_worker(self, process: StdioProcess):
-        """Worker to handle incoming packages from the LSP server's stdout. Must terminate by cancellation."""
-
         async def handle(package: jsonrpc.RawPackage):
             match package:
                 case {"result": _, "id": id} | {"error": _, "id": id} as resp:
@@ -239,8 +231,7 @@ class StdioServer(LSPServerBase):
                     await self.runtime.sender.send(noti)
 
         async with aio.TaskGroup() as tg:
-            while True:
-                package = await process.receive_package()
+            while package := await process.receive_package():
                 tg.create_task(handle(package))
 
 
