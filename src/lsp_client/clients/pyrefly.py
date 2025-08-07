@@ -45,6 +45,7 @@ class PyReflyServer(StdioServer):
 class PyReflyClient(
     lsp_cap.WithRequestReferences,
     lsp_cap.WithRequestDocumentSymbols,
+    lsp_cap.WithRequestWorkspaceSymbolInformation,
     lsp_cap.WithRequestHover,
     lsp_cap.WithRequestSignatureHelp,
     lsp_cap.WithRequestCompletions,

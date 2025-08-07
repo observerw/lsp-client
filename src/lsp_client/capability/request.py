@@ -748,7 +748,7 @@ class WithRequestWorkspaceSymbolInformation(WithRequestWorkspaceSymbols, Protoco
         return all(isinstance(item, lsp_type.SymbolInformation) for item in result)
 
     async def request_workspace_symbol_information(
-        self, query: str
+        self, query: str = ""
     ) -> Sequence[lsp_type.SymbolInformation] | None:
         match await self._request_workspace_symbols(query):
             case list() as symbols if self.is_symbol_information(symbols):
@@ -770,10 +770,47 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
         return all(isinstance(item, lsp_type.WorkspaceSymbol) for item in result)
 
     async def request_workspace_symbols(
-        self, query: str
+        self, query: str = ""
     ) -> Sequence[lsp_type.WorkspaceSymbol] | None:
         match await self._request_workspace_symbols(query):
             case list() as symbols if self.is_workspace_symbols(symbols):
                 return symbols
             case _:
                 return
+
+
+@runtime_checkable
+class WithRequestWorkspaceSymbolResolve(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
+    """
+    `workspace/symbol/resolve` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_symbolResolve
+    """
+
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            workspace=lsp_type.WorkspaceClientCapabilities(
+                symbol=lsp_type.WorkspaceSymbolClientCapabilities(
+                    resolve_support=lsp_type.ClientSymbolResolveOptions(
+                        properties=[
+                            "location.range",
+                        ]
+                    ),
+                )
+            )
+        )
+
+    async def request_workspace_symbol_resolve(
+        self, symbol: lsp_type.WorkspaceSymbol
+    ) -> lsp_type.WorkspaceSymbol | None:
+        return await self._request(
+            lsp_type.WorkspaceSymbolResolveRequest(
+                id=jsonrpc_uuid(),
+                params=symbol,
+            ),
+            schema=lsp_type.WorkspaceSymbolResolveResponse,
+        )

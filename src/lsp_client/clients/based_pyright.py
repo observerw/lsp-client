@@ -44,6 +44,7 @@ class BasedPyrightDockerServer(DockerStdioServer):
 @dataclass(kw_only=True)
 class BasedPyrightClient(
     lsp_cap.FullFeaturedCapabilityGroup,
+    lsp_cap.WithRequestWorkspaceSymbolInformation,
     DockerStdioClient,
 ):
     @property
