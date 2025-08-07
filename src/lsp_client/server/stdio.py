@@ -6,7 +6,7 @@ import random
 from abc import abstractmethod
 from asyncio import StreamReader, StreamWriter
 from collections.abc import AsyncGenerator, Generator, Sequence
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Self, override
@@ -96,6 +96,17 @@ class StdioProcess:
             self.process.kill()
             return 1
 
+    @classmethod
+    @asynccontextmanager
+    async def serve(
+        cls, *cmd: str, id: str, info: LSPServerInfo
+    ) -> AsyncGenerator[StdioProcess]:
+        process = await cls.create(*cmd, id=id, info=info)
+        try:
+            yield process
+        finally:
+            await process.shutdown()
+
 
 @dataclass
 class StdioServerRuntime:
@@ -179,16 +190,22 @@ class StdioServer(LSPServerBase):
 
         process_count = self.process_count or os.cpu_count() or 1
         assert process_count >= 1, f"Invalid process count: {process_count}"
-        processes = await gather_all(
-            StdioProcess.create(
-                *self.server_cmd,
-                id=f"process-{i}",
-                info=self.info,
-            )
-            for i in range(process_count)
-        )
 
-        async with aio.TaskGroup() as worker_tg:
+        async with (
+            aio.TaskGroup() as worker_tg,
+            AsyncExitStack() as process_stack,
+        ):
+            processes = await gather_all(
+                process_stack.enter_async_context(
+                    StdioProcess.serve(
+                        *self.server_cmd,
+                        id=f"process-{i}",
+                        info=self.info,
+                    )
+                )
+                for i in range(process_count)
+            )
+
             self._runtime = StdioServerRuntime(
                 resp_table=jsonrpc.ResponseTable(),
                 processes=[*processes],
@@ -198,24 +215,16 @@ class StdioServer(LSPServerBase):
             for process in self.runtime.processes:
                 worker_tg.create_task(self._process_worker(process))
 
-            logger.info("LSPServerPool initialized with {} processes", len(processes))
+            logger.debug("LSPServerPool initialized with {} processes", len(processes))
 
-            try:
-                yield self
-            finally:
-                # after `exit`, server processes are supposed to exit gracefully
-                returncodes = await gather_all(
-                    process.shutdown()  #
-                    for process in self.runtime.processes
-                )
-                assert sum(returncodes) == 0
+            yield self
 
-                # LSP spec not specify when should server stop sending server-side requests,
-                # so we shutdown the queue after processes exit for safety
-                self.runtime.queue.shutdown()
+        # LSP spec not specify when should server stop sending server-side requests,
+        # so we shutdown the queue after processes exit for safety
+        self.runtime.queue.shutdown()
 
-                self._runtime = None
-                logger.debug("LSPServerPool exit")
+        self._runtime = None
+        logger.debug("LSPServerPool exit")
 
     @override
     @asynccontextmanager
