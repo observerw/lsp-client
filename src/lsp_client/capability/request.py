@@ -47,6 +47,7 @@ class WithRequestInlineCompletions(
         file_path: AnyPath,
         position: Position,
         *,
+        trigger_kind: lsp_type.InlineCompletionTriggerKind = lsp_type.InlineCompletionTriggerKind.Automatic,
         info: lsp_type.SelectedCompletionInfo | None = None,
     ) -> Sequence[lsp_type.InlineCompletionItem] | None:
         match await self._request(
@@ -54,7 +55,7 @@ class WithRequestInlineCompletions(
                 id=jsonrpc_uuid(),
                 params=lsp_type.InlineCompletionParams(
                     context=lsp_type.InlineCompletionContext(
-                        trigger_kind=lsp_type.InlineCompletionTriggerKind.Automatic,
+                        trigger_kind=trigger_kind,
                         selected_completion_info=info,
                     ),
                     text_document=lsp_type.TextDocumentIdentifier(
@@ -183,7 +184,7 @@ class WithRequestDefinition(
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
-                definition=lsp_type.DefinitionClientCapabilities(link_support=True)
+                definition=lsp_type.DefinitionClientCapabilities()
             )
         )
 
@@ -239,6 +240,15 @@ class WithRequestDefinitionLocation(WithRequestDefinition, Protocol):
     `textDocument/definition` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition
     """
 
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                definition=lsp_type.DefinitionClientCapabilities(link_support=False)
+            )
+        )
+
     async def request_definition_location(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.Location] | None:
@@ -254,6 +264,15 @@ class WithRequestDefinitionLink(WithRequestDefinition, Protocol):
 
     Client should use this instead of {@WithRequestDefinitionLocation} whenever the server supports.
     """
+
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                definition=lsp_type.DefinitionClientCapabilities(link_support=True)
+            )
+        )
 
     async def request_definition_link(
         self, file_path: AnyPath, position: Position
@@ -458,6 +477,10 @@ class WithRequestCompletions(
                         tag_support=lsp_type.CompletionItemTagOptions(
                             value_set=[lsp_type.CompletionItemTag.Deprecated]
                         ),
+                        insert_replace_support=True,
+                    ),
+                    completion_item_kind=lsp_type.ClientCompletionItemOptionsKind(
+                        value_set=[*lsp_type.CompletionItemKind]
                     ),
                 ),
             )
@@ -579,9 +602,7 @@ class WithRequestDocumentSymbols(
                         value_set=[*lsp_type.SymbolKind],
                     ),
                     tag_support=lsp_type.ClientSymbolTagOptions(
-                        value_set=[
-                            lsp_type.SymbolTag.Deprecated,
-                        ]
+                        value_set=[*lsp_type.SymbolTag]
                     ),
                     hierarchical_document_symbol_support=True,
                 ),
