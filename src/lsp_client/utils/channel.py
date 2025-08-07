@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import asyncio as aio
 from asyncio import Event
-from collections.abc import AsyncGenerator, Hashable
-from contextlib import asynccontextmanager
+from collections.abc import Hashable
 from dataclasses import dataclass, field
 from typing import NamedTuple, Self
 
@@ -200,7 +199,7 @@ class ShotTable[T]:
             await self.register(id, tx)
             return await rx.receive()
         finally:
-            self._pending.pop(id)
+            self._pending.pop(id, None)
 
     async def wait_many(self, id: Hashable, expect_count: int) -> list[T]:
         tx, rx = manyshot_channel.create(expect_count=expect_count)
@@ -209,64 +208,13 @@ class ShotTable[T]:
             await self.register(id, tx)
             return await rx.receive()
         finally:
-            self._pending.pop(id)
+            self._pending.pop(id, None)
 
     async def wait_complete(self) -> None:
         async with self._empty_cond:
             while self._pending:
                 await self._empty_cond.wait()
 
-
-@dataclass(frozen=True)
-class Sender[T]:
-    """MPSC sender"""
-
-    _queue: aio.Queue[T]
-
-    async def send(self, item: T) -> None:
-        await self._queue.put(item)
-
-
-@dataclass(frozen=True)
-class Receiver[T]:
-    """MPSC receiver"""
-
-    _queue: aio.Queue[T]
-
-    @asynccontextmanager
-    async def handle(self) -> AsyncGenerator[T]:
-        try:
-            yield await self._queue.get()
-        finally:
-            self._queue.task_done()
-
-    async def receive(self) -> T | None:
-        try:
-            return await self._queue.get()
-        except (aio.QueueEmpty, aio.QueueShutDown):
-            return None
-
-    def try_receive(self) -> T | None:
-        try:
-            return self._queue.get_nowait()
-        except (aio.QueueEmpty, aio.QueueShutDown):
-            return None
-
-    def close(self) -> None:
-        self._queue.shutdown()
-
-
-class channel[T](NamedTuple):
-    """MPSC channel"""
-
-    sender: Sender[T]
-    receiver: Receiver[T]
-
-    @classmethod
-    def create(cls, buffer_size: int = 0) -> channel[T]:
-        """Create a channel with a specified buffer size."""
-
-        queue = aio.Queue[T](buffer_size)
-        sender = Sender[T](_queue=queue)
-        receiver = Receiver[T](_queue=queue)
-        return cls(sender=sender, receiver=receiver)
+    @property
+    def completed(self) -> bool:
+        return not self._pending

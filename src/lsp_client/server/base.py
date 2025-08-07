@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio as aio
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
@@ -19,15 +20,21 @@ class LSPServerBase(ABC):
 
     @abstractmethod
     async def request_all(
-        self, requests: jsonrpc.RawRequest
+        self, request: jsonrpc.RawRequest
     ) -> Sequence[jsonrpc.RawResponsePackage]: ...
 
     @abstractmethod
     async def notify(self, notification: jsonrpc.RawNotification) -> None: ...
 
+    @property
     @abstractmethod
-    async def receive(self) -> ServerRequest | None: ...
+    def server_request_queue(self) -> aio.Queue[ServerRequest]: ...
 
     @asynccontextmanager
     @abstractmethod
-    def serve(self, workspace: Workspace) -> AsyncGenerator[Self]: ...
+    def run(self) -> AsyncGenerator[Self]: ...
+
+    @asynccontextmanager
+    @abstractmethod
+    def serve(self, workspace: Workspace) -> AsyncGenerator[Self]:
+        """After `initialize`, before `exit`."""

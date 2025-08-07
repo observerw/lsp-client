@@ -4,7 +4,7 @@ import asyncio as aio
 import os
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, Mapping, Sequence
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from functools import cached_property
 from itertools import product
@@ -118,21 +118,20 @@ class LSPClientBase(
 
         server = self.create_server()
 
-        async with (
-            aio.TaskGroup() as worker_tg,
-            server.serve(workspace=formatted_workspace) as running_server,
-        ):
+        async with aio.TaskGroup() as worker_tg, server.run():
             # handle server-side requests
+            # note that server may send notifications before `initialize`,
+            # so we need to start handling server requests before client initialized
             worker_tg.create_task(self._server_request_worker())
 
+            # handle client-side requests
             async with aio.TaskGroup() as request_tg:
                 self._runtime = ClientRuntime(
-                    server=running_server,
+                    server=server,
                     workspace=formatted_workspace,
                     tg=request_tg,
                 )
 
-                # initialize repo
                 _ = await self._initialize(
                     types.InitializeParams(
                         capabilities=self.client_capabilities(),
@@ -148,17 +147,19 @@ class LSPClientBase(
                     )
                 )
 
-                try:
-                    yield self
-                finally:
+                # after `initialize`, server starts to serve
+                async with server.serve(workspace=formatted_workspace):
                     try:
-                        _ = await self._shutdown()
-                    except TimeoutError as e:
-                        raise TimeoutError(
-                            "LSP client shutdown timed out, server failed to exit gracefully."
-                        ) from e
+                        yield self
+                    finally:
+                        try:
+                            _ = await self._shutdown()
+                        except TimeoutError as e:
+                            raise TimeoutError(
+                                "LSP client shutdown timed out, server failed to exit gracefully."
+                            ) from e
 
-            await self._exit()
+                await self._exit()
 
     @cached_property
     def file_buffer(self) -> LSPFileBuffer:
@@ -338,6 +339,8 @@ class LSPClientBase(
         await self._notify(types.ExitNotification())
 
     async def _dispatch_server_request(self, server_req: ServerRequest):
+        queue = self.runtime.server.server_request_queue
+
         match server_req:
             case {"method": types.WINDOW_LOG_MESSAGE} if isinstance(
                 self, lsp_cap.WithReceiveLogMessage
@@ -401,6 +404,8 @@ class LSPClientBase(
             case noti:
                 logger.warning("Unknown notification: {}", noti)
 
+        queue.task_done()
+
     async def _server_request_worker(self):
         """
         This worker will gracefully shutdown after:
@@ -409,10 +414,14 @@ class LSPClientBase(
         """
 
         async with aio.TaskGroup() as tg:
-            while server_req := await self.runtime.server.receive():
-                tg.create_task(
-                    aio.wait_for(
-                        self._dispatch_server_request(server_req),
-                        timeout=self.pending_timeout,
+            queue = self.runtime.server.server_request_queue
+
+            with suppress(aio.QueueShutDown):
+                while True:
+                    server_req = await queue.get()
+                    tg.create_task(
+                        aio.wait_for(
+                            self._dispatch_server_request(server_req),
+                            timeout=self.pending_timeout,
+                        )
                     )
-                )
