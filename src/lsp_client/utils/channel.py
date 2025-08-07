@@ -1,3 +1,5 @@
+"""[tokio-like](https://docs.rs/tokio/latest/tokio/sync/index.html) channel utilities."""
+
 from __future__ import annotations
 
 import asyncio as aio
@@ -18,8 +20,6 @@ class DataEvent[T](Event):
         self.set()
 
     def get_data(self) -> T:
-        """Get data immediately, or raise ValueError if data is not set."""
-
         if not self.is_set():
             raise ValueError("DataEvent not set")
         if self._data is None:
@@ -53,8 +53,6 @@ class ManyDataEvent[T](Event):
             self.set()
 
     def get_data(self) -> list[T]:
-        """Get data immediately, or raise ValueError if data is not set."""
-
         if not self.is_set():
             raise ValueError("ManyDataEvent not set")
         if self._data is None:
@@ -111,7 +109,6 @@ class oneshot_channel[T](NamedTuple):
 
     @classmethod
     def create(cls) -> Self:
-        """Create a one-shot channel."""
         event = DataEvent[T]()
         sender = OneShotSender[T](_event=event)
         receiver = OneShotReceiver[T](_event=event)
@@ -171,8 +168,9 @@ type ShotReceiver[T] = OneShotReceiver[T] | ManyShotReceiver[T]
 class ShotTable[T]:
     """Dispatch data to one-shot senders by ID."""
 
-    _cond: aio.Condition = field(default_factory=aio.Condition)
     _pending: dict[Hashable, ShotSender[T]] = field(default_factory=dict)
+    _empty_cond: aio.Condition = field(default_factory=aio.Condition)
+    """Condition variable to wait for _pending to be empty."""
 
     async def register(self, id: Hashable, sender: ShotSender[T]) -> None:
         """Register a one-shot sender with an ID."""
@@ -180,34 +178,43 @@ class ShotTable[T]:
         if id in self._pending:
             raise ValueError(f"Sender with id {id} already registered")
 
-        async with self._cond:
+        async with self._empty_cond:
             self._pending[id] = sender
 
     async def send(self, id: Hashable, data: T) -> None:
-        """Send data through the one-shot sender with the given ID."""
         if id not in self._pending:
-            raise ValueError(f"OneShotSender with id {id} not found")
+            raise ValueError(f"Pending request of id {id} not found")
 
-        sender = self._pending[id]
+        self._pending[id].send(data)
 
-        if sender.closed:
-            raise ValueError(f"OneShotSender with id {id} is closed")
-
-        sender.send(data)
-
-        async with self._cond:
-            if not sender.closed:
-                return
+        async with self._empty_cond:
             self._pending.pop(id)
             if self._pending:
                 return
-            self._cond.notify_all()
+            self._empty_cond.notify_all()
+
+    async def wait(self, id: Hashable) -> T:
+        tx, rx = oneshot_channel.create()
+
+        try:
+            await self.register(id, tx)
+            return await rx.receive()
+        finally:
+            self._pending.pop(id)
+
+    async def wait_many(self, id: Hashable, expect_count: int) -> list[T]:
+        tx, rx = manyshot_channel.create(expect_count=expect_count)
+
+        try:
+            await self.register(id, tx)
+            return await rx.receive()
+        finally:
+            self._pending.pop(id)
 
     async def wait_complete(self) -> None:
-        """Wait until all pending one-shot senders are resolved."""
-        async with self._cond:
+        async with self._empty_cond:
             while self._pending:
-                await self._cond.wait()
+                await self._empty_cond.wait()
 
 
 @dataclass(frozen=True)

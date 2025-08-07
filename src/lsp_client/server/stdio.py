@@ -143,25 +143,21 @@ class StdioServer(LSPServerBase):
 
     @override
     async def request(self, request: jsonrpc.RawRequest) -> jsonrpc.RawResponsePackage:
-        tx, rx = jsonrpc.response_channel.create()
         with self.next_server() as process:
             await process.send_package(request)
-            await self.runtime.resp_table.register(request["id"], tx)
-            return await rx.receive()
+            return await self.runtime.resp_table.wait(request["id"])
 
     @override
     async def request_all(
         self, requests: jsonrpc.RawRequest
     ) -> Sequence[jsonrpc.RawResponsePackage]:
-        tx, rx = jsonrpc.many_response_channel.create(
-            expect_count=len(self.runtime.processes)
-        )
         await gather_all(
             process.send_package(requests)  #
             for process in self.runtime.processes
         )
-        await self.runtime.resp_table.register(requests["id"], tx)
-        return await rx.receive()
+        return await self.runtime.resp_table.wait_many(
+            requests["id"], expect_count=len(self.runtime.processes)
+        )
 
     @override
     async def notify(self, notification: jsonrpc.RawNotification) -> None:

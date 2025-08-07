@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from pathlib import Path
 
 from lsp_client import Position, Range, lsp_type
 from lsp_client.clients.based_pyright import BasedPyrightClient
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 
 repo_path = Path.cwd()
 curr_path = Path(__file__)
@@ -18,6 +12,7 @@ curr_path = Path(__file__)
 
 async def main():
     async with BasedPyrightClient().start(workspace=repo_path) as client:
+        #      ^________________^
         # found all references of `BasedPyrightClient` class
         refs = await client.request_references(
             file_path="src/lsp_client/clients/based_pyright.py",
