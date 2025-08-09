@@ -199,13 +199,13 @@ class WithRequestDefinition(
         logger.debug("Server supports textDocument/definition checked")
 
     @staticmethod
-    def is_locations(result: list[Any]) -> TypeGuard[list[lsp_type.Location]]:
+    def is_locations(result: Sequence[Any]) -> TypeGuard[Sequence[lsp_type.Location]]:
         return all(isinstance(item, lsp_type.Location) for item in result)
 
     @staticmethod
     def is_definition_links(
-        result: list[Any],
-    ) -> TypeGuard[list[lsp_type.DefinitionLink]]:
+        result: Sequence[Any],
+    ) -> TypeGuard[Sequence[lsp_type.DefinitionLink]]:
         return all(isinstance(item, lsp_type.LocationLink) for item in result)
 
     async def request_definition(

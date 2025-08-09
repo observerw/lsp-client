@@ -100,3 +100,7 @@ class LSPCapabilityClientProtocol(Protocol):
     @abstractmethod
     def from_uri(self, uri: str) -> AbsPath:
         """Convert a URI to an absolute file path."""
+
+    @abstractmethod
+    def resolve_path(self, file_path: AnyPath) -> AbsPath:
+        """Resolve a (maybe relative) file path to an absolute path."""
