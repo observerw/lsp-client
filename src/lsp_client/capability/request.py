@@ -478,10 +478,16 @@ class WithRequestCompletions(
                             value_set=[lsp_type.CompletionItemTag.Deprecated]
                         ),
                         insert_replace_support=True,
+                        insert_text_mode_support=lsp_type.ClientCompletionItemInsertTextModeOptions(
+                            value_set=[*lsp_type.InsertTextMode]
+                        ),
+                        label_details_support=True,
                     ),
                     completion_item_kind=lsp_type.ClientCompletionItemOptionsKind(
                         value_set=[*lsp_type.CompletionItemKind]
                     ),
+                    insert_text_mode=lsp_type.InsertTextMode.AsIs,
+                    context_support=True,
                 ),
             )
         )
