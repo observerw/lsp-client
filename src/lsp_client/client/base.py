@@ -4,8 +4,8 @@ import asyncio as aio
 import os
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, Mapping, Sequence
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from contextlib import asynccontextmanager, suppress
+from dataclasses import dataclass, field
 from functools import cached_property
 from itertools import product
 from pathlib import Path
@@ -24,7 +24,7 @@ from lsp_client.capability.protocol import (
     LSPCapabilityClientProtocol,
     LSPCapabilityProtocol,
 )
-from lsp_client.server.base import LSPServerBase
+from lsp_client.server.base import LSPServerBase, ServerRequest
 from lsp_client.types import AnyPath, Notification, Workspace, WorkspaceFolder
 from lsp_client.utils.attrs import attrs_merges
 from lsp_client.utils.path import AbsPath
@@ -48,7 +48,7 @@ class LSPClientBase(
     LSPCapabilityClientProtocol,
     ABC,
 ):
-    _runtime: ClientRuntime | None = None
+    _runtime: ClientRuntime | None = field(default=None, init=False)
 
     sync_file: bool = True
     """Whether to synchronize file (open, close, changed, etc.) when performing file-related operations."""
@@ -86,9 +86,11 @@ class LSPClientBase(
         The final client capabilities are merged from all capabilities defined in the class hierarchy.
         """
 
+        # reverse mro order so derived capabilities takes precedence
+        reversed_mro = reversed(cls.mro())
         caps = [
             cap_cls.client_capability()
-            for cap_cls in cls.mro()
+            for cap_cls in reversed_mro
             if issubclass(cap_cls, LSPCapabilityProtocol)  #
             and cap_cls is not LSPCapabilityClientProtocol
             and cap_cls is not cls
@@ -117,54 +119,49 @@ class LSPClientBase(
                 }
 
         server = self.create_server()
-        async with server.serve(workspace=formatted_workspace) as server:
-            async with aio.TaskGroup() as tg:
+
+        async with aio.TaskGroup() as worker_tg, server.run():
+            # handle server-side requests
+            # note that server may send notifications before `initialize`,
+            # so we need to start handling server requests before client initialized
+            worker_tg.create_task(self._server_request_worker())
+
+            # handle client-side requests
+            async with aio.TaskGroup() as request_tg:
                 self._runtime = ClientRuntime(
                     server=server,
                     workspace=formatted_workspace,
-                    tg=tg,
+                    tg=request_tg,
                 )
 
-                initialize_params = types.InitializeParams(
-                    capabilities=self.client_capabilities(),
-                    process_id=os.getpid(),
-                    client_info=types.ClientInfo(
-                        name="LSP Client",
-                        version="1.81.0-insider",
-                    ),
-                    locale="en-us",
-                    initialization_options=self.create_initialization_options(),
-                    trace=types.TraceValue.Verbose,
-                    workspace_folders=self.workspace_folders,
+                _ = await self._initialize(
+                    types.InitializeParams(
+                        capabilities=self.client_capabilities(),
+                        process_id=os.getpid(),
+                        client_info=types.ClientInfo(
+                            name="LSP Client",
+                            version="1.81.0-insider",
+                        ),
+                        locale="en-us",
+                        initialization_options=self.create_initialization_options(),
+                        trace=types.TraceValue.Verbose,
+                        workspace_folders=self.workspace_folders,
+                    )
                 )
 
-                # initialize repo
-                _ = await self._initialize(initialize_params)
-
-                # prepare for server side requests
-                server_req_worker_task = tg.create_task(self._server_request_worker())
-
-                try:
-                    yield self
-                    # all client side requests are sent
-                finally:
+                # after `initialize`, server starts to serve
+                async with server.serve(workspace=formatted_workspace):
                     try:
-                        _ = await self._shutdown()
-                    except TimeoutError as e:
-                        raise TimeoutError(
-                            "LSP client shutdown timed out, server failed to exit gracefully."
-                        ) from e
-                    # request server to shutdown (but not exit)
+                        yield self
+                    finally:
+                        try:
+                            _ = await self._shutdown()
+                        except TimeoutError as e:
+                            raise TimeoutError(
+                                "LSP client shutdown timed out, server failed to exit gracefully."
+                            ) from e
 
-                    await self.runtime.server.server_request_receiver.join()
-                    canceled = server_req_worker_task.cancel()
-                    assert canceled, "Server request worker task is not canceled"
-                    # all server side requests are handled
-                # all client side requests are sent
-            # all client side requests are responded
-            await self._exit()  # request server to exit
-
-    # all server processes are exited
+                await self._exit()
 
     @cached_property
     def file_buffer(self) -> LSPFileBuffer:
@@ -343,19 +340,25 @@ class LSPClientBase(
 
         await self._notify(types.ExitNotification())
 
-    async def _dispatch_server_request(self, req: jsonrpc.ChannelRequest):
-        match req:
+    async def _dispatch_server_request(self, server_req: ServerRequest):
+        queue = self.runtime.server.server_request_queue
+
+        match server_req:
             case {"method": types.WINDOW_LOG_MESSAGE} if isinstance(
                 self, lsp_cap.WithReceiveLogMessage
             ):
                 await self.receive_log_message(
-                    jsonrpc.request_deserialize(req, lsp_type.LogMessageNotification)
+                    jsonrpc.request_deserialize(
+                        server_req, lsp_type.LogMessageNotification
+                    )
                 )
             case {"method": types.WINDOW_SHOW_MESSAGE} if isinstance(
                 self, lsp_cap.WithReceiveShowMessage
             ):
                 await self.receive_show_message(
-                    jsonrpc.request_deserialize(req, lsp_type.ShowMessageNotification)
+                    jsonrpc.request_deserialize(
+                        server_req, lsp_type.ShowMessageNotification
+                    )
                 )
             case ({"method": types.WINDOW_SHOW_MESSAGE_REQUEST} as raw_req, tx) if (
                 isinstance(self, lsp_cap.WithRespondShowMessageRequest)
@@ -369,7 +372,7 @@ class LSPClientBase(
             ):
                 await self.receive_publish_diagnostics(
                     jsonrpc.request_deserialize(
-                        req, lsp_type.PublishDiagnosticsNotification
+                        server_req, lsp_type.PublishDiagnosticsNotification
                     )
                 )
             case ({"method": types.WORKSPACE_WORKSPACE_FOLDERS} as raw_req, tx) if (
@@ -389,20 +392,38 @@ class LSPClientBase(
                     jsonrpc.request_deserialize(raw_req, lsp_type.ConfigurationRequest)
                 )
                 tx.send(jsonrpc.response_serialize(resp))
+            case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
+                self, lsp_cap.WithReceivePublishDiagnostics
+            ):
+                await self.receive_publish_diagnostics(
+                    jsonrpc.request_deserialize(
+                        server_req, lsp_type.PublishDiagnosticsNotification
+                    )
+                )
             case (raw_req, _):
                 # if server sent a request that client can't handle, raise an error
                 raise ValueError(f"Unexpected server-side request: {raw_req}")
             case noti:
                 logger.warning("Unknown notification: {}", noti)
 
-        self.runtime.server.server_request_receiver.task_done()
+        queue.task_done()
 
     async def _server_request_worker(self):
+        """
+        This worker will gracefully shutdown after:
+            - All server-side requests are received, indicated by receive() return None
+            - All received requests are dispatched and handled, indicated by TaskGroup exit
+        """
+
         async with aio.TaskGroup() as tg:
-            while req := await self.runtime.server.server_request_receiver.receive():
-                tg.create_task(
-                    aio.wait_for(
-                        self._dispatch_server_request(req),
-                        timeout=self.pending_timeout,
+            queue = self.runtime.server.server_request_queue
+
+            with suppress(aio.QueueShutDown):
+                while True:
+                    server_req = await queue.get()
+                    tg.create_task(
+                        aio.wait_for(
+                            self._dispatch_server_request(server_req),
+                            timeout=self.pending_timeout,
+                        )
                     )
-                )

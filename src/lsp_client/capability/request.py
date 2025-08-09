@@ -47,6 +47,7 @@ class WithRequestInlineCompletions(
         file_path: AnyPath,
         position: Position,
         *,
+        trigger_kind: lsp_type.InlineCompletionTriggerKind = lsp_type.InlineCompletionTriggerKind.Automatic,
         info: lsp_type.SelectedCompletionInfo | None = None,
     ) -> Sequence[lsp_type.InlineCompletionItem] | None:
         match await self._request(
@@ -54,7 +55,7 @@ class WithRequestInlineCompletions(
                 id=jsonrpc_uuid(),
                 params=lsp_type.InlineCompletionParams(
                     context=lsp_type.InlineCompletionContext(
-                        trigger_kind=lsp_type.InlineCompletionTriggerKind.Automatic,
+                        trigger_kind=trigger_kind,
                         selected_completion_info=info,
                     ),
                     text_document=lsp_type.TextDocumentIdentifier(
@@ -183,7 +184,7 @@ class WithRequestDefinition(
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
-                definition=lsp_type.DefinitionClientCapabilities(link_support=True)
+                definition=lsp_type.DefinitionClientCapabilities()
             )
         )
 
@@ -239,6 +240,15 @@ class WithRequestDefinitionLocation(WithRequestDefinition, Protocol):
     `textDocument/definition` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition
     """
 
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                definition=lsp_type.DefinitionClientCapabilities(link_support=False)
+            )
+        )
+
     async def request_definition_location(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.Location] | None:
@@ -254,6 +264,15 @@ class WithRequestDefinitionLink(WithRequestDefinition, Protocol):
 
     Client should use this instead of {@WithRequestDefinitionLocation} whenever the server supports.
     """
+
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                definition=lsp_type.DefinitionClientCapabilities(link_support=True)
+            )
+        )
 
     async def request_definition_link(
         self, file_path: AnyPath, position: Position
@@ -458,7 +477,17 @@ class WithRequestCompletions(
                         tag_support=lsp_type.CompletionItemTagOptions(
                             value_set=[lsp_type.CompletionItemTag.Deprecated]
                         ),
+                        insert_replace_support=True,
+                        insert_text_mode_support=lsp_type.ClientCompletionItemInsertTextModeOptions(
+                            value_set=[*lsp_type.InsertTextMode]
+                        ),
+                        label_details_support=True,
                     ),
+                    completion_item_kind=lsp_type.ClientCompletionItemOptionsKind(
+                        value_set=[*lsp_type.CompletionItemKind]
+                    ),
+                    insert_text_mode=lsp_type.InsertTextMode.AsIs,
+                    context_support=True,
                 ),
             )
         )
@@ -579,9 +608,7 @@ class WithRequestDocumentSymbols(
                         value_set=[*lsp_type.SymbolKind],
                     ),
                     tag_support=lsp_type.ClientSymbolTagOptions(
-                        value_set=[
-                            lsp_type.SymbolTag.Deprecated,
-                        ]
+                        value_set=[*lsp_type.SymbolTag]
                     ),
                     hierarchical_document_symbol_support=True,
                 ),
@@ -599,7 +626,7 @@ class WithRequestDocumentSymbols(
 
         logger.debug("Server supports textDocument/documentSymbol checked")
 
-    async def _request_document_symbols(
+    async def request_document_symbols(
         self, file_path: AnyPath
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.DocumentSymbol] | None
@@ -633,7 +660,7 @@ class WithRequestDocumentSymbolInformation(WithRequestDocumentSymbols, Protocol)
     async def request_document_symbol_information(
         self, file_path: AnyPath
     ) -> Sequence[lsp_type.SymbolInformation] | None:
-        match await self._request_document_symbols(file_path):
+        match await self.request_document_symbols(file_path):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
 
@@ -650,10 +677,10 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
     ) -> TypeGuard[list[lsp_type.DocumentSymbol]]:
         return all(isinstance(item, lsp_type.DocumentSymbol) for item in result)
 
-    async def request_document_symbols(
+    async def request_document_base_symbols(
         self, file_path: AnyPath
     ) -> Sequence[lsp_type.DocumentSymbol] | None:
-        match await self._request_document_symbols(file_path):
+        match await self.request_document_symbols(file_path):
             case list() as symbols if self.is_document_symbols(symbols):
                 return symbols
             case _:
@@ -700,7 +727,7 @@ class WithRequestWorkspaceSymbols(
 
         logger.debug("Server supports workspace/symbol checked")
 
-    async def _request_workspace_symbols(
+    async def request_workspace_symbols(
         self, query: str
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.WorkspaceSymbol] | None
@@ -727,9 +754,9 @@ class WithRequestWorkspaceSymbolInformation(WithRequestWorkspaceSymbols, Protoco
         return all(isinstance(item, lsp_type.SymbolInformation) for item in result)
 
     async def request_workspace_symbol_information(
-        self, query: str
+        self, query: str = ""
     ) -> Sequence[lsp_type.SymbolInformation] | None:
-        match await self._request_workspace_symbols(query):
+        match await self.request_workspace_symbols(query):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
             case _:
@@ -748,11 +775,48 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
     ) -> TypeGuard[list[lsp_type.WorkspaceSymbol]]:
         return all(isinstance(item, lsp_type.WorkspaceSymbol) for item in result)
 
-    async def request_workspace_symbols(
-        self, query: str
+    async def request_workspace_base_symbols(
+        self, query: str = ""
     ) -> Sequence[lsp_type.WorkspaceSymbol] | None:
-        match await self._request_workspace_symbols(query):
+        match await self.request_workspace_symbols(query):
             case list() as symbols if self.is_workspace_symbols(symbols):
                 return symbols
             case _:
                 return
+
+
+@runtime_checkable
+class WithRequestWorkspaceSymbolResolve(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
+    """
+    `workspace/symbol/resolve` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_symbolResolve
+    """
+
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            workspace=lsp_type.WorkspaceClientCapabilities(
+                symbol=lsp_type.WorkspaceSymbolClientCapabilities(
+                    resolve_support=lsp_type.ClientSymbolResolveOptions(
+                        properties=[
+                            "location.range",
+                        ]
+                    ),
+                )
+            )
+        )
+
+    async def request_workspace_symbol_resolve(
+        self, symbol: lsp_type.WorkspaceSymbol
+    ) -> lsp_type.WorkspaceSymbol | None:
+        return await self._request(
+            lsp_type.WorkspaceSymbolResolveRequest(
+                id=jsonrpc_uuid(),
+                params=symbol,
+            ),
+            schema=lsp_type.WorkspaceSymbolResolveResponse,
+        )

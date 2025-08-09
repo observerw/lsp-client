@@ -6,7 +6,7 @@ import random
 from abc import abstractmethod
 from asyncio import StreamReader, StreamWriter
 from collections.abc import AsyncGenerator, Generator, Sequence
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Self, override
@@ -17,7 +17,7 @@ from loguru import logger
 from lsp_client import jsonrpc
 from lsp_client.types import Workspace
 
-from .base import LSPServerBase
+from .base import LSPServerBase, ServerRequest
 from .jsonrpc import read_raw_package, write_raw_package
 
 
@@ -70,54 +70,63 @@ class StdioProcess:
         assert stderr, "Process stderr is not available"
         return stderr
 
-    async def receive_package(self) -> jsonrpc.RawPackage:
-        package = await read_raw_package(self.stdout)
-        logger.debug("Received package: {}", package)
-        return package
-
-    async def send_package(self, package: jsonrpc.RawPackage) -> None:
+    async def send(self, package: jsonrpc.RawPackage) -> None:
         await write_raw_package(self.stdin, package)
         logger.debug("Package sent: {}", package)
 
-    async def shutdown(self) -> None:
+    async def receive(self) -> jsonrpc.RawPackage | None:
         try:
-            if returncode := await aio.wait_for(self.process.wait(), timeout=5.0):
-                logger.debug(
-                    "Process {} exited with code {}",
-                    self.id,
-                    returncode,
-                )
+            package = await read_raw_package(self.stdout)
+            logger.debug("Received package: {}", package)
+            return package
+        except EOFError:
+            logger.debug("Process {} stdout closed", self.id)
+            return None
+
+    async def shutdown(self) -> int:
+        try:
+            returncode = await aio.wait_for(self.process.wait(), timeout=5.0)
+            logger.debug("Process {} exited with code {}", self.id, returncode)
+            return returncode
         except TimeoutError:
             logger.warning(
-                "Process %s shutdown timeout reached, killing process",
+                "Process {} shutdown timeout reached, killing process",
                 self.id,
             )
             self.process.kill()
-            _ = await self.process.wait()
-            logger.debug(
-                "Process %s killed after timeout",
-                self.id,
-            )
+            return 1
+
+    @classmethod
+    @asynccontextmanager
+    async def serve(
+        cls, *cmd: str, id: str, info: LSPServerInfo
+    ) -> AsyncGenerator[StdioProcess]:
+        process = await cls.create(*cmd, id=id, info=info)
+        try:
+            yield process
+        finally:
+            await process.shutdown()
 
 
 @dataclass
 class StdioServerRuntime:
-    workspace: Workspace
-    resp_table: jsonrpc.ResponseTable
     processes: list[StdioProcess]
-    tg: aio.TaskGroup
+    resp_table: jsonrpc.ResponseTable
 
-    # for server-side requests
-    sender: jsonrpc.ReqSender
-    receiver: jsonrpc.ReqReceiver
+    # server-side requests
+    queue: aio.Queue[ServerRequest]
+
+    # only after server start to `serve` will the `workspace` be set here
+    workspace: Workspace | None = None
 
 
 @dataclass
 class StdioServer(LSPServerBase):
     _runtime: StdioServerRuntime | None = field(default=None, init=False)
 
-    process_count: int | None = 1
-    info: LSPServerInfo = field(default_factory=LSPServerInfo)
+    process_count: int | None
+    info: LSPServerInfo
+
     buffer_size: int = 0
 
     @property
@@ -127,119 +136,131 @@ class StdioServer(LSPServerBase):
     @property
     def runtime(self) -> StdioServerRuntime:
         if not self._runtime:
-            raise RuntimeError("LSPServerRuntime is not initialized")
+            raise RuntimeError("Server is not running")
 
         return self._runtime
 
+    @property
+    def workspace(self) -> Workspace:
+        if not self.runtime.workspace:
+            raise RuntimeError("Server is not initialized")
+
+        return self.runtime.workspace
+
     @contextmanager
     def next_server(self) -> Generator[StdioProcess]:
+        # TODO implement more sophisticated load-balancing strategy
         yield random.choice(self.runtime.processes)
 
     @override
     async def request(self, request: jsonrpc.RawRequest) -> jsonrpc.RawResponsePackage:
-        tx, rx = jsonrpc.response_channel.create()
         with self.next_server() as process:
-            await process.send_package(request)
-            await self.runtime.resp_table.register(request["id"], tx)
-            return await rx.receive()
+            await process.send(request)
+            return await self.runtime.resp_table.wait(request["id"])
 
     @override
     async def request_all(
-        self, requests: jsonrpc.RawRequest
+        self, request: jsonrpc.RawRequest
     ) -> Sequence[jsonrpc.RawResponsePackage]:
-        tx, rx = jsonrpc.many_response_channel.create(
-            expect_count=len(self.runtime.processes)
-        )
         await gather_all(
-            process.send_package(requests)  #
+            process.send(request)  #
             for process in self.runtime.processes
         )
-        await self.runtime.resp_table.register(requests["id"], tx)
-        return await rx.receive()
+        return await self.runtime.resp_table.wait_many(
+            request["id"], expect_count=len(self.runtime.processes)
+        )
 
     @override
     async def notify(self, notification: jsonrpc.RawNotification) -> None:
         await gather_all(
-            process.send_package(notification)  #
+            process.send(notification)  #
             for process in self.runtime.processes
         )
 
     @property
     @override
-    def server_request_receiver(self) -> jsonrpc.ReqReceiver:
-        return self.runtime.receiver
+    def server_request_queue(self) -> aio.Queue[ServerRequest]:
+        return self.runtime.queue
 
     @override
     @asynccontextmanager
-    async def serve(self, workspace: Workspace) -> AsyncGenerator[Self]:
+    async def run(self) -> AsyncGenerator[Self]:
         if self._runtime:
             yield self
 
         process_count = self.process_count or os.cpu_count() or 1
         assert process_count >= 1, f"Invalid process count: {process_count}"
-        processes = await gather_all(
-            StdioProcess.create(
-                *self.server_cmd,
-                id=f"process-{i}",
-                info=self.info,
+
+        async with (
+            aio.TaskGroup() as worker_tg,
+            AsyncExitStack() as process_stack,
+        ):
+            processes = await gather_all(
+                process_stack.enter_async_context(
+                    StdioProcess.serve(
+                        *self.server_cmd,
+                        id=f"process-{i}",
+                        info=self.info,
+                    )
+                )
+                for i in range(process_count)
             )
-            for i in range(process_count)
-        )
-        sender, receiver = jsonrpc.request_channel.create(buffer_size=self.buffer_size)
+
+            self._runtime = StdioServerRuntime(
+                resp_table=jsonrpc.ResponseTable(),
+                processes=[*processes],
+                queue=aio.Queue(),
+            )
+
+            for process in self.runtime.processes:
+                worker_tg.create_task(self._process_worker(process))
+
+            logger.debug("LSPServerPool initialized with {} processes", len(processes))
+
+            yield self
+
+        # LSP spec not specify when should server stop sending server-side requests,
+        # so we shutdown the queue after processes exit for safety
+        self.runtime.queue.shutdown()
+
+        self._runtime = None
+        logger.debug("LSPServerPool exit")
+
+    @override
+    @asynccontextmanager
+    async def serve(self, workspace: Workspace) -> AsyncGenerator[Self]:
+        if not self._runtime:
+            raise RuntimeError("Server is not running")
+
+        if self.runtime.workspace:
+            raise RuntimeError("Server can only be initialized once")
+
+        self.runtime.workspace = workspace
 
         try:
-            async with aio.TaskGroup() as tg:
-                self._runtime = StdioServerRuntime(
-                    resp_table=jsonrpc.ResponseTable(),
-                    workspace=workspace,
-                    tg=tg,
-                    processes=[*processes],
-                    sender=sender,
-                    receiver=receiver,
-                )
-                logger.info(
-                    "LSPServerPool initialized with {} processes", len(processes)
-                )
-
-                process_worker_tasks = [
-                    tg.create_task(self._process_worker(process))
-                    for process in self.runtime.processes
-                ]
-
-                yield self
-
-                # if client yielded with no exception,
-                # safely cancel all process worker tasks
-                # or TaskGroup will help us cancel them
-                for task in process_worker_tasks:
-                    canceled = task.cancel()
-                    assert canceled, "Process worker task is not canceled"
-
+            yield self
         finally:  # clean up runtime
-            await self.runtime.sender.join()
-            await self.runtime.resp_table.wait_complete()
-            await gather_all(process.shutdown() for process in self.runtime.processes)
-
-            self._runtime = None
+            # respond to `shutdown` indicates that servers have already
+            # responded to all client-side requests, therefore the resp_table
+            # is supposed to be completed here
+            assert self.runtime.resp_table.completed
+            logger.debug("LSPServerPool shutdown")
 
     async def _process_worker(self, process: StdioProcess):
-        """Worker to handle incoming packages from the LSP server's stdout. Must terminate by cancellation."""
-
         async def handle(package: jsonrpc.RawPackage):
             match package:
                 case {"result": _, "id": id} | {"error": _, "id": id} as resp:
                     await self.runtime.resp_table.send(id, resp)
                 case {"id": id, "method": _} as req:
                     tx, rx = jsonrpc.response_channel.create()
-                    await self.runtime.sender.send((req, tx))
+                    await self.runtime.queue.put((req, tx))
                     resp = await rx.receive()
-                    await process.send_package(resp)
+                    await process.send(resp)
                 case {"method": _} as noti:
-                    await self.runtime.sender.send(noti)
+                    await self.runtime.queue.put(noti)
 
         async with aio.TaskGroup() as tg:
-            while True:
-                package = await process.receive_package()
+            while package := await process.receive():
                 tg.create_task(handle(package))
 
 

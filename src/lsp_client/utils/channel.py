@@ -1,9 +1,10 @@
+"""[tokio-like](https://docs.rs/tokio/latest/tokio/sync/index.html) channel utilities."""
+
 from __future__ import annotations
 
 import asyncio as aio
 from asyncio import Event
-from collections.abc import AsyncGenerator, Hashable
-from contextlib import asynccontextmanager
+from collections.abc import Hashable
 from dataclasses import dataclass, field
 from typing import NamedTuple, Self
 
@@ -18,8 +19,6 @@ class DataEvent[T](Event):
         self.set()
 
     def get_data(self) -> T:
-        """Get data immediately, or raise ValueError if data is not set."""
-
         if not self.is_set():
             raise ValueError("DataEvent not set")
         if self._data is None:
@@ -53,8 +52,6 @@ class ManyDataEvent[T](Event):
             self.set()
 
     def get_data(self) -> list[T]:
-        """Get data immediately, or raise ValueError if data is not set."""
-
         if not self.is_set():
             raise ValueError("ManyDataEvent not set")
         if self._data is None:
@@ -75,7 +72,8 @@ class OneShotSender[T]:
 
     def send(self, item: T) -> None:
         if self._event.is_set():
-            raise RuntimeError("OneShotSender can only be used once")
+            raise RuntimeError("Receiver already closed")
+
         self._event.set_data(item)
 
     @property
@@ -96,6 +94,9 @@ class OneShotReceiver[T]:
 
         return self._event.get_data()
 
+    def close(self) -> None:
+        self._event.set()
+
     @property
     def closed(self) -> bool:
         return self._event.is_set()
@@ -107,7 +108,6 @@ class oneshot_channel[T](NamedTuple):
 
     @classmethod
     def create(cls) -> Self:
-        """Create a one-shot channel."""
         event = DataEvent[T]()
         sender = OneShotSender[T](_event=event)
         receiver = OneShotReceiver[T](_event=event)
@@ -167,8 +167,9 @@ type ShotReceiver[T] = OneShotReceiver[T] | ManyShotReceiver[T]
 class ShotTable[T]:
     """Dispatch data to one-shot senders by ID."""
 
-    _cond: aio.Condition = field(default_factory=aio.Condition)
     _pending: dict[Hashable, ShotSender[T]] = field(default_factory=dict)
+    _empty_cond: aio.Condition = field(default_factory=aio.Condition)
+    """Condition variable to wait for _pending to be empty."""
 
     async def register(self, id: Hashable, sender: ShotSender[T]) -> None:
         """Register a one-shot sender with an ID."""
@@ -176,89 +177,44 @@ class ShotTable[T]:
         if id in self._pending:
             raise ValueError(f"Sender with id {id} already registered")
 
-        async with self._cond:
+        async with self._empty_cond:
             self._pending[id] = sender
 
     async def send(self, id: Hashable, data: T) -> None:
-        """Send data through the one-shot sender with the given ID."""
         if id not in self._pending:
-            raise ValueError(f"OneShotSender with id {id} not found")
+            raise ValueError(f"Pending request of id {id} not found")
 
-        sender = self._pending[id]
+        self._pending[id].send(data)
 
-        if sender.closed:
-            raise ValueError(f"OneShotSender with id {id} is closed")
-
-        sender.send(data)
-
-        async with self._cond:
-            if not sender.closed:
-                return
+        async with self._empty_cond:
             self._pending.pop(id)
             if self._pending:
                 return
-            self._cond.notify_all()
+            self._empty_cond.notify_all()
+
+    async def wait(self, id: Hashable) -> T:
+        tx, rx = oneshot_channel.create()
+
+        try:
+            await self.register(id, tx)
+            return await rx.receive()
+        finally:
+            self._pending.pop(id, None)
+
+    async def wait_many(self, id: Hashable, expect_count: int) -> list[T]:
+        tx, rx = manyshot_channel.create(expect_count=expect_count)
+
+        try:
+            await self.register(id, tx)
+            return await rx.receive()
+        finally:
+            self._pending.pop(id, None)
 
     async def wait_complete(self) -> None:
-        """Wait until all pending one-shot senders are resolved."""
-        async with self._cond:
+        async with self._empty_cond:
             while self._pending:
-                await self._cond.wait()
+                await self._empty_cond.wait()
 
-
-@dataclass(frozen=True)
-class Sender[T]:
-    """MPSC sender"""
-
-    _queue: aio.Queue[T]
-
-    async def send(self, item: T) -> None:
-        await self._queue.put(item)
-
-    async def join(self) -> None:
-        await self._queue.join()
-
-
-@dataclass(frozen=True)
-class Receiver[T]:
-    """MPSC receiver"""
-
-    _queue: aio.Queue[T]
-
-    @asynccontextmanager
-    async def handle(self) -> AsyncGenerator[T]:
-        try:
-            yield await self._queue.get()
-        finally:
-            self._queue.task_done()
-
-    async def receive(self) -> T:
-        return await self._queue.get()
-
-    async def try_receive(self) -> T | None:
-        if self._queue.empty():
-            return None
-        return await self._queue.get()
-
-    def task_done(self) -> None:
-        self._queue.task_done()
-
-    async def join(self) -> None:
-        """Wait until all received items have been processed."""
-        await self._queue.join()
-
-
-class channel[T](NamedTuple):
-    """MPSC channel"""
-
-    sender: Sender[T]
-    receiver: Receiver[T]
-
-    @classmethod
-    def create(cls, buffer_size: int = 0) -> channel[T]:
-        """Create a channel with a specified buffer size."""
-
-        queue = aio.Queue[T](buffer_size)
-        sender = Sender[T](_queue=queue)
-        receiver = Receiver[T](_queue=queue)
-        return cls(sender=sender, receiver=receiver)
+    @property
+    def completed(self) -> bool:
+        return not self._pending

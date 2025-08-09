@@ -7,19 +7,16 @@ from typing import Any, TypedDict, cast
 
 from lsprotocol import converters, types
 
-from lsp_client.channel import (
+from lsp_client.types import Notification, Request, Response
+from lsp_client.utils.channel import (
     ManyShotReceiver,
     ManyShotSender,
     OneShotReceiver,
     OneShotSender,
-    Receiver,
-    Sender,
     ShotTable,
-    channel,
     manyshot_channel,
     oneshot_channel,
 )
-from lsp_client.types import Notification, Request, Response
 
 # --------------------------------- base type -------------------------------- #
 
@@ -114,24 +111,15 @@ def response_serialize(response: Response[Any]) -> RawResponsePackage:
 
 # ---------------------------------- channel --------------------------------- #
 
-# one shot channel for response to request
-type ChannelResponse = RawResponsePackage
-
-response_channel = oneshot_channel[ChannelResponse]
-type RespSender = OneShotSender[ChannelResponse]
-type RespReceiver = OneShotReceiver[ChannelResponse]
+# one shot channel for response
+response_channel = oneshot_channel[RawResponsePackage]
+type RespSender = OneShotSender[RawResponsePackage]
+type RespReceiver = OneShotReceiver[RawResponsePackage]
 
 # one shot channel for multiple response
-many_response_channel = manyshot_channel[ChannelResponse]
-type ManyRespSender = ManyShotSender[ChannelResponse]
-type ManyRespReceiver = ManyShotReceiver[ChannelResponse]
+many_response_channel = manyshot_channel[RawResponsePackage]
+type ManyRespSender = ManyShotSender[RawResponsePackage]
+type ManyRespReceiver = ManyShotReceiver[RawResponsePackage]
 
 # table for response dispatch
-ResponseTable = ShotTable[ChannelResponse]
-
-# mpsc channel for sending request
-type ChannelRequest = tuple[RawRequest, RespSender | ManyRespSender] | RawNotification
-
-request_channel = channel[ChannelRequest]
-type ReqSender = Sender[ChannelRequest]
-type ReqReceiver = Receiver[ChannelRequest]
+ResponseTable = ShotTable[RawResponsePackage]

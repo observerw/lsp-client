@@ -17,6 +17,7 @@ class FullFeaturedCapabilityGroup(
     req.WithRequestSignatureHelp,
     req.WithRequestDocumentSymbols,
     req.WithRequestWorkspaceSymbols,
+    req.WithRequestWorkspaceSymbolResolve,
     resp.WithReceiveLogMessage,
     resp.WithReceiveShowMessage,
     resp.WithReceiveLogTrace,

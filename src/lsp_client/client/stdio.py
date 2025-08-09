@@ -8,7 +8,7 @@ from lsp_client.server.stdio import LSPServerInfo, StdioServer
 from .base import LSPClientBase
 
 
-@dataclass
+@dataclass(kw_only=True)
 class StdioClient(LSPClientBase):
     """LSP client with stdio server related options."""
 
@@ -23,7 +23,7 @@ class StdioClient(LSPClientBase):
         """Create a stdio server instance."""
 
 
-@dataclass
+@dataclass(kw_only=True)
 class DockerStdioClient(StdioClient):
     """LSP client with docker support."""
 

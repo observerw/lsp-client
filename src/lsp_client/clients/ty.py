@@ -20,7 +20,7 @@ from lsp_client.server.stdio import StdioServer
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class TyServer(StdioServer):
     @property
     @override
@@ -32,10 +32,15 @@ class TyServer(StdioServer):
 
 
 @final
-@dataclass
+@dataclass(kw_only=True)
 class TyClient(
+    lsp_cap.WithRequestCompletions,
+    lsp_cap.WithRequestDefinitionLink,
     lsp_cap.WithRequestReferences,
+    lsp_cap.WithRequestHover,
     lsp_cap.WithRespondWorkspaceConfiguration,
+    lsp_cap.WithRequestSignatureHelp,
+    lsp_cap.WithReceivePublishDiagnostics,
     StdioClient,
 ):
     diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
