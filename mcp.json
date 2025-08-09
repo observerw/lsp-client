@@ -1,0 +1,10 @@
+{
+    "mcpServers": {
+        "lsp-client": {
+            "command": "python3",
+            "args": [
+                "$(find . -name 'lsp_client.py' -print -quit)"
+            ]
+        }
+    }
+}

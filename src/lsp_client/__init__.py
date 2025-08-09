@@ -5,6 +5,7 @@ from loguru import logger
 
 from . import capability as lsp_cap
 from .client.base import LSPClientBase
+from .mcp.sdk import start_mcp
 from .server.base import LSPServerBase
 from .types import Position, Range
 
@@ -18,4 +19,5 @@ __all__ = [
     "logger",
     "lsp_cap",
     "lsp_type",
+    "start_mcp",
 ]
