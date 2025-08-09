@@ -626,7 +626,7 @@ class WithRequestDocumentSymbols(
 
         logger.debug("Server supports textDocument/documentSymbol checked")
 
-    async def _request_document_symbols(
+    async def request_document_symbols(
         self, file_path: AnyPath
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.DocumentSymbol] | None
@@ -660,7 +660,7 @@ class WithRequestDocumentSymbolInformation(WithRequestDocumentSymbols, Protocol)
     async def request_document_symbol_information(
         self, file_path: AnyPath
     ) -> Sequence[lsp_type.SymbolInformation] | None:
-        match await self._request_document_symbols(file_path):
+        match await self.request_document_symbols(file_path):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
 
@@ -677,10 +677,10 @@ class WithRequestDocumentBaseSymbols(WithRequestDocumentSymbols, Protocol):
     ) -> TypeGuard[list[lsp_type.DocumentSymbol]]:
         return all(isinstance(item, lsp_type.DocumentSymbol) for item in result)
 
-    async def request_document_symbols(
+    async def request_document_base_symbols(
         self, file_path: AnyPath
     ) -> Sequence[lsp_type.DocumentSymbol] | None:
-        match await self._request_document_symbols(file_path):
+        match await self.request_document_symbols(file_path):
             case list() as symbols if self.is_document_symbols(symbols):
                 return symbols
             case _:
@@ -727,7 +727,7 @@ class WithRequestWorkspaceSymbols(
 
         logger.debug("Server supports workspace/symbol checked")
 
-    async def _request_workspace_symbols(
+    async def request_workspace_symbols(
         self, query: str
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.WorkspaceSymbol] | None
@@ -756,7 +756,7 @@ class WithRequestWorkspaceSymbolInformation(WithRequestWorkspaceSymbols, Protoco
     async def request_workspace_symbol_information(
         self, query: str = ""
     ) -> Sequence[lsp_type.SymbolInformation] | None:
-        match await self._request_workspace_symbols(query):
+        match await self.request_workspace_symbols(query):
             case list() as symbols if self.is_symbol_information(symbols):
                 return symbols
             case _:
@@ -775,10 +775,10 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
     ) -> TypeGuard[list[lsp_type.WorkspaceSymbol]]:
         return all(isinstance(item, lsp_type.WorkspaceSymbol) for item in result)
 
-    async def request_workspace_symbols(
+    async def request_workspace_base_symbols(
         self, query: str = ""
     ) -> Sequence[lsp_type.WorkspaceSymbol] | None:
-        match await self._request_workspace_symbols(query):
+        match await self.request_workspace_symbols(query):
             case list() as symbols if self.is_workspace_symbols(symbols):
                 return symbols
             case _:
