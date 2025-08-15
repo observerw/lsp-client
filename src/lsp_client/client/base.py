@@ -201,11 +201,6 @@ class LSPClientBase(
         return AbsPath.from_uri(uri)
 
     @override
-    def resolve_path(self, file_path: AnyPath) -> AbsPath:
-        uri = self.as_uri(file_path)
-        return self.from_uri(uri)
-
-    @override
     @asynccontextmanager
     async def open_files(self, *file_paths: AnyPath):
         """
