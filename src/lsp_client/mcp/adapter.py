@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Literal
 
 from lsprotocol.types import Position
 from mcp.server.fastmcp import FastMCP
@@ -31,29 +30,20 @@ def resolve_line(text: str, pattern: str) -> int:
     return line
 
 
-type CharacterIndicator = Literal["·"]
+character_indicator = "·"
 
 
-def resolve_character(
-    text: str,
-    pattern: str,
-    *,
-    indicator: CharacterIndicator | None = None,
-) -> int:
-    sub_idx = text.index(pattern)
+def resolve_character(text: str, pattern: str) -> int:
+    if character_indicator in pattern:
+        indicator_idx = pattern.index(character_indicator)
+        return text.index(pattern.replace(character_indicator, "")) + indicator_idx - 1
 
-    if indicator:
-        indicator_idx = pattern.index(indicator)
-        return sub_idx + indicator_idx - 1
-
-    return sub_idx
+    return text.index(pattern)
 
 
-def resolve_position(
-    text: str, pattern: str, *, indicator: CharacterIndicator | None = None
-) -> lsp_type.Position:
-    line = resolve_line(text, pattern.replace(indicator, "") if indicator else pattern)
-    character = resolve_character(text, pattern, indicator=indicator)
+def resolve_position(text: str, pattern: str) -> lsp_type.Position:
+    line = resolve_line(text, pattern)
+    character = resolve_character(text, pattern)
 
     return lsp_type.Position(line, character)
 
@@ -78,15 +68,9 @@ class Locate(BaseModel):
     )
 
     pattern: str = Field(
-        description="Location pattern to locate the symbol in the file. You may "
-        "use `indicator` to locate the character in the line."
-        "If not provided, the first occurrence of the pattern will be used."
-    )
-
-    indicator: CharacterIndicator | None = Field(
-        default=None,
-        description="If provided in `pattern`, "
-        "it will be used to locate the character in the line.",
+        description="""
+Location pattern to locate the symbol in the file. You may use `indicator` to locate the character in the line. If not provided, the first occurrence of the pattern will be used.
+        """
     )
 
     line_range: tuple[int, int] | None = Field(
@@ -106,7 +90,7 @@ class Locate(BaseModel):
             else file_path.read_text()
         )
 
-        position = resolve_position(text, self.pattern, indicator=self.indicator)
+        position = resolve_position(text, self.pattern)
         position.line += offset
 
         return position
