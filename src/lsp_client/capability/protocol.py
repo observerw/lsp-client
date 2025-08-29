@@ -18,6 +18,11 @@ class LSPCapabilityProtocol(Protocol):
 
     @classmethod
     @abstractmethod
+    def method(cls) -> Sequence[str]:
+        """The LSP methods"""
+
+    @classmethod
+    @abstractmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         """
         Return the client capabilities for this capability.

@@ -1,7 +1,7 @@
 [project]
 name = "lsp-client"
 version = "0.1.0"
-description = "Full-featured, well-typed, and easy-to-use LSP client."
+description = "Full-featured, well-typed, and easy-to-use LSP client"
 readme = "README.md"
 authors = [{ name = "observerw", email = "wozluohd@gmail.com" }]
 requires-python = ">=3.13"
@@ -13,7 +13,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "asyncio-addon>=0.2.0",
+    "aiometer>=1.0.0",
+    "anyio>=4.10.0",
+    "attrs>=25.3.0",
     "loguru>=0.7.3",
     "lsprotocol>=2025.0.0",
     "pydantic>=2.11.7",
@@ -30,7 +32,6 @@ dev = [
     "httpx>=0.28.1",
     "aiofiles>=24.1.0",
 ]
-mcp = ["mcp[cli]>=1.10.1", "pydantic>=2.11.7", "typer>=0.16.0"]
 
 [build-system]
 requires = ["hatchling"]

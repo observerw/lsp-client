@@ -1,63 +1,64 @@
 from __future__ import annotations
 
-import asyncio as aio
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Mapping, Sequence
-from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass, field
-from functools import cached_property
-from itertools import product
+from collections.abc import AsyncGenerator, Sequence
+from contextlib import asynccontextmanager
+from functools import cached_property, partial
 from pathlib import Path
-from typing import Any, Self, final, override
+from typing import Any, Self, override
 
+import aiometer
+import anyio
 import attrs
-from asyncio_addon import gather_all
+from anyio import AsyncContextManagerMixin
+from attrs import define, field
 from loguru import logger
 from lsprotocol import types
 
-import lsp_client.capability as lsp_cap
-from lsp_client import jsonrpc, lsp_type
+from lsp_client import jsonrpc
 from lsp_client.capability.file_buffer import LSPFileBuffer
 from lsp_client.capability.notification import WithNotifyTextDocumentSynchronize
 from lsp_client.capability.protocol import (
     LSPCapabilityClientProtocol,
     LSPCapabilityProtocol,
 )
-from lsp_client.server.base import LSPServerBase, ServerRequest
+from lsp_client.server import LSPServer
+from lsp_client.server.type import ServerRequest
 from lsp_client.types import AnyPath, Notification, Workspace, WorkspaceFolder
 from lsp_client.utils.attrs import attrs_merges
+from lsp_client.utils.channel import channel
 from lsp_client.utils.path import AbsPath
 
-ROOT_FOLDER_NAME = "__root__"
+from .server_req import ServerRequestMixin
+from .utils import ROOT_FOLDER_NAME, format_workspace
 
 
-@final
-@dataclass(frozen=True)
-class ClientRuntime:
-    server: LSPServerBase
-    workspace: Workspace
-    tg: aio.TaskGroup
-
-
-@dataclass(kw_only=True)
-class LSPClientBase(
+@define
+class LSPClient[Server: LSPServer](
     # Client support for `textDocument/didOpen`, `textDocument/didChange` and `textDocument/didClose`
     # notifications is mandatory
     WithNotifyTextDocumentSynchronize,
     LSPCapabilityClientProtocol,
+    AsyncContextManagerMixin,
+    ServerRequestMixin,
     ABC,
 ):
-    _runtime: ClientRuntime | None = field(default=None, init=False)
+    server: Server
+    """LSP server this client is connected to."""
+
+    workspace: Workspace = field(converter=format_workspace)
+    """
+    Workspace path(s) for the client to run on.
+
+    Can be a single path (single-root workspace), or multiple path with unique identifier (multiple-root worksapce).
+    """
 
     sync_file: bool = True
     """Whether to synchronize file (open, close, changed, etc.) when performing file-related operations."""
 
     pending_timeout: float | None = 10.0
     """Timeout for pending requests."""
-
-    @abstractmethod
-    def create_server(self) -> LSPServerBase: ...
 
     @abstractmethod
     def create_initialization_options(self) -> dict[str, Any] | None: ...
@@ -67,16 +68,9 @@ class LSPClientBase(
         """Check if the available server capabilities are compatible with the client."""
 
     @property
-    def runtime(self) -> ClientRuntime:
-        if not (runtime := self._runtime):
-            raise RuntimeError("Client is closed.")
-
-        return runtime
-
-    @property
     @override
     def workspace_folders(self) -> Sequence[WorkspaceFolder]:
-        return [*self.runtime.workspace.values()]
+        return [*self.workspace.values()]
 
     @classmethod
     def client_capabilities(cls) -> types.ClientCapabilities:
@@ -100,67 +94,44 @@ class LSPClientBase(
         assert isinstance(merged, types.ClientCapabilities)
         return merged
 
+    @override
     @asynccontextmanager
-    async def start(
-        self, workspace: AnyPath | Mapping[str, AnyPath]
-    ) -> AsyncGenerator[Self]:
-        match workspace:
-            case str() | os.PathLike() as root_folder_path:
-                formatted_workspace = {
-                    ROOT_FOLDER_NAME: WorkspaceFolder(
-                        uri=AbsPath(root_folder_path).as_uri(),
-                        name=ROOT_FOLDER_NAME,
-                    )
-                }
-            case _ as mapping:
-                formatted_workspace = {
-                    name: WorkspaceFolder(uri=AbsPath(path).as_uri(), name=name)
-                    for name, path in mapping.items()
-                }
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        sender, receiver = channel[ServerRequest].create()
 
-        server = self.create_server()
+        async with (
+            anyio.create_task_group() as worker_tg,
+            self.server._start(sender=sender),
+        ):
+            # server notification can be sent before initialize
+            worker_tg.start_soon(self._server_request_worker, receiver)
 
-        async with aio.TaskGroup() as worker_tg, server.run():
-            # handle server-side requests
-            # note that server may send notifications before `initialize`,
-            # so we need to start handling server requests before client initialized
-            worker_tg.create_task(self._server_request_worker())
+            # if single workspace root provided, set `root_path` and `root_uri` for compatibility
+            root_workspace = self.workspace.get(ROOT_FOLDER_NAME)
+            root_path = root_workspace.path.as_posix() if root_workspace else None
+            root_uri = root_workspace.uri if root_workspace else None
 
-            # handle client-side requests
-            async with aio.TaskGroup() as request_tg:
-                self._runtime = ClientRuntime(
-                    server=server,
-                    workspace=formatted_workspace,
-                    tg=request_tg,
+            _ = await self._initialize(
+                types.InitializeParams(
+                    capabilities=self.client_capabilities(),
+                    process_id=os.getpid(),
+                    client_info=types.ClientInfo(
+                        name="LSP Client",
+                        version="1.81.0-insider",
+                    ),
+                    locale="en-us",
+                    initialization_options=self.create_initialization_options(),
+                    trace=types.TraceValue.Verbose,
+                    root_path=root_path,
+                    root_uri=root_uri,
+                    workspace_folders=self.workspace_folders,
                 )
+            )
 
-                _ = await self._initialize(
-                    types.InitializeParams(
-                        capabilities=self.client_capabilities(),
-                        process_id=os.getpid(),
-                        client_info=types.ClientInfo(
-                            name="LSP Client",
-                            version="1.81.0-insider",
-                        ),
-                        locale="en-us",
-                        initialization_options=self.create_initialization_options(),
-                        trace=types.TraceValue.Verbose,
-                        workspace_folders=self.workspace_folders,
-                    )
-                )
-
-                # after `initialize`, server starts to serve
-                async with server.serve(workspace=formatted_workspace):
-                    try:
-                        yield self
-                    finally:
-                        try:
-                            _ = await self._shutdown()
-                        except TimeoutError as e:
-                            raise TimeoutError(
-                                "LSP client shutdown timed out, server failed to exit gracefully."
-                            ) from e
-
+            try:
+                yield self
+            finally:
+                _ = await self._shutdown()
                 await self._exit()
 
     @cached_property
@@ -175,23 +146,21 @@ class LSPClientBase(
         For multi-root workspace, using the first part of a relative path as the workspace folder name.
         """
 
-        workspace = self.runtime.workspace
-
         if (file_path := Path(file_path)).is_absolute():
             # abs path must be in one of the workspace folders
             if not any(
-                file_path.is_relative_to(folder.path) for folder in workspace.values()
+                file_path.is_relative_to(folder.path)
+                for folder in self.workspace.values()
             ):
                 raise ValueError(f"{file_path} is not a valid workspace file path")
 
             return file_path.as_uri()
-
-        if len(self.runtime.workspace) == 1:  # single root workspace
-            folder = workspace[ROOT_FOLDER_NAME]
-        else:
-            if (root := file_path.parts[0]) not in workspace:
+        elif len(self.workspace) == 1:  # single root workspace
+            folder = self.workspace[ROOT_FOLDER_NAME]
+        else:  # multi-root workspace
+            if (root := file_path.parts[0]) not in self.workspace:
                 raise ValueError(f"{root} is not a valid workspace folder")
-            folder = workspace[root]
+            folder = self.workspace[root]
 
         return AbsPath(file_path, base_path=folder.path).as_uri()
 
@@ -226,12 +195,15 @@ class LSPClientBase(
             return
 
         buffer_items = self.file_buffer.open(file_uris)
-        await gather_all(
-            self.notify_text_document_opened(
-                file_path=item.file_path,
-                file_content=item.content,
-            )
-            for item in buffer_items
+        await aiometer.run_all(
+            [
+                partial(
+                    self.notify_text_document_opened,
+                    file_path=item.file_path,
+                    file_content=item.content,
+                )
+                for item in buffer_items
+            ]
         )
 
         try:
@@ -240,15 +212,15 @@ class LSPClientBase(
             closed_items = self.file_buffer.close(
                 item.file_uri for item in buffer_items
             )
-            await gather_all(
-                self.notify_text_document_closed(file_path=item.file_path)
-                for item in closed_items
+            await aiometer.run_all(
+                [
+                    partial(
+                        self.notify_text_document_closed,
+                        file_path=item.file_path,
+                    )
+                    for item in closed_items
+                ]
             )
-
-    def create_request[Task](self, coro: aio._CoroutineLike[Task]) -> aio.Task[Task]:
-        return self.runtime.tg.create_task(
-            aio.wait_for(coro, timeout=self.pending_timeout)
-        )
 
     @override
     async def _request[R](
@@ -260,51 +232,31 @@ class LSPClientBase(
     ) -> R:
         async with self.open_files(*file_paths):
             req = jsonrpc.request_serialize(req)
-            raw_resp = await aio.wait_for(
-                self.runtime.server.request(req),
-                timeout=self.pending_timeout,
-            )
+            with anyio.fail_after(self.pending_timeout):
+                raw_resp = await self.server._request(req)
             return jsonrpc.response_deserialize(raw_resp, schema)
-
-    async def _request_all[R](
-        self,
-        req: attrs.AttrsInstance,
-        schema: type[jsonrpc.Response[R]],
-    ) -> Sequence[R]:
-        """
-        This is not a public API. Only use to send `initialize` and `shutdown` request.
-        """
-
-        req = jsonrpc.request_serialize(req)
-        raw_resp = await aio.wait_for(
-            self.runtime.server.request_all(req),
-            timeout=self.pending_timeout,
-        )
-        return [jsonrpc.response_deserialize(item, schema) for item in raw_resp]
 
     @override
     async def _notify(self, msg: Notification) -> None:
         noti = jsonrpc.notification_serialize(msg)
-        await aio.wait_for(
-            self.runtime.server.notify(noti),
-            timeout=self.pending_timeout,
-        )
+        with anyio.fail_after(self.pending_timeout):
+            await self.server._notify(noti)
 
     async def _initialize(self, params: types.InitializeParams):
         """Initialize parameters for the LSP client."""
 
-        results = await self._request_all(
-            types.InitializeRequest(id="intialize", params=params),
+        result = await self._request(
+            types.InitializeRequest(id="initialize", params=params),
             schema=types.InitializeResponse,
         )
 
         # check for server capabilities
         cls = self.__class__
-        for result, cap_cls in product(results, cls.mro()):
-            if not (
-                issubclass(cap_cls, LSPCapabilityProtocol)
-                and cap_cls is not LSPCapabilityClientProtocol
-                and cap_cls is not cls
+        for cap_cls in cls.mro():
+            if (
+                not issubclass(cap_cls, LSPCapabilityProtocol)
+                or cap_cls is LSPCapabilityProtocol
+                or cap_cls is cls
             ):
                 continue
 
@@ -312,8 +264,10 @@ class LSPClientBase(
                 result.capabilities,
                 result.server_info,
             )
+            for method in cap_cls.method():
+                logger.debug("Server support for {} checked", method)
 
-            self.check_server_compatibility(result.server_info)
+        self.check_server_compatibility(result.server_info)
 
         await self._notify(
             types.InitializedNotification(
@@ -326,7 +280,7 @@ class LSPClientBase(
         `shutdown` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
         """
 
-        _ = await self._request_all(
+        _ = await self._request(
             types.ShutdownRequest(
                 id="shutdown",
             ),
@@ -339,91 +293,3 @@ class LSPClientBase(
         """
 
         await self._notify(types.ExitNotification())
-
-    async def _dispatch_server_request(self, server_req: ServerRequest):
-        queue = self.runtime.server.server_request_queue
-
-        match server_req:
-            case {"method": types.WINDOW_LOG_MESSAGE} if isinstance(
-                self, lsp_cap.WithReceiveLogMessage
-            ):
-                await self.receive_log_message(
-                    jsonrpc.request_deserialize(
-                        server_req, lsp_type.LogMessageNotification
-                    )
-                )
-            case {"method": types.WINDOW_SHOW_MESSAGE} if isinstance(
-                self, lsp_cap.WithReceiveShowMessage
-            ):
-                await self.receive_show_message(
-                    jsonrpc.request_deserialize(
-                        server_req, lsp_type.ShowMessageNotification
-                    )
-                )
-            case ({"method": types.WINDOW_SHOW_MESSAGE_REQUEST} as raw_req, tx) if (
-                isinstance(self, lsp_cap.WithRespondShowMessageRequest)
-            ):
-                resp = await self.respond_show_message(
-                    jsonrpc.request_deserialize(raw_req, lsp_type.ShowMessageRequest)
-                )
-                tx.send(jsonrpc.response_serialize(resp))
-            case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
-                self, lsp_cap.WithReceivePublishDiagnostics
-            ):
-                await self.receive_publish_diagnostics(
-                    jsonrpc.request_deserialize(
-                        server_req, lsp_type.PublishDiagnosticsNotification
-                    )
-                )
-            case ({"method": types.WORKSPACE_WORKSPACE_FOLDERS} as raw_req, tx) if (
-                isinstance(self, lsp_cap.WithRespondWorkspaceFolders)
-            ):
-                resp = await self.respond_workspace_folders(
-                    jsonrpc.request_deserialize(
-                        raw_req, lsp_type.WorkspaceFoldersRequest
-                    )
-                )
-                tx.send(jsonrpc.response_serialize(resp))
-            case (
-                {"method": types.WORKSPACE_CONFIGURATION} as raw_req,
-                tx,
-            ) if isinstance(self, lsp_cap.WithRespondWorkspaceConfiguration):
-                resp = await self.respond_workspace_configuration(
-                    jsonrpc.request_deserialize(raw_req, lsp_type.ConfigurationRequest)
-                )
-                tx.send(jsonrpc.response_serialize(resp))
-            case {"method": types.TEXT_DOCUMENT_PUBLISH_DIAGNOSTICS} if isinstance(
-                self, lsp_cap.WithReceivePublishDiagnostics
-            ):
-                await self.receive_publish_diagnostics(
-                    jsonrpc.request_deserialize(
-                        server_req, lsp_type.PublishDiagnosticsNotification
-                    )
-                )
-            case (raw_req, _):
-                # if server sent a request that client can't handle, raise an error
-                raise ValueError(f"Unexpected server-side request: {raw_req}")
-            case noti:
-                logger.warning("Unknown notification: {}", noti)
-
-        queue.task_done()
-
-    async def _server_request_worker(self):
-        """
-        This worker will gracefully shutdown after:
-            - All server-side requests are received, indicated by receive() return None
-            - All received requests are dispatched and handled, indicated by TaskGroup exit
-        """
-
-        async with aio.TaskGroup() as tg:
-            queue = self.runtime.server.server_request_queue
-
-            with suppress(aio.QueueShutDown):
-                while True:
-                    server_req = await queue.get()
-                    tg.create_task(
-                        aio.wait_for(
-                            self._dispatch_server_request(server_req),
-                            timeout=self.pending_timeout,
-                        )
-                    )

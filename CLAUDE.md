@@ -4,120 +4,113 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an LSP (Language Server Protocol) client library for Python that provides a full-featured, well-typed, and easy-to-use interface for communicating with LSP servers. The project enables parallel processing with multiple server instances and supports various LSP capabilities like references, definitions, hover information, and more.
-
-## Key Commands
-
-### Development Setup
-
-- `uv sync` - Install dependencies
-- `uv sync --group dev` - Install with development dependencies
-
-### Testing
-
-- `pytest` - Run all tests
-- `pytest tests/test_basic.py` - Run specific test file
-- `pytest -v` - Run tests with verbose output
-
-### Code Quality
-
-- `ruff check` - Lint code
-- `ruff format` - Format code
-- `ruff check --fix` - Auto-fix linting issues
-- `mypy src/` - Type checking
-
-### Build and Release
-
-- `just bump version="x.x.x"` - Bump version and create git tag
+This is a **full-featured, well-typed, and easy-to-use LSP client** library for Python that provides a high-level interface to interact with Language Server Protocol servers. The project supports multiple LSP servers (BasedPyright, Ty) and offers both synchronous and asynchronous capabilities.
 
 ## Architecture
 
 ### Core Components
 
-**LSPClientBase** (`src/lsp_client/client/base.py`): The foundational client class that manages:
-
-- Server pool connections and load balancing
-- File buffer management for document synchronization
-- Request/response handling with asyncio task groups
-- Context management for proper server lifecycle
-
-**Capability System** (`src/lsp_client/capability/`): Protocol-based capability definitions that allow:
-
-- Modular LSP feature composition using mixins
-- Type-safe capability checking at class definition time
-- Custom capability implementations for specific servers
-
-**Server Pool** (`src/lsp_client/server/`): Multi-process server management:
-
-- Parallel LSP server instances for improved performance
-- Automatic load balancing across server processes
-- Request queuing and response correlation
-
-**LSP Server Implementations** (`src/lsp_client/servers/`): Pre-configured clients for specific servers:
-
-- `BasedPyrightClient`: Python language server with comprehensive capabilities
-- Extensible pattern for adding new server support
+- **LSPClient**: Abstract base class for LSP clients (`src/lsp_client/client/base.py:37`)
+- **LSPServer**: Base class for LSP servers (`src/lsp_client/server/base.py:27`)
+- **Capability System**: Modular capability groups for LSP features (`src/lsp_client/capability/`)
+- **JSON-RPC**: Custom JSON-RPC implementation for LSP communication (`src/lsp_client/jsonrpc.py`)
 
 ### Key Design Patterns
 
-**Protocol-Based Capabilities**: LSP features are implemented as Protocol classes that can be mixed into client implementations. This allows for:
+- **Capability Groups**: Features are organized into composable capability groups (e.g., `FullFeaturedCapabilityGroup`, `WithRequestDocumentSymbols`)
+- **Server-Specific Clients**: Concrete implementations like `BasedPyrightClient` and `TyClient` in `src/lsp_client/clients/`
+- **Async Context Management**: Uses `asynccontextmanager` for proper resource cleanup
+- **Type Safety**: Extensive use of Pydantic models and type hints with lsprotocol types
 
-- Type-safe capability composition
-- Runtime capability checking
-- Easy extension for new LSP features
+## Development Commands
 
-**Async Context Management**: The client uses async context managers for:
+### Setup
 
-- Proper server lifecycle management (start/shutdown/exit)
-- File opening/closing with document synchronization
-- Resource cleanup on errors or completion
+```bash
+# Install dependencies
+uv sync  # or: pip install -e .
 
-**Multi-Server Architecture**: The server pool pattern enables:
+# Install development dependencies
+uv sync --group dev  # or: pip install -e ".[dev]"
+```
 
-- Parallel request processing across multiple server instances
-- Load balancing for improved performance on large codebases
-- Fault isolation between server processes
+### Linting & Formatting
 
-### File Structure
+```bash
+# Run ruff linter
+ruff check .
 
-- `src/lsp_client/client/`: Core client implementation and file buffer management
-- `src/lsp_client/capability/`: Protocol definitions for LSP capabilities
-- `src/lsp_client/server/`: Server process management and request handling
-- `src/lsp_client/servers/`: Concrete server implementations
-- `src/lsp_client/utils/`: Path utilities and helper functions
-- `tests/`: Test suite including mock server for testing
+# Run ruff formatter
+ruff format .
+
+# Run mypy type checking
+mypy src/
+```
+
+### Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run tests with coverage
+pytest --cov=lsp_client --cov-report=html
+
+# Run async tests
+pytest -p asyncio
+```
+
+### Examples
+
+```bash
+# Run BasedPyright example
+python examples/run_basedpyright.py
+
+# Run Ty example
+python examples/run_ty.py
+```
 
 ## Usage Patterns
 
 ### Basic Client Usage
 
 ```python
-async with BasedPyrightClient.start(repo_path=".", server_count=4) as client:
-    refs = await client.request_references(file_path="file.py", position=Position(10, 5))
+from pathlib import Path
+from lsp_client.clients.based_pyright import BasedPyrightClient
+
+async with BasedPyrightClient(workspace=Path("./my_project")) as client:
+    # Find references
+    refs = await client.request_references(
+        file_path="main.py",
+        position=Position(line=10, character=5)
+    )
+    
+    # Get document symbols
+    symbols = await client.request_document_symbols("main.py")
 ```
 
-### Parallel Request Processing
+### Adding New LSP Server Support
 
-```python
-tasks = [
-    client.create_request(client.request_definition(file, pos))
-    for file, pos in file_positions
-]
-results = [task.result() for task in tasks]
+1. Create server class inheriting from `LSPServer`
+2. Create client class inheriting from `LSPClient[YourServer]`
+3. Mix in appropriate capability groups
+4. Implement required abstract methods
+
+## Project Structure
+
+```
+src/lsp_client/
+├── client/           # Client base classes and utilities
+├── server/           # Server base classes and process management  
+├── capability/       # LSP capability groups and protocols
+├── clients/          # Server-specific client implementations
+└── utils/            # Shared utilities
 ```
 
-### Custom Server Implementation
+## Important Conventions
 
-Extend `LSPClientBase` with desired capability mixins and provide:
-
-- `language_id`: Target language
-- `server_cmd`: Command to start the LSP server
-- `client_capabilities`: LSP client capabilities declaration
-
-## Development Notes
-
-- Python 3.13+ required
-- Uses `ruff` for linting with comprehensive rule set
-- Enforces `from __future__ import annotations` imports
-- Type hints are mandatory throughout the codebase
-- Async/await pattern used extensively for LSP communication
+- **Async First**: All operations are async/await based
+- **Type Safety**: Use lsprotocol types for all LSP interactions
+- **Resource Management**: Always use context managers for client/server lifecycle
+- **Workspace Handling**: Supports both single-root and multi-root workspaces
+- **File Synchronization**: Automatic file synchronization via `LSPFileBuffer`

@@ -4,15 +4,13 @@ import lsprotocol.types as lsp_type
 from loguru import logger
 
 from . import capability as lsp_cap
-from .client.base import LSPClientBase
-from .server.base import LSPServerBase
+from .client.base import LSPClient
+from .server.base import LSPServer
 from .types import Position, Range
 
-logger.disable("lsp_client")
-
 __all__ = [
-    "LSPClientBase",
-    "LSPServerBase",
+    "LSPClient",
+    "LSPServer",
     "Position",
     "Range",
     "logger",

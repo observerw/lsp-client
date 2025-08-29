@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
-from loguru import logger
 from lsprotocol import types
 
 from lsp_client.types import AnyPath
@@ -22,6 +21,15 @@ class WithNotifyTextDocumentSynchronize(
     `textDocument/didChange` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange
     `textDocument/didClose` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didClose
     """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return (
+            "textDocument/didOpen",
+            "textDocument/didChange",
+            "textDocument/didClose",
+        )
 
     @override
     @classmethod
@@ -44,10 +52,6 @@ class WithNotifyTextDocumentSynchronize(
         info: types.ServerInfo | None,
     ):
         assert capability.text_document_sync
-
-        logger.debug("Server supports textDocument/didOpen checked")
-        logger.debug("Server supports textDocument/didChange checked")
-        logger.debug("Server supports textDocument/didClose checked")
 
     async def notify_text_document_opened(
         self, file_path: AnyPath, file_content: str
@@ -89,6 +93,11 @@ class WithNotifyChangeConfiguration(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/didChangeConfiguration",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> types.ClientCapabilities:
         return types.ClientCapabilities(
             workspace=types.WorkspaceClientCapabilities(
@@ -103,7 +112,7 @@ class WithNotifyChangeConfiguration(
         capability: types.ServerCapabilities,
         info: types.ServerInfo | None,
     ):
-        logger.debug("Server supports workspace/didChangeConfiguration checked")
+        pass
 
     async def notify_change_configuration(
         self, settings: types.ConfigurationParams
@@ -127,6 +136,11 @@ class WithNotifyChangeWorkspaceFolders(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/didChangeWorkspaceFolders",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> types.ClientCapabilities:
         return types.ClientCapabilities(
             workspace=types.WorkspaceClientCapabilities(
@@ -144,8 +158,6 @@ class WithNotifyChangeWorkspaceFolders(
         assert (workspace := capability.workspace)
         assert workspace.workspace_folders
         assert workspace.workspace_folders.supported
-
-        logger.debug("Server supports workspace/didChangeWorkspaceFolders checked")
 
     async def notify_change_workspace_folders(
         self,

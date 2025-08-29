@@ -9,12 +9,9 @@ from lsprotocol import converters, types
 
 from lsp_client.types import Notification, Request, Response
 from lsp_client.utils.channel import (
-    ManyShotReceiver,
-    ManyShotSender,
     OneShotReceiver,
     OneShotSender,
-    ShotTable,
-    manyshot_channel,
+    OneShotTable,
     oneshot_channel,
 )
 
@@ -116,10 +113,5 @@ response_channel = oneshot_channel[RawResponsePackage]
 type RespSender = OneShotSender[RawResponsePackage]
 type RespReceiver = OneShotReceiver[RawResponsePackage]
 
-# one shot channel for multiple response
-many_response_channel = manyshot_channel[RawResponsePackage]
-type ManyRespSender = ManyShotSender[RawResponsePackage]
-type ManyRespReceiver = ManyShotReceiver[RawResponsePackage]
-
 # table for response dispatch
-ResponseTable = ShotTable[RawResponsePackage]
+ResponseTable = OneShotTable[RawResponsePackage]

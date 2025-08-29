@@ -4,11 +4,11 @@ Server-side request/notification.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
+import lsprotocol.types as lsp_type
 from loguru import logger
-
-from lsp_client import lsp_type
 
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
 
@@ -25,6 +25,11 @@ class WithReceiveLogMessage(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("window/logMessage",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         # logMessage don't need client capabilities
         return lsp_type.ClientCapabilities()
@@ -36,10 +41,10 @@ class WithReceiveLogMessage(
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports window/logMessage checked")
+        pass
 
     async def receive_log_message(self, req: lsp_type.LogMessageNotification):
-        logger.debug("Received log message: {}", req.params.message)
+        logger.info("Received log message: {}", req.params.message)
 
 
 @runtime_checkable
@@ -56,15 +61,20 @@ class WithReceiveLogTrace(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("window/logTrace",)
+
+    @override
+    @classmethod
     def check_server_capability(
         cls,
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports window/logTrace checked")
+        pass
 
     async def receive_log_trace(self, req: lsp_type.LogTraceNotification):
-        logger.debug("Received log trace: {}", req.params.message)
+        logger.info("Received log trace: {}", req.params.message)
 
 
 @runtime_checkable
@@ -76,6 +86,11 @@ class WithReceiveShowMessage(
     """
     `window/showMessage` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_showMessage
     """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("window/showMessage",)
 
     @override
     @classmethod
@@ -97,10 +112,10 @@ class WithReceiveShowMessage(
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports window/showMessage checked")
+        pass
 
     async def receive_show_message(self, req: lsp_type.ShowMessageNotification):
-        logger.debug("Received show message: {}", req.params.message)
+        logger.info("Received show message: {}", req.params.message)
 
 
 @runtime_checkable
@@ -112,6 +127,11 @@ class WithReceivePublishDiagnostics(
     """
     `textDocument/publishDiagnostics` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics
     """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/publishDiagnostics",)
 
     @override
     @classmethod
@@ -136,13 +156,13 @@ class WithReceivePublishDiagnostics(
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports textDocument/publishDiagnostics checked")
+        pass
 
     async def receive_publish_diagnostics(
         self, req: lsp_type.PublishDiagnosticsNotification
     ) -> None:
         # TODO add support for diagnostic handling
-        logger.debug(
+        logger.info(
             "Received publish diagnostics for {}",
             req.params.uri,
         )
@@ -157,6 +177,11 @@ class WithRespondShowMessageRequest(
     """
     `window/showMessageRequest` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_showMessageRequest
     """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("window/showMessageRequest",)
 
     @override
     @classmethod
@@ -178,7 +203,7 @@ class WithRespondShowMessageRequest(
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports window/showMessageRequest checked")
+        pass
 
     async def respond_show_message(
         self, req: lsp_type.ShowMessageRequest
@@ -199,6 +224,11 @@ class WithRespondWorkspaceFolders(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/workspaceFolders",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             workspace=lsp_type.WorkspaceClientCapabilities(workspace_folders=True)
@@ -211,7 +241,7 @@ class WithRespondWorkspaceFolders(
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports workspace/workspaceFolders checked")
+        pass
 
     async def respond_workspace_folders(
         self, req: lsp_type.WorkspaceFoldersRequest
@@ -235,6 +265,11 @@ class WithRespondWorkspaceConfiguration(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/configuration",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             workspace=lsp_type.WorkspaceClientCapabilities(
@@ -250,14 +285,12 @@ class WithRespondWorkspaceConfiguration(
         capability: lsp_type.ServerCapabilities,
         info: lsp_type.ServerInfo | None,
     ):
-        logger.debug("Server supports workspace/configuration checked")
+        pass
 
     async def respond_workspace_configuration(
         self, req: lsp_type.ConfigurationRequest
     ) -> lsp_type.ConfigurationResponse:
         logger.debug("Responding to workspace configuration request")
-        # Return empty configuration values for all requested items
-        # In a real implementation, this would fetch actual configuration values
         return lsp_type.ConfigurationResponse(
             id=req.id,
             result=[],

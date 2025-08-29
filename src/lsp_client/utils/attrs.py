@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import reduce
-from typing import Any
 
 import attrs
 
@@ -28,7 +27,10 @@ def can_merge_attrs(a: attrs.AttrsInstance, b: attrs.AttrsInstance) -> bool:
     )
 
 
-def attrs_merge(base: Any | None, update: Any | None) -> Any:
+def attrs_merge(
+    base: attrs.AttrsInstance | None,
+    update: attrs.AttrsInstance | None,
+) -> attrs.AttrsInstance:
     """
     Merge `update` attrs instance into `base` attrs instance.
 
@@ -59,7 +61,6 @@ def attrs_merge(base: Any | None, update: Any | None) -> Any:
             return update_value
 
 
-def attrs_merges(*args: Any) -> Any:
+def attrs_merges(*args: attrs.AttrsInstance) -> attrs.AttrsInstance:
     """Merge multiple attrs instances into one."""
-
     return reduce(attrs_merge, args)

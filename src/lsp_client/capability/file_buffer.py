@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
 
+from attrs import Factory, define, frozen
 
-@dataclass(frozen=True)
+
+@frozen
 class LSPFileBufferItem:
     file_uri: str
     file_content: bytes
@@ -26,10 +27,10 @@ class LSPFileBufferItem:
         return 0
 
 
-@dataclass
+@define
 class LSPFileBuffer:
-    _lookup: dict[str, LSPFileBufferItem] = field(default_factory=dict)
-    _ref_count: Counter[str] = field(default_factory=Counter)
+    _lookup: dict[str, LSPFileBufferItem] = Factory(dict)
+    _ref_count: Counter[str] = Factory(Counter)
 
     def open(self, file_uris: Iterable[str]) -> Sequence[LSPFileBufferItem]:
         """Open files and save to buffer. Only return newly opened files."""

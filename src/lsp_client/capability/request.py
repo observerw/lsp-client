@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from functools import partial
 from typing import Any, Protocol, TypeGuard, override, runtime_checkable
 
-from asyncio_addon import gather_all
-from loguru import logger
+import aiometer
+import lsprotocol.types as lsp_type
 
-from lsp_client import lsp_type
 from lsp_client.types import AnyPath, Position
 
 from .protocol import LSPCapabilityClientProtocol, LSPCapabilityProtocol
@@ -25,6 +25,11 @@ class WithRequestInlineCompletions(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/inlineCompletion",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
@@ -40,7 +45,6 @@ class WithRequestInlineCompletions(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.inline_completion_provider
-        logger.debug("Server supports textDocument/inlineCompletion checked")
 
     async def request_inline_completions(
         self,
@@ -83,6 +87,11 @@ class WithRequestExecuteCommand(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/executeCommand",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             workspace=lsp_type.WorkspaceClientCapabilities(
@@ -98,7 +107,6 @@ class WithRequestExecuteCommand(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.execute_command_provider
-        logger.debug("Server supports workspace/executeCommand checked")
 
     async def request_execute_command(
         self, command: str, *arguments: Any
@@ -127,6 +135,11 @@ class WithRequestReferences(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/references",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
@@ -142,7 +155,6 @@ class WithRequestReferences(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.references_provider
-        logger.debug("Server supports textDocument/references checked")
 
     async def request_references(
         self,
@@ -181,6 +193,11 @@ class WithRequestDefinition(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/definition",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
@@ -196,7 +213,6 @@ class WithRequestDefinition(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.definition_provider
-        logger.debug("Server supports textDocument/definition checked")
 
     @staticmethod
     def is_locations(result: list[Any]) -> TypeGuard[list[lsp_type.Location]]:
@@ -290,6 +306,11 @@ class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Proto
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/hover",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
@@ -310,8 +331,6 @@ class WithRequestHover(LSPCapabilityProtocol, LSPCapabilityClientProtocol, Proto
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.hover_provider
-
-        logger.debug("Server supports textDocument/hover checked")
 
     async def request_hover(
         self, file_path: AnyPath, position: Position
@@ -345,6 +364,15 @@ class WithRequestCallHierarchy(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return (
+            "textDocument/prepareCallHierarchy",
+            "callHierarchy/incomingCalls",
+            "callHierarchy/outgoingCalls",
+        )
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
@@ -360,8 +388,6 @@ class WithRequestCallHierarchy(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.call_hierarchy_provider
-
-        logger.debug("Server supports textDocument/callHierarchy checked")
 
     async def _prepare_call_hierarchy(
         self, file_path: AnyPath, position: Position
@@ -393,18 +419,21 @@ class WithRequestCallHierarchy(
         ):
             return
 
-        result_groups = await gather_all(
-            self._request(
-                lsp_type.CallHierarchyIncomingCallsRequest(
-                    id=jsonrpc_uuid(),
-                    params=lsp_type.CallHierarchyIncomingCallsParams(
-                        item=prepare_result
+        result_groups = await aiometer.run_all(
+            [
+                partial(
+                    self._request,
+                    req=lsp_type.CallHierarchyIncomingCallsRequest(
+                        id=jsonrpc_uuid(),
+                        params=lsp_type.CallHierarchyIncomingCallsParams(
+                            item=prepare_result
+                        ),
                     ),
-                ),
-                schema=lsp_type.CallHierarchyIncomingCallsResponse,
-                file_paths=[file_path],
-            )
-            for prepare_result in prepare_results
+                    schema=lsp_type.CallHierarchyIncomingCallsResponse,
+                    file_paths=[file_path],
+                )
+                for prepare_result in prepare_results
+            ]
         )
 
         return [
@@ -427,18 +456,21 @@ class WithRequestCallHierarchy(
         ):
             return
 
-        result_groups = await gather_all(
-            self._request(
-                lsp_type.CallHierarchyOutgoingCallsRequest(
-                    id=jsonrpc_uuid(),
-                    params=lsp_type.CallHierarchyOutgoingCallsParams(
-                        item=prepare_result
+        result_groups = await aiometer.run_all(
+            [
+                partial(
+                    self._request,
+                    req=lsp_type.CallHierarchyOutgoingCallsRequest(
+                        id=jsonrpc_uuid(),
+                        params=lsp_type.CallHierarchyOutgoingCallsParams(
+                            item=prepare_result
+                        ),
                     ),
-                ),
-                schema=lsp_type.CallHierarchyOutgoingCallsResponse,
-                file_paths=[file_path],
-            )
-            for prepare_result in prepare_results
+                    schema=lsp_type.CallHierarchyOutgoingCallsResponse,
+                    file_paths=[file_path],
+                )
+                for prepare_result in prepare_results
+            ]
         )
 
         return [
@@ -458,6 +490,11 @@ class WithRequestCompletions(
     """
     `textDocument/completion` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
     """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/completion",)
 
     @override
     @classmethod
@@ -500,7 +537,6 @@ class WithRequestCompletions(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.completion_provider
-        logger.debug("Server supports textDocument/completion checked")
 
     async def request_completions(
         self,
@@ -543,6 +579,11 @@ class WithRequestSignatureHelp(
 
     @override
     @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/signatureHelp",)
+
+    @override
+    @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
         return lsp_type.ClientCapabilities(
             text_document=lsp_type.TextDocumentClientCapabilities(
@@ -558,8 +599,6 @@ class WithRequestSignatureHelp(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.signature_help_provider
-
-        logger.debug("Server supports textDocument/signatureHelp checked")
 
     async def request_signature_help(
         self,
@@ -598,6 +637,15 @@ class WithRequestDocumentSymbols(
     LSPCapabilityClientProtocol,
     Protocol,
 ):
+    """
+    `textDocument/documentSymbol` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol
+    """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/documentSymbol",)
+
     @override
     @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
@@ -623,8 +671,6 @@ class WithRequestDocumentSymbols(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.document_symbol_provider
-
-        logger.debug("Server supports textDocument/documentSymbol checked")
 
     async def request_document_symbols(
         self, file_path: AnyPath
@@ -693,6 +739,15 @@ class WithRequestWorkspaceSymbols(
     LSPCapabilityClientProtocol,
     Protocol,
 ):
+    """
+    `workspace/symbol` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_symbol
+    """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/symbol",)
+
     @override
     @classmethod
     def client_capability(cls) -> lsp_type.ClientCapabilities:
@@ -724,8 +779,6 @@ class WithRequestWorkspaceSymbols(
         info: lsp_type.ServerInfo | None,
     ):
         assert capability.workspace_symbol_provider
-
-        logger.debug("Server supports workspace/symbol checked")
 
     async def request_workspace_symbols(
         self, query: str
@@ -786,6 +839,89 @@ class WithRequestWorkspaceBaseSymbols(WithRequestWorkspaceSymbols, Protocol):
 
 
 @runtime_checkable
+class WithRequestRename(
+    LSPCapabilityProtocol,
+    LSPCapabilityClientProtocol,
+    Protocol,
+):
+    """
+    `textDocument/rename` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_rename
+    """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("textDocument/rename", "textDocument/prepareRename")
+
+    @override
+    @classmethod
+    def client_capability(cls) -> lsp_type.ClientCapabilities:
+        return lsp_type.ClientCapabilities(
+            text_document=lsp_type.TextDocumentClientCapabilities(
+                rename=lsp_type.RenameClientCapabilities(
+                    dynamic_registration=True,
+                    prepare_support=True,
+                )
+            )
+        )
+
+    @override
+    @classmethod
+    def check_server_capability(
+        cls,
+        capability: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
+    ):
+        assert capability.rename_provider
+
+    async def request_rename(
+        self,
+        file_path: AnyPath,
+        position: Position,
+        new_name: str,
+    ) -> lsp_type.WorkspaceEdit | None:
+        return await self._request(
+            lsp_type.RenameRequest(
+                id=jsonrpc_uuid(),
+                params=lsp_type.RenameParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    position=position,
+                    new_name=new_name,
+                ),
+            ),
+            schema=lsp_type.RenameResponse,
+            file_paths=[file_path],
+        )
+
+    async def request_prepare_rename(
+        self,
+        file_path: AnyPath,
+        position: Position,
+    ) -> lsp_type.PrepareRenameResult | None:
+        """
+        The textDocument/prepareRename request is sent from the client to the server to setup
+        and test the validity of a rename operation at a given location.
+
+        @since 3.12.0
+        """
+        return await self._request(
+            lsp_type.PrepareRenameRequest(
+                id=jsonrpc_uuid(),
+                params=lsp_type.PrepareRenameParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    position=position,
+                ),
+            ),
+            schema=lsp_type.PrepareRenameResponse,
+            file_paths=[file_path],
+        )
+
+
+@runtime_checkable
 class WithRequestWorkspaceSymbolResolve(
     LSPCapabilityProtocol,
     LSPCapabilityClientProtocol,
@@ -794,6 +930,11 @@ class WithRequestWorkspaceSymbolResolve(
     """
     `workspace/symbol/resolve` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_symbolResolve
     """
+
+    @override
+    @classmethod
+    def method(cls) -> Sequence[str]:
+        return ("workspace/symbolResolve",)
 
     @override
     @classmethod

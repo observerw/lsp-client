@@ -8,31 +8,32 @@ References:
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Any, Literal, final, override
 
+from attr import Factory
+from attrs import define
 from loguru import logger
 from semver import Version
 
-from lsp_client import lsp_cap, lsp_type
-from lsp_client.client.stdio import StdioClient
-from lsp_client.server.stdio import StdioServer
+from lsp_client import LSPClient, LSPServer, lsp_cap, lsp_type
 
 
 @final
-@dataclass(kw_only=True)
-class TyServer(StdioServer):
+@define
+class TyServer(LSPServer):
     @property
     @override
     def server_cmd(self) -> Sequence[str]:
-        return (
-            "ty",
-            "server",
-        )
+        return ("ty",)
+
+    @property
+    @override
+    def server_args(self) -> Sequence[str]:
+        return ("server",)
 
 
 @final
-@dataclass(kw_only=True)
+@define
 class TyClient(
     lsp_cap.WithRequestCompletions,
     lsp_cap.WithRequestDefinitionLink,
@@ -41,8 +42,10 @@ class TyClient(
     lsp_cap.WithRespondWorkspaceConfiguration,
     lsp_cap.WithRequestSignatureHelp,
     lsp_cap.WithReceivePublishDiagnostics,
-    StdioClient,
+    LSPClient[TyServer],
 ):
+    server: TyServer = Factory(TyServer)
+
     diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
     log_level: Literal["error", "warn", "info", "debug", "trace"] = "info"
     import_strategy: Literal["fromEnvironment", "useBundled"] = "fromEnvironment"
@@ -51,13 +54,6 @@ class TyClient(
     @override
     def language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.Python
-
-    @override
-    def create_server(self) -> StdioServer:
-        return TyServer(
-            process_count=self.server_count,
-            info=self.server_info,
-        )
 
     @override
     def create_initialization_options(self) -> dict[str, Any] | None:
