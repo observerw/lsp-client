@@ -62,3 +62,12 @@ class AbsPath(Path):
         walk_up: bool = False,
     ) -> RelPath:
         return RelPath(self, base_path=Path(other))
+
+
+def from_local_uri(uri: str) -> AbsPath:
+    """
+    Turn a local file uri to an absolute path.
+
+    This method is a patch of https://docs.python.org/3/library/pathlib.html#pathlib.Path.from_uri.
+    """
+    return AbsPath(uri.removeprefix("file://"))

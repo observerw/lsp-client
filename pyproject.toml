@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Full-featured, well-typed, and easy-to-use LSP client"
 readme = "README.md"
 authors = [{ name = "observerw", email = "wozluohd@gmail.com" }]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 keywords = ["Language Server Protocol", "LSP"]
 classifiers = [
     "Programming Language :: Python",

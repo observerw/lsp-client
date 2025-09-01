@@ -28,7 +28,7 @@ from lsp_client.server.type import ServerRequest
 from lsp_client.types import AnyPath, Notification, Workspace, WorkspaceFolder
 from lsp_client.utils.attrs import attrs_merges
 from lsp_client.utils.channel import channel
-from lsp_client.utils.path import AbsPath
+from lsp_client.utils.path import AbsPath, from_local_uri
 
 from .server_req import ServerRequestMixin
 from .utils import ROOT_FOLDER_NAME, format_workspace
@@ -167,7 +167,7 @@ class LSPClient[Server: LSPServer](
     @override
     def from_uri(self, uri: str) -> AbsPath:
         """Convert a URI to an absolute file path."""
-        return AbsPath.from_uri(uri)
+        return from_local_uri(uri)
 
     @override
     @asynccontextmanager

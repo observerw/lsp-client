@@ -12,6 +12,8 @@ import attrs
 from attrs import AttrsInstance
 from lsprotocol import types as lsp_type
 
+from lsp_client.utils.path import from_local_uri
+
 Position = lsp_type.Position
 Range = lsp_type.Range
 
@@ -40,7 +42,7 @@ class Response[T](Protocol):
 class WorkspaceFolder(lsp_type.WorkspaceFolder):
     @cached_property
     def path(self) -> Path:
-        return Path.from_uri(self.uri)
+        return from_local_uri(self.uri)
 
 
 type Workspace = Mapping[str, WorkspaceFolder]

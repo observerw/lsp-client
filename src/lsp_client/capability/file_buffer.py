@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from functools import cached_property
-from pathlib import Path
 
 from attrs import Factory, define, frozen
+
+from lsp_client.utils.path import AbsPath, from_local_uri
 
 
 @frozen
@@ -14,8 +15,8 @@ class LSPFileBufferItem:
     file_content: bytes
 
     @cached_property
-    def file_path(self) -> Path:
-        return Path.from_uri(self.file_uri)
+    def file_path(self) -> AbsPath:
+        return from_local_uri(self.file_uri)
 
     @cached_property
     def content(self) -> str:
@@ -44,7 +45,7 @@ class LSPFileBuffer:
 
             item = self._lookup[uri] = LSPFileBufferItem(
                 file_uri=uri,
-                file_content=Path.from_uri(uri).read_bytes(),
+                file_content=from_local_uri(uri).read_bytes(),
             )
             items.append(item)
 
