@@ -61,7 +61,7 @@ class OneShotTable[T]:
         self._pending[id].send(data)
         self._pending.pop(id)
 
-    async def wait(self, id: Hashable) -> T:
+    async def receive(self, id: Hashable) -> T:
         if id in self._pending:
             raise ValueError(f"Sender with id {id} already registered")
 

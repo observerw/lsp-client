@@ -19,7 +19,7 @@ from .type import ServerRequest
 class LSPServerConfig(ProcessConfig): ...
 
 
-type LSPServerRuntime = Literal["local", "docker", "podman", "runc"]
+type LSPServerRuntime = Literal["local", "docker", "podman"]
 
 
 @define(kw_only=True)
@@ -91,7 +91,7 @@ class LSPServer:
 
     async def _request(self, request: jsonrpc.RawRequest) -> jsonrpc.RawResponsePackage:
         await self.process.send(request)
-        return await self.resp_table.wait(request["id"])
+        return await self.resp_table.receive(request["id"])
 
     async def _notify(self, notification: jsonrpc.RawNotification) -> None:
         await self.process.send(notification)
