@@ -108,3 +108,5 @@ async def process_worker(
     async with anyio.create_task_group() as tg:
         while package := await process.receive():
             tg.start_soon(handle, package)
+
+    server_req_sender.close()
