@@ -58,6 +58,9 @@ pytest --cov=lsp_client --cov-report=html
 
 # Run async tests
 pytest -p asyncio
+
+# Run specific test
+pytest tests/test_specific.py::test_function_name
 ```
 
 ### Examples
@@ -68,6 +71,9 @@ python examples/run_basedpyright.py
 
 # Run Ty example
 python examples/run_ty.py
+
+# Run symbols example
+python examples/symbols.py
 ```
 
 ## Usage Patterns
@@ -84,7 +90,7 @@ async with BasedPyrightClient(workspace=Path("./my_project")) as client:
         file_path="main.py",
         position=Position(line=10, character=5)
     )
-    
+
     # Get document symbols
     symbols = await client.request_document_symbols("main.py")
 ```
@@ -101,11 +107,20 @@ async with BasedPyrightClient(workspace=Path("./my_project")) as client:
 ```
 src/lsp_client/
 ├── client/           # Client base classes and utilities
-├── server/           # Server base classes and process management  
+├── server/           # Server base classes and process management
 ├── capability/       # LSP capability groups and protocols
 ├── clients/          # Server-specific client implementations
 └── utils/            # Shared utilities
 ```
+
+## Key Files
+
+- **Entry Points**: `src/lsp_client/__init__.py` - Main package exports
+- **Core Abstractions**:
+  - `src/lsp_client/client/base.py` - LSPClient base class
+  - `src/lsp_client/server/base.py` - LSPServer base class
+- **Capability Groups**: `src/lsp_client/capability/groups.py` - Feature mixins
+- **JSON-RPC**: `src/lsp_client/jsonrpc.py` - Communication layer
 
 ## Important Conventions
 
