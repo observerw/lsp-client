@@ -194,7 +194,7 @@ class LSPClient[Server: LSPServer](
             yield
             return
 
-        buffer_items = self.file_buffer.open(file_uris)
+        buffer_items = await self.file_buffer.open(file_uris)
         await aiometer.run_all(
             [
                 partial(

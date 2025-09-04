@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from functools import cached_property
+from functools import cached_property, partial
 
+import aiometer
+import anyio
 from attrs import Factory, define, frozen
 
 from lsp_client.utils.path import AbsPath, from_local_uri
@@ -33,21 +35,23 @@ class LSPFileBuffer:
     _lookup: dict[str, LSPFileBufferItem] = Factory(dict)
     _ref_count: Counter[str] = Factory(Counter)
 
-    def open(self, file_uris: Iterable[str]) -> Sequence[LSPFileBufferItem]:
+    async def open(self, file_uris: Iterable[str]) -> Sequence[LSPFileBufferItem]:
         """Open files and save to buffer. Only return newly opened files."""
 
         self._ref_count.update(file_uris)
 
-        items: list[LSPFileBufferItem] = []
-        for uri in file_uris:
-            if uri in self._lookup:
-                continue
-
-            item = self._lookup[uri] = LSPFileBufferItem(
+        async def map_item(uri: str) -> LSPFileBufferItem:
+            text = await anyio.Path(from_local_uri(uri)).read_bytes()
+            return LSPFileBufferItem(
                 file_uri=uri,
-                file_content=from_local_uri(uri).read_bytes(),
+                file_content=text,
             )
-            items.append(item)
+
+        file_uris = [uri for uri in file_uris if uri not in self._lookup]
+        items = await aiometer.run_all(
+            [partial(map_item, uri) for uri in file_uris],
+        )
+        self._lookup.update({item.file_uri: item for item in items})
 
         return items
 
