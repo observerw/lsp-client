@@ -3,6 +3,7 @@ from __future__ import annotations
 from os import PathLike
 from pathlib import Path
 from typing import override
+from urllib.parse import unquote
 
 
 class RelPath(Path):
@@ -70,4 +71,5 @@ def from_local_uri(uri: str) -> AbsPath:
 
     This method is a patch of https://docs.python.org/3/library/pathlib.html#pathlib.Path.from_uri.
     """
-    return AbsPath(uri.removeprefix("file://"))
+
+    return AbsPath(unquote(uri).removeprefix("file://"))
