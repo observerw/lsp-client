@@ -21,11 +21,10 @@ class OneShotSender[T]:
 class OneShotReceiver[T]:
     receiver: MemoryObjectReceiveStream[T]
 
-    async def receive(self, *, timeout: float | None = None) -> T:
-        with anyio.fail_after(timeout):
-            item = await self.receiver.receive()
-            self.receiver.close()
-            return item
+    async def receive(self) -> T:
+        item = await self.receiver.receive()
+        self.receiver.close()
+        return item
 
     def try_receive(self) -> T | None:
         with suppress(anyio.WouldBlock):
