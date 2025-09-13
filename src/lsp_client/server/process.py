@@ -96,7 +96,7 @@ async def process_worker(
     async def handle(package: jsonrpc.RawPackage):
         match package:
             case {"result": _, "id": id} | {"error": _, "id": id} as resp:
-                await client_resp_table.send(id, resp)
+                client_resp_table.send(id, resp)
             case {"id": id, "method": _} as req:
                 tx, rx = jsonrpc.response_channel.create()
                 await server_req_sender.send((req, tx))

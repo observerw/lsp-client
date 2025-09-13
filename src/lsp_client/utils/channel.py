@@ -54,7 +54,7 @@ class OneShotTable[T]:
     _pending: dict[Hashable, OneShotSender[T]] = Factory(dict)
     """Condition variable to wait for _pending to be empty."""
 
-    async def send(self, id: Hashable, data: T) -> None:
+    def send(self, id: Hashable, data: T) -> None:
         if id not in self._pending:
             raise ValueError(f"Pending request of id {id} not found")
 
