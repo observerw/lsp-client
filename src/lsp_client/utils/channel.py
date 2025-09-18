@@ -7,6 +7,7 @@ from typing import NamedTuple, Self
 import anyio
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from attrs import Factory, define, frozen
+from loguru import logger
 
 
 @frozen
@@ -14,7 +15,8 @@ class OneShotSender[T]:
     sender: MemoryObjectSendStream[T]
 
     def send(self, item: T) -> None:
-        self.sender.send_nowait(item)
+        with suppress(anyio.WouldBlock):
+            self.sender.send_nowait(item)
 
 
 @frozen
@@ -55,7 +57,8 @@ class OneShotTable[T]:
 
     def send(self, id: Hashable, data: T) -> None:
         if id not in self._pending:
-            raise ValueError(f"Pending request of id {id} not found")
+            logger.debug(f"Pending request of id {id} not found")
+            return
 
         self._pending[id].send(data)
         self._pending.pop(id)
