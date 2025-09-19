@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Hashable
-from contextlib import suppress
 from typing import NamedTuple, Self
 
 import anyio
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from attrs import Factory, define, frozen
-from loguru import logger
 
 
 @frozen
@@ -15,8 +13,7 @@ class OneShotSender[T]:
     sender: MemoryObjectSendStream[T]
 
     def send(self, item: T) -> None:
-        with suppress(anyio.WouldBlock):
-            self.sender.send_nowait(item)
+        self.sender.send_nowait(item)
 
 
 @frozen
@@ -29,10 +26,9 @@ class OneShotReceiver[T]:
         return item
 
     def try_receive(self) -> T | None:
-        with suppress(anyio.WouldBlock):
-            item = self.receiver.receive_nowait()
-            self.receiver.close()
-            return item
+        item = self.receiver.receive_nowait()
+        self.receiver.close()
+        return item
 
 
 class oneshot_channel[T](NamedTuple):
@@ -57,8 +53,7 @@ class OneShotTable[T]:
 
     def send(self, id: Hashable, data: T) -> None:
         if id not in self._pending:
-            logger.debug(f"Pending request of id {id} not found")
-            return
+            raise ValueError(f"Pending request of id {id} not found")
 
         self._pending[id].send(data)
         self._pending.pop(id)
