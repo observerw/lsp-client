@@ -31,7 +31,9 @@ jobs:
       run: uv sync --locked --all-extras --dev
 
     - name: Run linter and static analysis
-      run: uv run pre-commit run --all-files
+      run: |
+        uv run ruff check
+        uv run ruff format --check
 
     - name: Run tests
       run: uv run pytest
