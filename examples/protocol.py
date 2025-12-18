@@ -1,3 +1,9 @@
+# Example: Protocol-based capability checking for LSP clients
+#
+# This example demonstrates how to use Python's Protocol to define expected
+# capabilities for LSP clients and perform runtime checks to ensure clients
+# meet those requirements.
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
@@ -17,14 +23,24 @@ class ExpectClientProtocol(
     WithRequestDefinition,
     Protocol,
 ):
-    """We expect the client to (at least) support 'references' and 'definition' requests."""
+    """Protocol defining minimum expected client capabilities.
+
+    This protocol specifies that any client implementing it must support
+    both 'references' and 'definition' LSP requests. Using @runtime_checkable
+    allows us to use isinstance() and issubclass() checks at runtime.
+    """
 
 
 class BadClient(
     LSPClient,
     WithRequestDocumentSymbol,
 ):
-    """The bad client does not meet our expectations."""
+    """Client that fails to meet protocol requirements.
+
+    This client only implements document symbol capability but lacks
+    the required references and definition capabilities, making it
+    incompatible with ExpectClientProtocol.
+    """
 
 
 class GoodClient(
@@ -33,8 +49,18 @@ class GoodClient(
     WithRequestDefinition,
     WithRequestCallHierarchy,
 ):
-    """The good client meets our expectations."""
+    """Client that satisfies protocol requirements.
+
+    This client implements both required capabilities (references and
+    definition) plus an additional capability (call hierarchy), making
+    it fully compatible with ExpectClientProtocol.
+    """
 
 
-assert not issubclass(BadClient, ExpectClientProtocol)
-assert issubclass(GoodClient, ExpectClientProtocol)
+# Runtime checks to verify protocol compliance
+assert not issubclass(
+    BadClient, ExpectClientProtocol
+)  # Should fail - missing required capabilities
+assert issubclass(
+    GoodClient, ExpectClientProtocol
+)  # Should pass - meets all requirements

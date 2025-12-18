@@ -1,3 +1,9 @@
+# Example: Basic Rust Analyzer LSP client setup
+#
+# This example demonstrates how to initialize a Rust Analyzer client
+# and retrieve basic information about the language server configuration.
+# Rust Analyzer is the official language server for Rust programming language.
+
 from __future__ import annotations
 
 import anyio
@@ -9,9 +15,12 @@ lsp_client.enable_logging()
 
 
 async def main():
+    # Initialize Rust Analyzer client with local server
     async with RustAnalyzerClient(server=RustAnalyzerLocalServer()) as client:
+        # Get and display the language ID for this client
+        # This should return "rust" for Rust Analyzer
         print(client.get_language_id())
 
 
 if __name__ == "__main__":
-    anyio.run(main)
+    anyio.run(main)  # Run the async example
