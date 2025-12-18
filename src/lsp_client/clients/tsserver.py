@@ -98,6 +98,6 @@ class TsserverClient(
             return
         except CalledProcessError as e:
             raise RuntimeError(
-                "Could not install typescript-language-server. Please install it manually with 'npm install -g typescript-language-server typescript'. "
+                "Could not install typescript-language-server and typescript. Please install them manually with 'npm install -g typescript-language-server typescript'. "
                 "See https://github.com/typescript-language-server/typescript-language-server for more information."
             ) from e

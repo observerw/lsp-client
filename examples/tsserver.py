@@ -10,6 +10,7 @@ from pathlib import Path
 
 import anyio
 
+from lsp_client import Position  # noqa: F401 - Used in commented example code
 from lsp_client.clients.tsserver import TsserverClient, TsserverLocalServer
 
 
