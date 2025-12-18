@@ -30,11 +30,14 @@ uv add lsp-client
 from pathlib import Path
 import anyio
 from lsp_client import Position
-from lsp_client.clients.pyright import PyrightClient
+from lsp_client.clients.pyright import PyrightClient, PyrightLocalServer
 
 async def main():
-    # Use current directory as workspace
-    async with PyrightClient(workspace=Path.cwd()) as client:
+    workspace = Path.cwd()
+    async with PyrightClient(
+        workspace=workspace,
+        server=PyrightLocalServer(),
+    ) as client:
         # Find definition of something at line 11, character 28 in a file
         refs = await client.request_definition_locations(
             file_path="src/main.py",
@@ -46,7 +49,7 @@ async def main():
             return
 
         for ref in refs:
-            print(f"Found definition at: {ref.uri}")
+            print(f"Found definition at: {ref.uri} - Range: {ref.range}")
 
 if __name__ == "__main__":
     anyio.run(main)
@@ -57,15 +60,14 @@ if __name__ == "__main__":
 ```python
 from pathlib import Path
 import anyio
-from lsp_client.clients.pyright import PyrightClient, PyrightServer, PyrightDockerRuntime
+from lsp_client import Position
+from lsp_client.clients.pyright import PyrightClient, PyrightDockerServer
 
 async def main():
     workspace = Path.cwd()
     async with PyrightClient(
         workspace=workspace,
-        server=PyrightServer(
-            runtime=PyrightDockerRuntime(mounts=[workspace]),
-        ),
+        server=PyrightDockerServer(mounts=[workspace]),
     ) as client:
         # Find definition of something at line 11, character 28 in a file
         refs = await client.request_definition_locations(
@@ -78,7 +80,7 @@ async def main():
             return
 
         for ref in refs:
-            print(f"Found definition at: {ref.uri}")
+            print(f"Found definition at: {ref.uri} - Range: {ref.range}")
 
 if __name__ == "__main__":
     anyio.run(main)
