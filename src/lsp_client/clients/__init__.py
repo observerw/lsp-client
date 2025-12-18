@@ -6,14 +6,14 @@ from .deno import DenoClient
 from .pyrefly import PyreflyClient
 from .pyright import PyrightClient
 from .rust_analyzer import RustAnalyzerClient
-from .tsserver import TsserverClient
+from .typescript import TypescriptClient
 
 clients: Final = (
     DenoClient,
     PyreflyClient,
     PyrightClient,
     RustAnalyzerClient,
-    TsserverClient,
+    TypescriptClient,
 )
 
 PythonClient = PyrightClient

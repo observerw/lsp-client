@@ -27,14 +27,14 @@ from lsp_client.server.docker import DockerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-TsserverLocalServer = partial(
+TypescriptServer = partial(
     LocalServer, command=["typescript-language-server", "--stdio"]
 )
-TsserverDockerServer = partial(DockerServer, image="docker.io/lspcontainers/tsserver")
+TypescriptDockerServer = partial(DockerServer, image="docker.io/lspcontainers/tsserver")
 
 
 @define
-class TsserverClient(
+class TypescriptClient(
     LSPClient,
     WithRequestHover,
     WithRequestDefinition,

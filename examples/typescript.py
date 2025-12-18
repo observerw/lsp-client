@@ -11,17 +11,17 @@ from pathlib import Path
 import anyio
 
 from lsp_client import Position  # noqa: F401 - Used in commented example code
-from lsp_client.clients.tsserver import TsserverClient, TsserverLocalServer
+from lsp_client.clients.typescript import TypescriptClient, TypescriptServer
 
 
 async def main():
     # Set up workspace directory
     workspace = Path.cwd()
-    async with TsserverClient(
-        server=TsserverLocalServer(),
+    async with TypescriptClient(
+        server=TypescriptServer(),
         workspace=workspace,
     ) as client:
-        # Example: Find definition of TsserverClient at line 13, column 28
+        # Example: Find definition of TypescriptClient at line 13, column 28
         # This demonstrates the definition lookup capability
         print(f"Using language server for: {client.get_language_id()}")
 
