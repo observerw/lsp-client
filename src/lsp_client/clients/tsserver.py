@@ -10,7 +10,6 @@ from attrs import define
 from loguru import logger
 
 from lsp_client.capability.request import (
-    WithRequestCallHierarchy,
     WithRequestDefinition,
     WithRequestDocumentSymbol,
     WithRequestHover,
@@ -42,7 +41,6 @@ class TsserverClient(
     WithRequestReferences,
     WithRequestImplementation,
     WithRequestTypeDefinition,
-    WithRequestCallHierarchy,
     WithRequestDocumentSymbol,
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
