@@ -55,6 +55,7 @@ class TypescriptClient(
     """
 
     # Preferences for TypeScript/JavaScript language features
+    # Reference: https://github.com/typescript-language-server/typescript-language-server#initializationoptions
     suggest_complete_function_calls: bool = True
     include_automatic_optional_chain_completions: bool = True
     include_completions_for_module_exports: bool = True
@@ -91,6 +92,8 @@ class TypescriptClient(
         )
 
         try:
+            # typescript-language-server requires the TypeScript compiler as a peer dependency
+            # Reference: https://github.com/typescript-language-server/typescript-language-server#installing
             await anyio.run_process(
                 ["npm", "install", "-g", "typescript-language-server", "typescript"]
             )
