@@ -62,14 +62,6 @@ class TsserverClient(
     include_completions_for_module_exports: bool = True
     include_completions_with_insert_text: bool = True
 
-    # Auto-import and path suggestions
-    auto_import_suggestions: bool = True
-    path_suggestions: bool = True
-
-    # Code actions and refactorings
-    enable_call_hierarchy: bool = True
-    enable_semantic_highlighting: bool = True
-
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.TypeScript
