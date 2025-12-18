@@ -1,0 +1,154 @@
+{
+  "repo_notes": [
+    {
+      "content": ""
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduce the lsp-client project, summarizing its purpose as a full-featured Python LSP client with parallel processing capabilities and extensible architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Core Architecture",
+      "purpose": "Explain the fundamental architecture of the LSP client system, including the main components and their relationships",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "LSP Client Framework",
+      "purpose": "Detail the LSPClientBase class and server pool management system that forms the foundation of the client architecture",
+      "parent": "Core Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Capability System",
+      "purpose": "Explain the protocol-based capability framework with WithRequest*/WithNotify* mixins that enable modular LSP feature composition",
+      "parent": "Core Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Language Server Implementations",
+      "purpose": "Overview of the various language server client implementations and how they extend the core framework",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Python Tool Integrations",
+      "purpose": "Document Python-specific LSP integrations including Ruff, Pyrefly, and Ty for linting and type checking",
+      "parent": "Language Server Implementations",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Other Language Servers",
+      "purpose": "Document remaining language server implementations for C# and other languages",
+      "parent": "Language Server Implementations",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Usage and Examples",
+      "purpose": "Provide practical examples and usage patterns for the LSP client system",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Basic Usage",
+      "purpose": "Walk through the basic usage patterns with concrete examples of requesting references, definitions, and other LSP operations",
+      "parent": "Usage and Examples",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Custom Capabilities",
+      "purpose": "Demonstrate how to extend the system with custom capabilities and client implementations",
+      "parent": "Usage and Examples",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Protocol Type Safety",
+      "purpose": "Show how to use the protocol-based capability system for type-safe LSP client development",
+      "parent": "Usage and Examples",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Development and Build",
+      "purpose": "Cover the project setup, development workflow, and build processes",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Project Configuration",
+      "purpose": "Detail the project setup including dependencies, build system, and development tools configuration",
+      "parent": "Development and Build",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Development Workflow",
+      "purpose": "Explain the development tools and workflow including version management and contribution guidelines",
+      "parent": "Development and Build",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "CI/CD and Publishing",
+      "purpose": "Document the continuous integration and PyPI publishing pipeline",
+      "parent": "Development and Build",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    }
+  ]
+}
