@@ -1,0 +1,86 @@
+[project]
+name = "lsp-client"
+version = "0.1.0"
+description = "Full-featured, well-typed, and easy-to-use LSP client"
+readme = "README.md"
+authors = [{ name = "observerw", email = "wozluohd@gmail.com" }]
+requires-python = ">=3.12"
+keywords = ["Language Server Protocol", "LSP"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+]
+
+dependencies = [
+    "anyio>=4.10.0",
+    "asyncer>=0.0.10",
+    "attrs>=25.3.0",
+    "loguru>=0.7.3",
+    "lsprotocol>=2025.0.0",
+    "pydantic>=2.11.7",
+    "semver>=3.0.4",
+    "tenacity>=9.1.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "httpx>=0.28.1",
+    "aiofiles>=24.1.0",
+    "pdoc>=16.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# from https://github.com/astral-sh/ruff/blob/c1fed55d51b34e1235f72c610fe4b1700ed76451/pyproject.toml
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle (error)
+    "F",   # pyflakes
+    "B",   # bugbear
+    "B9",
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "I",   # isort
+    "UP",  # pyupgrade
+    "PIE", # flake8-pie
+    "PGH", # pygrep-hooks
+    "PYI", # flake8-pyi
+    "RUF",
+]
+
+ignore = [
+    # only relevant if you run a script with `python -0`,
+    # which seems unlikely for any of the scripts in this repo
+    "B011",
+    # Leave it to the formatter to split long lines and
+    # the judgement of all of us.
+    "E501",
+]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/fixtures/**/*.py" = ["F821"]
+
+[tool.pytest.ini_options]
+# Register custom markers
+markers = [
+    "integration: marks tests as integration tests",
+    "pyright: marks tests that require pyright-langserver",
+]
