@@ -50,7 +50,16 @@ class BindMount(MountBase):
 
     @classmethod
     def from_path(cls, path: Path) -> BindMount:
-        return cls(source=str(path), target=str(path))
+        absolute_path = path.resolve()
+
+        if absolute_path.drive:
+            raise ValueError(
+                f"Path '{absolute_path}' contains a drive letter, which is not supported "
+                "for same-path bind mounts in Linux containers. "
+                "On Windows, you must explicitly separate 'source' and 'target' paths."
+            )
+
+        return cls(source=str(absolute_path), target=str(absolute_path))
 
 
 class VolumeMount(MountBase):
