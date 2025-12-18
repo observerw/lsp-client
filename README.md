@@ -88,12 +88,13 @@ if __name__ == "__main__":
 
 The library includes pre-configured clients for popular language servers:
 
-| Language Server | Module Path                        | Language              |
-| --------------- | ---------------------------------- | --------------------- |
-| Pyright         | `lsp_client.clients.pyright`       | Python                |
-| Pyrefly         | `lsp_client.clients.pyrefly`       | Python                |
-| Rust Analyzer   | `lsp_client.clients.rust_analyzer` | Rust                  |
-| Deno            | `lsp_client.clients.deno`          | TypeScript/JavaScript |
+| Language Server              | Module Path                          | Language              |
+| ---------------------------- | ------------------------------------ | --------------------- |
+| Pyright                      | `lsp_client.clients.pyright`         | Python                |
+| Pyrefly                      | `lsp_client.clients.pyrefly`         | Python                |
+| Rust Analyzer                | `lsp_client.clients.rust_analyzer`   | Rust                  |
+| Deno                         | `lsp_client.clients.deno`            | TypeScript/JavaScript |
+| TypeScript Language Server   | `lsp_client.clients.typescript`      | TypeScript/JavaScript |
 
 ## Contributing
 
