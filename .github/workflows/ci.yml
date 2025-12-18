@@ -32,7 +32,7 @@ jobs:
 
     - name: Run linter and static analysis
       run: |
-        uv run ruff check --fix
+        uv run ruff check
         uv run ruff format --check
 
     - name: Run tests
