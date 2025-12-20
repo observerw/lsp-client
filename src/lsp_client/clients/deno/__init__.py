@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from .client import DenoClient, DenoDockerServer, DenoLocalServer
+from .client import DenoClient, DenoContainerServer
 
 __all__ = [
     "DenoClient",
-    "DenoDockerServer",
-    "DenoLocalServer",
+    "DenoContainerServer",
 ]

@@ -24,7 +24,8 @@ from lsp_client.capability.server_notification import (
 )
 from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
 from lsp_client.client.abc import LSPClient
-from lsp_client.server.docker import DockerServer
+from lsp_client.server.abc import LSPServer
+from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
@@ -42,8 +43,9 @@ from .extension import (
     WithRequestDenoVirtualTextDocument,
 )
 
-DenoLocalServer = partial(LocalServer, command=["deno", "lsp"])
-DenoDockerServer = partial(DockerServer, image="lspcontainers/denols:2.4.2")
+DenoContainerServer = partial(
+    ContainerServer, image="ghcr.io/observerw/lsp-client/deno:latest"
+)
 
 
 @define
@@ -104,6 +106,10 @@ class DenoClient(
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.TypeScript
+
+    @override
+    def create_default_server(self) -> LSPServer:
+        return LocalServer(command=["deno", "lsp"])
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
