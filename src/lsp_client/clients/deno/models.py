@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from attrs import define, field
+import cattrs
+from attrs import define, field, resolve_types
+from lsprotocol import converters
 
 from lsp_client.jsonrpc.id import ID
 from lsp_client.utils.types import lsp_type
@@ -30,22 +32,22 @@ DENO_TEST_RUN_PROGRESS: Literal["deno/testRunProgress"] = "deno/testRunProgress"
 
 
 @define
-class TestData:
+class DenoTestData:
     id: str
     label: str
-    steps: list[TestData] | None = None
+    steps: list[DenoTestData] | None = None
     range: lsp_type.Range | None = None
 
 
 @define
-class TestIdentifier:
+class DenoTestIdentifier:
     text_document: lsp_type.TextDocumentIdentifier
     id: str | None = None
     step_id: str | None = None
 
 
 @define
-class TestMessage:
+class DenoTestMessage:
     message: lsp_type.MarkupContent
     expected_output: str | None = None
     actual_output: str | None = None
@@ -53,46 +55,50 @@ class TestMessage:
 
 
 @define
-class TestEnqueuedStartedSkipped:
+class DenoTestEnqueuedStartedSkipped:
     type: Literal["enqueued", "started", "skipped"]
-    test: TestIdentifier
+    test: DenoTestIdentifier
 
 
 @define
-class TestFailedErrored:
+class DenoTestFailedErrored:
     type: Literal["failed", "errored"]
-    test: TestIdentifier
-    messages: list[TestMessage]
+    test: DenoTestIdentifier
+    messages: list[DenoTestMessage]
     duration: float | None = None
 
 
 @define
-class TestPassed:
+class DenoTestPassed:
     type: Literal["passed"]
-    test: TestIdentifier
+    test: DenoTestIdentifier
     duration: float | None = None
 
 
 @define
-class TestOutput:
+class DenoTestOutput:
     type: Literal["output"]
     value: str
-    test: TestIdentifier | None = None
+    test: DenoTestIdentifier | None = None
     location: lsp_type.Location | None = None
 
 
 @define
-class TestEnd:
+class DenoTestEnd:
     type: Literal["end"]
 
 
-type TestRunProgressMessage = (
-    TestEnqueuedStartedSkipped | TestFailedErrored | TestPassed | TestOutput | TestEnd
+type DenoTestRunProgressMessage = (
+    DenoTestEnqueuedStartedSkipped
+    | DenoTestFailedErrored
+    | DenoTestPassed
+    | DenoTestOutput
+    | DenoTestEnd
 )
 
 
 @define
-class EnqueuedTestModule:
+class DenoEnqueuedTestModule:
     text_document: lsp_type.TextDocumentIdentifier
     ids: list[str]
 
@@ -101,137 +107,137 @@ class EnqueuedTestModule:
 
 
 @define
-class CacheParams:
+class DenoCacheParams:
     referrer: lsp_type.TextDocumentIdentifier
     uris: list[lsp_type.TextDocumentIdentifier] = field(factory=list)
 
 
 @define
-class CacheRequest:
+class DenoCacheRequest:
     id: ID
-    params: CacheParams
+    params: DenoCacheParams
     method: Literal["deno/cache"] = DENO_CACHE
     jsonrpc: str = "2.0"
 
 
 @define
-class CacheResponse:
+class DenoCacheResponse:
     id: ID | None
     result: None
     jsonrpc: str = "2.0"
 
 
 @define
-class PerformanceRequest:
+class DenoPerformanceRequest:
     id: ID
     method: Literal["deno/performance"] = DENO_PERFORMANCE
     jsonrpc: str = "2.0"
 
 
 @define
-class PerformanceResponse:
+class DenoPerformanceResponse:
     id: ID | None
     result: Any
     jsonrpc: str = "2.0"
 
 
 @define
-class ReloadImportRegistriesRequest:
+class DenoReloadImportRegistriesRequest:
     id: ID
     method: Literal["deno/reloadImportRegistries"] = DENO_RELOAD_IMPORT_REGISTRIES
     jsonrpc: str = "2.0"
 
 
 @define
-class ReloadImportRegistriesResponse:
+class DenoReloadImportRegistriesResponse:
     id: ID | None
     result: None
     jsonrpc: str = "2.0"
 
 
 @define
-class VirtualTextDocumentParams:
+class DenoVirtualTextDocumentParams:
     text_document: lsp_type.TextDocumentIdentifier
 
 
 @define
-class VirtualTextDocumentRequest:
+class DenoVirtualTextDocumentRequest:
     id: ID
-    params: VirtualTextDocumentParams
+    params: DenoVirtualTextDocumentParams
     method: Literal["deno/virtualTextDocument"] = DENO_VIRTUAL_TEXT_DOCUMENT
     jsonrpc: str = "2.0"
 
 
 @define
-class VirtualTextDocumentResponse:
+class DenoVirtualTextDocumentResponse:
     id: ID | None
     result: str
     jsonrpc: str = "2.0"
 
 
 @define
-class TaskParams:
+class DenoTaskParams:
     pass
 
 
 @define
-class TaskRequest:
+class DenoTaskRequest:
     id: ID
-    params: TaskParams | None = None
+    params: DenoTaskParams | None = None
     method: Literal["deno/task"] = DENO_TASK
     jsonrpc: str = "2.0"
 
 
 @define
-class TaskResponse:
+class DenoTaskResponse:
     id: ID | None
     result: list[Any]
     jsonrpc: str = "2.0"
 
 
 @define
-class TestRunRequestParams:
+class DenoTestRunRequestParams:
     id: int
     kind: Literal["run", "coverage", "debug"]
-    exclude: list[TestIdentifier] | None = None
-    include: list[TestIdentifier] | None = None
+    exclude: list[DenoTestIdentifier] | None = None
+    include: list[DenoTestIdentifier] | None = None
 
 
 @define
-class TestRunRequest:
+class DenoTestRunRequest:
     id: ID
-    params: TestRunRequestParams
+    params: DenoTestRunRequestParams
     method: Literal["deno/testRun"] = DENO_TEST_RUN
     jsonrpc: str = "2.0"
 
 
 @define
-class TestRunResponseParams:
-    enqueued: list[EnqueuedTestModule]
+class DenoTestRunResponseParams:
+    enqueued: list[DenoEnqueuedTestModule]
 
 
 @define
-class TestRunResponse:
+class DenoTestRunResponse:
     id: ID | None
-    result: TestRunResponseParams
+    result: DenoTestRunResponseParams
     jsonrpc: str = "2.0"
 
 
 @define
-class TestRunCancelParams:
+class DenoTestRunCancelParams:
     id: int
 
 
 @define
-class TestRunCancelRequest:
+class DenoTestRunCancelRequest:
     id: ID
-    params: TestRunCancelParams
+    params: DenoTestRunCancelParams
     method: Literal["deno/testRunCancel"] = DENO_TEST_RUN_CANCEL
     jsonrpc: str = "2.0"
 
 
 @define
-class TestRunCancelResponse:
+class DenoTestRunCancelResponse:
     id: ID | None
     result: None
     jsonrpc: str = "2.0"
@@ -241,53 +247,122 @@ class TestRunCancelResponse:
 
 
 @define
-class RegistryStatusNotificationParams:
+class DenoRegistryStatusNotificationParams:
     origin: str
     suggestions: bool
 
 
 @define
-class RegistryStatusNotification:
-    params: RegistryStatusNotificationParams
+class DenoRegistryStatusNotification:
+    params: DenoRegistryStatusNotificationParams
     method: Literal["deno/registryState"] = DENO_REGISTRY_STATE
     jsonrpc: str = "2.0"
 
 
 @define
-class TestModuleParams:
+class DenoTestModuleParams:
     text_document: lsp_type.TextDocumentIdentifier
     kind: Literal["insert", "replace"]
     label: str
-    tests: list[TestData]
+    tests: list[DenoTestData]
 
 
 @define
-class TestModuleNotification:
-    params: TestModuleParams
+class DenoTestModuleNotification:
+    params: DenoTestModuleParams
     method: Literal["deno/testModule"] = DENO_TEST_MODULE
     jsonrpc: str = "2.0"
 
 
 @define
-class TestModuleDeleteParams:
+class DenoTestModuleDeleteParams:
     text_document: lsp_type.TextDocumentIdentifier
 
 
 @define
-class TestModuleDeleteNotification:
-    params: TestModuleDeleteParams
+class DenoTestModuleDeleteNotification:
+    params: DenoTestModuleDeleteParams
     method: Literal["deno/testModuleDelete"] = DENO_TEST_MODULE_DELETE
     jsonrpc: str = "2.0"
 
 
 @define
-class TestRunProgressParams:
+class DenoTestRunProgressParams:
     id: int
-    message: TestRunProgressMessage
+    message: DenoTestRunProgressMessage
 
 
 @define
-class TestRunProgressNotification:
-    params: TestRunProgressParams
+class DenoTestRunProgressNotification:
+    params: DenoTestRunProgressParams
     method: Literal["deno/testRunProgress"] = DENO_TEST_RUN_PROGRESS
     jsonrpc: str = "2.0"
+
+
+def register_hooks(converter: cattrs.Converter) -> None:
+    resolve_types(DenoTestData)
+    resolve_types(DenoTestIdentifier)
+    resolve_types(DenoTestMessage)
+    resolve_types(DenoTestEnqueuedStartedSkipped)
+    resolve_types(DenoTestFailedErrored)
+    resolve_types(DenoTestPassed)
+    resolve_types(DenoTestOutput)
+    resolve_types(DenoTestEnd)
+    resolve_types(DenoEnqueuedTestModule)
+    resolve_types(DenoCacheParams)
+    resolve_types(DenoCacheRequest)
+    resolve_types(DenoCacheResponse)
+    resolve_types(DenoPerformanceRequest)
+    resolve_types(DenoPerformanceResponse)
+    resolve_types(DenoReloadImportRegistriesRequest)
+    resolve_types(DenoReloadImportRegistriesResponse)
+    resolve_types(DenoVirtualTextDocumentParams)
+    resolve_types(DenoVirtualTextDocumentRequest)
+    resolve_types(DenoVirtualTextDocumentResponse)
+    resolve_types(DenoTaskParams)
+    resolve_types(DenoTaskRequest)
+    resolve_types(DenoTaskResponse)
+    resolve_types(DenoTestRunRequestParams)
+    resolve_types(DenoTestRunRequest)
+    resolve_types(DenoTestRunResponseParams)
+    resolve_types(DenoTestRunResponse)
+    resolve_types(DenoTestRunCancelParams)
+    resolve_types(DenoTestRunCancelRequest)
+    resolve_types(DenoTestRunCancelResponse)
+    resolve_types(DenoRegistryStatusNotificationParams)
+    resolve_types(DenoRegistryStatusNotification)
+    resolve_types(DenoTestModuleParams)
+    resolve_types(DenoTestModuleNotification)
+    resolve_types(DenoTestModuleDeleteParams)
+    resolve_types(DenoTestModuleDeleteNotification)
+    resolve_types(DenoTestRunProgressParams)
+    resolve_types(DenoTestRunProgressNotification)
+
+    def _test_run_progress_message_hook(
+        obj: Any, _: type
+    ) -> DenoTestRunProgressMessage:
+        if not isinstance(obj, dict):
+            return obj
+
+        match obj.get("type"):
+            case "enqueued" | "started" | "skipped":
+                return converter.structure(obj, DenoTestEnqueuedStartedSkipped)
+            case "failed" | "errored":
+                return converter.structure(obj, DenoTestFailedErrored)
+            case "passed":
+                return converter.structure(obj, DenoTestPassed)
+            case "output":
+                return converter.structure(obj, DenoTestOutput)
+            case "end":
+                return converter.structure(obj, DenoTestEnd)
+            case _:
+                raise ValueError(
+                    f"Unknown DenoTestRunProgressMessage type: {obj.get('type')}"
+                )
+
+    converter.register_structure_hook(
+        DenoTestRunProgressMessage, _test_run_progress_message_hook
+    )
+
+
+register_hooks(converters.get_converter())

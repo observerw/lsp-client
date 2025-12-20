@@ -28,29 +28,29 @@ from .models import (
     DENO_TEST_RUN_CANCEL,
     DENO_TEST_RUN_PROGRESS,
     DENO_VIRTUAL_TEXT_DOCUMENT,
-    CacheParams,
-    CacheRequest,
-    CacheResponse,
-    PerformanceRequest,
-    PerformanceResponse,
-    RegistryStatusNotification,
-    ReloadImportRegistriesRequest,
-    ReloadImportRegistriesResponse,
-    TaskRequest,
-    TaskResponse,
-    TestModuleDeleteNotification,
-    TestModuleNotification,
-    TestRunCancelParams,
-    TestRunCancelRequest,
-    TestRunCancelResponse,
-    TestRunProgressNotification,
-    TestRunRequest,
-    TestRunRequestParams,
-    TestRunResponse,
-    TestRunResponseParams,
-    VirtualTextDocumentParams,
-    VirtualTextDocumentRequest,
-    VirtualTextDocumentResponse,
+    DenoCacheParams,
+    DenoCacheRequest,
+    DenoCacheResponse,
+    DenoPerformanceRequest,
+    DenoPerformanceResponse,
+    DenoRegistryStatusNotification,
+    DenoReloadImportRegistriesRequest,
+    DenoReloadImportRegistriesResponse,
+    DenoTaskRequest,
+    DenoTaskResponse,
+    DenoTestModuleDeleteNotification,
+    DenoTestModuleNotification,
+    DenoTestRunCancelParams,
+    DenoTestRunCancelRequest,
+    DenoTestRunCancelResponse,
+    DenoTestRunProgressNotification,
+    DenoTestRunRequest,
+    DenoTestRunRequestParams,
+    DenoTestRunResponse,
+    DenoTestRunResponseParams,
+    DenoVirtualTextDocumentParams,
+    DenoVirtualTextDocumentRequest,
+    DenoVirtualTextDocumentResponse,
 )
 
 
@@ -71,9 +71,9 @@ class WithRequestDenoCache(
         uris: Sequence[AnyPath] = (),
     ) -> None:
         return await self.request(
-            CacheRequest(
+            DenoCacheRequest(
                 id=jsonrpc_uuid(),
-                params=CacheParams(
+                params=DenoCacheParams(
                     referrer=lsp_type.TextDocumentIdentifier(uri=self.as_uri(referrer)),
                     uris=[
                         lsp_type.TextDocumentIdentifier(uri=self.as_uri(uri))
@@ -81,7 +81,7 @@ class WithRequestDenoCache(
                     ],
                 ),
             ),
-            schema=CacheResponse,
+            schema=DenoCacheResponse,
         )
 
 
@@ -98,8 +98,8 @@ class WithRequestDenoPerformance(
 
     async def request_deno_performance(self) -> Any:
         return await self.request(
-            PerformanceRequest(id=jsonrpc_uuid()),
-            schema=PerformanceResponse,
+            DenoPerformanceRequest(id=jsonrpc_uuid()),
+            schema=DenoPerformanceResponse,
         )
 
 
@@ -116,8 +116,8 @@ class WithRequestDenoReloadImportRegistries(
 
     async def request_deno_reload_import_registries(self) -> None:
         return await self.request(
-            ReloadImportRegistriesRequest(id=jsonrpc_uuid()),
-            schema=ReloadImportRegistriesResponse,
+            DenoReloadImportRegistriesRequest(id=jsonrpc_uuid()),
+            schema=DenoReloadImportRegistriesResponse,
         )
 
 
@@ -137,13 +137,13 @@ class WithRequestDenoVirtualTextDocument(
         uri: str,
     ) -> str:
         return await self.request(
-            VirtualTextDocumentRequest(
+            DenoVirtualTextDocumentRequest(
                 id=jsonrpc_uuid(),
-                params=VirtualTextDocumentParams(
+                params=DenoVirtualTextDocumentParams(
                     text_document=lsp_type.TextDocumentIdentifier(uri=uri)
                 ),
             ),
-            schema=VirtualTextDocumentResponse,
+            schema=DenoVirtualTextDocumentResponse,
         )
 
 
@@ -160,16 +160,16 @@ class WithRequestDenoTask(
 
     async def request_deno_task(self) -> list[Any]:
         return await self.request(
-            TaskRequest(id=jsonrpc_uuid()),
-            schema=TaskResponse,
+            DenoTaskRequest(id=jsonrpc_uuid()),
+            schema=DenoTaskResponse,
         )
 
 
 @runtime_checkable
 class WithRequestDenoTestRun(
+    ExperimentalCapabilityProtocol,
     CapabilityProtocol,
     CapabilityClientProtocol,
-    ExperimentalCapabilityProtocol,
     Protocol,
 ):
     @override
@@ -184,14 +184,14 @@ class WithRequestDenoTestRun(
 
     async def request_deno_test_run(
         self,
-        params: TestRunRequestParams,
-    ) -> TestRunResponseParams:
+        params: DenoTestRunRequestParams,
+    ) -> DenoTestRunResponseParams:
         return await self.request(
-            TestRunRequest(
+            DenoTestRunRequest(
                 id=jsonrpc_uuid(),
                 params=params,
             ),
-            schema=TestRunResponse,
+            schema=DenoTestRunResponse,
         )
 
 
@@ -211,11 +211,11 @@ class WithRequestDenoTestRunCancel(
         test_run_id: int,
     ) -> None:
         return await self.request(
-            TestRunCancelRequest(
+            DenoTestRunCancelRequest(
                 id=jsonrpc_uuid(),
-                params=TestRunCancelParams(id=test_run_id),
+                params=DenoTestRunCancelParams(id=test_run_id),
             ),
-            schema=TestRunCancelResponse,
+            schema=DenoTestRunCancelResponse,
         )
 
 
@@ -231,7 +231,7 @@ class WithReceiveDenoRegistryStatus(
         return (DENO_REGISTRY_STATE,)
 
     async def receive_deno_registry_state(
-        self, noti: RegistryStatusNotification
+        self, noti: DenoRegistryStatusNotification
     ) -> None:
         logger.debug("Received Deno registry state: {}", noti.params)
 
@@ -243,7 +243,7 @@ class WithReceiveDenoRegistryStatus(
         registry.register(
             DENO_REGISTRY_STATE,
             ServerNotificationHook(
-                cls=RegistryStatusNotification,
+                cls=DenoRegistryStatusNotification,
                 execute=self.receive_deno_registry_state,
             ),
         )
@@ -260,7 +260,7 @@ class WithReceiveDenoTestModule(
     def methods(cls) -> Sequence[str]:
         return (DENO_TEST_MODULE,)
 
-    async def receive_deno_test_module(self, noti: TestModuleNotification) -> None:
+    async def receive_deno_test_module(self, noti: DenoTestModuleNotification) -> None:
         logger.debug("Received Deno test module: {}", noti.params)
 
     @override
@@ -271,7 +271,7 @@ class WithReceiveDenoTestModule(
         registry.register(
             DENO_TEST_MODULE,
             ServerNotificationHook(
-                cls=TestModuleNotification,
+                cls=DenoTestModuleNotification,
                 execute=self.receive_deno_test_module,
             ),
         )
@@ -289,7 +289,7 @@ class WithReceiveDenoTestModuleDelete(
         return (DENO_TEST_MODULE_DELETE,)
 
     async def receive_deno_test_module_delete(
-        self, noti: TestModuleDeleteNotification
+        self, noti: DenoTestModuleDeleteNotification
     ) -> None:
         logger.debug("Received Deno test module delete: {}", noti.params)
 
@@ -301,7 +301,7 @@ class WithReceiveDenoTestModuleDelete(
         registry.register(
             DENO_TEST_MODULE_DELETE,
             ServerNotificationHook(
-                cls=TestModuleDeleteNotification,
+                cls=DenoTestModuleDeleteNotification,
                 execute=self.receive_deno_test_module_delete,
             ),
         )
@@ -319,7 +319,7 @@ class WithReceiveDenoTestRunProgress(
         return (DENO_TEST_RUN_PROGRESS,)
 
     async def receive_deno_test_run_progress(
-        self, noti: TestRunProgressNotification
+        self, noti: DenoTestRunProgressNotification
     ) -> None:
         logger.debug("Received Deno test run progress: {}", noti.params)
 
@@ -331,7 +331,7 @@ class WithReceiveDenoTestRunProgress(
         registry.register(
             DENO_TEST_RUN_PROGRESS,
             ServerNotificationHook(
-                cls=TestRunProgressNotification,
+                cls=DenoTestRunProgressNotification,
                 execute=self.receive_deno_test_run_progress,
             ),
         )
