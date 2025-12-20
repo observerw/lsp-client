@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import AsyncGenerator
 
 from attrs import frozen
 
@@ -18,17 +19,20 @@ from lsp_client.server.abc import LSPServer
 
 
 @frozen
-class CheckResult:
+class CapabilityInspectResult:
     capability: str
     client: bool
     server: bool
 
 
-async def inspect_capabilities(server: LSPServer, client_cls: type[LSPClient]):
+async def inspect_capabilities(
+    server: LSPServer, client_cls: type[LSPClient]
+) -> AsyncGenerator[CapabilityInspectResult]:
     if not __debug__:
         raise RuntimeError("inspect_capabilities can only be used in debug mode")
 
     async with server.serve():
+        # send a fake initialize request to get server capabilities
         req = lsp_type.InitializeRequest(
             id="initialize",
             params=lsp_type.InitializeParams(
@@ -57,7 +61,7 @@ async def inspect_capabilities(server: LSPServer, client_cls: type[LSPClient]):
             server_available = False
 
         for method in cap.methods():
-            yield CheckResult(
+            yield CapabilityInspectResult(
                 capability=method,
                 client=client_available,
                 server=server_available,
