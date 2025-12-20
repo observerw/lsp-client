@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from attrs import define, field
-from lsprotocol import types as lsp_type
 
 from lsp_client.jsonrpc.id import ID
+from lsp_client.utils.types import lsp_type
 
 # ---------------------------------- Constants --------------------------------- #
 
@@ -116,6 +116,34 @@ class CacheRequest:
 
 @define
 class CacheResponse:
+    id: ID | None
+    result: None
+    jsonrpc: str = "2.0"
+
+
+@define
+class PerformanceRequest:
+    id: ID
+    method: Literal["deno/performance"] = DENO_PERFORMANCE
+    jsonrpc: str = "2.0"
+
+
+@define
+class PerformanceResponse:
+    id: ID | None
+    result: Any
+    jsonrpc: str = "2.0"
+
+
+@define
+class ReloadImportRegistriesRequest:
+    id: ID
+    method: Literal["deno/reloadImportRegistries"] = DENO_RELOAD_IMPORT_REGISTRIES
+    jsonrpc: str = "2.0"
+
+
+@define
+class ReloadImportRegistriesResponse:
     id: ID | None
     result: None
     jsonrpc: str = "2.0"

@@ -28,6 +28,20 @@ from lsp_client.server.docker import DockerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
+from .extension import (
+    WithReceiveDenoRegistryStatus,
+    WithReceiveDenoTestModule,
+    WithReceiveDenoTestModuleDelete,
+    WithReceiveDenoTestRunProgress,
+    WithRequestDenoCache,
+    WithRequestDenoPerformance,
+    WithRequestDenoReloadImportRegistries,
+    WithRequestDenoTask,
+    WithRequestDenoTestRun,
+    WithRequestDenoTestRunCancel,
+    WithRequestDenoVirtualTextDocument,
+)
+
 DenoLocalServer = partial(LocalServer, command=["deno", "lsp"])
 DenoDockerServer = partial(DockerServer, image="lspcontainers/denols:2.4.2")
 
@@ -45,6 +59,17 @@ class DenoClient(
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
     WithReceivePublishDiagnostics,
+    WithRequestDenoCache,
+    WithRequestDenoPerformance,
+    WithRequestDenoReloadImportRegistries,
+    WithRequestDenoVirtualTextDocument,
+    WithRequestDenoTask,
+    WithRequestDenoTestRun,
+    WithRequestDenoTestRunCancel,
+    WithReceiveDenoRegistryStatus,
+    WithReceiveDenoTestModule,
+    WithReceiveDenoTestModuleDelete,
+    WithReceiveDenoTestRunProgress,
 ):
     """
     - Language: TypeScript, JavaScript

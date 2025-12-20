@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .capability import (
     CapabilityProtocol,
+    ExperimentalCapabilityProtocol,
     GeneralCapabilityProtocol,
     NotebookCapabilityProtocol,
     TextDocumentCapabilityProtocol,
@@ -21,6 +22,7 @@ from .hook import (
 __all__ = [
     "CapabilityClientProtocol",
     "CapabilityProtocol",
+    "ExperimentalCapabilityProtocol",
     "GeneralCapabilityProtocol",
     "NotebookCapabilityProtocol",
     "ServerNotificationHook",

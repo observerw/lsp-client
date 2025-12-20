@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from lsp_client.protocol import (
+    ExperimentalCapabilityProtocol,
     GeneralCapabilityProtocol,
     NotebookCapabilityProtocol,
     ServerRequestHookProtocol,
@@ -22,6 +23,7 @@ def build_client_capabilities(cls: type) -> lsp_type.ClientCapabilities:
     )
     window = lsp_type.WindowClientCapabilities()
     general = lsp_type.GeneralClientCapabilities()
+    experimental: dict[str, Any] = {}
 
     if issubclass(cls, WorkspaceCapabilityProtocol):
         cls.register_workspace_capability(workspace)
@@ -33,6 +35,8 @@ def build_client_capabilities(cls: type) -> lsp_type.ClientCapabilities:
         cls.register_window_capability(window)
     if issubclass(cls, GeneralCapabilityProtocol):
         cls.register_general_capability(general)
+    if issubclass(cls, ExperimentalCapabilityProtocol):
+        cls.register_experimental_capability(experimental)
 
     return lsp_type.ClientCapabilities(
         workspace=workspace,
@@ -40,6 +44,7 @@ def build_client_capabilities(cls: type) -> lsp_type.ClientCapabilities:
         notebook_document=notebook_document,
         window=window,
         general=general,
+        experimental=experimental if experimental else None,
     )
 
 
