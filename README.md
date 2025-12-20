@@ -6,15 +6,23 @@
 
 A full-featured, well-typed, and easy-to-use Python client for the Language Server Protocol (LSP). This library provides a clean, async-first interface for interacting with language servers, supporting both local and Docker-based runtimes.
 
+## Why lsp-client?
+
+`lsp-client` is designed specifically for developers who need **high control**, **isolation**, and **extensibility**:
+
+- **🐳 Native Docker Support**: Unlike other clients that focus on local process management, `lsp-client` treats Docker as a first-class citizen. It handles the "magic" of mounting workspaces, translating file paths between your host and the container, and managing container lifecycles.
+- **🧩 SDK for Custom Tooling**: Instead of being a closed wrapper, this is a true SDK. Our **Modular Capability System** allows you to build custom clients by mixing and matching only the LSP features you need, or even adding your own protocol extensions seamlessly.
+- **🛠️ Explicit over Implicit**: We prioritize predictable environments. While other tools might auto-download binaries, `lsp-client` gives you full control over your server environment (Local or Docker), making it ideal for production-grade tools where version pinning is critical.
+- **⚡ Modern Async-First Architecture**: Built from the ground up for Python 3.12+, utilizing advanced async patterns to ensure high-performance concurrent operations without blocking your main event loop.
+
 ## Features
 
-- **🚀 Async-first Design**: Built for high-performance concurrent operations
-- **🔧 Full LSP Support**: Comprehensive implementation of LSP 3.17 specification
-- **🐳 Docker Support**: Run language servers in isolated containers
-- **📝 Type Safety**: Full type annotations with Pydantic validation
-- **🧩 Modular Architecture**: Mixin-based capability system for easy extension
-- **🎯 Production Ready**: Robust error handling with tenacity retries
-- **📚 Well Documented**: Extensive documentation and examples
+- **🚀 Environment Agnostic**: Seamlessly switch between local processes and isolated Docker containers.
+- **🔧 Full LSP 3.17 Support**: Comprehensive implementation of the latest protocol specification.
+- **🎯 Specialized Clients**: Out-of-the-box support for popular servers (Pyright, Deno, Rust-Analyzer, etc.).
+- **📝 Zero-Config Capabilities**: Automatically manages complex protocol handshakes and feature negotiations.
+- **🧩 Pluggable & Modular**: Easily extend functionality or add support for custom LSP extensions.
+- **🔒 Production-Grade Reliability**: Robust error handling, automatic retries, and full type safety.
 
 ## Quick Start
 
@@ -90,13 +98,13 @@ if __name__ == "__main__":
 
 The library includes pre-configured clients for popular language servers:
 
-| Language Server              | Module Path                          | Language              |
-| ---------------------------- | ------------------------------------ | --------------------- |
-| Pyright                      | `lsp_client.clients.pyright`         | Python                |
-| Pyrefly                      | `lsp_client.clients.pyrefly`         | Python                |
-| Rust Analyzer                | `lsp_client.clients.rust_analyzer`   | Rust                  |
-| Deno                         | `lsp_client.clients.deno`            | TypeScript/JavaScript |
-| TypeScript Language Server   | `lsp_client.clients.typescript`      | TypeScript/JavaScript |
+| Language Server            | Module Path                        | Language              |
+| -------------------------- | ---------------------------------- | --------------------- |
+| Pyright                    | `lsp_client.clients.pyright`       | Python                |
+| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                |
+| Rust Analyzer              | `lsp_client.clients.rust_analyzer` | Rust                  |
+| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript |
+| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript |
 
 ## Contributing
 
