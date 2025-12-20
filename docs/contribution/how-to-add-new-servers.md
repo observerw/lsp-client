@@ -1,6 +1,18 @@
 # How to Add Support for a New LSP Server
 
-To add a new LSP server to this project, follow these steps to ensure both client support and containerized deployment are correctly configured.
+**Why this matters**: Language servers are the core of this project. Each new server you add enables Python developers to leverage that language's intelligence—from autocomplete to refactoring—in their tools and workflows. The community needs contributors who understand specific language servers and can help integrate them properly.
+
+This guide shows you how to add complete support for a new LSP server, including both the Python client and containerized deployment.
+
+## Overview
+
+Adding a new language server involves three main steps:
+
+1. **Implement the Python client** - Create a client class with appropriate capability mixins
+2. **Register for automatic versioning** - Enable automated updates from upstream
+3. **Create a container image** - Package the server for isolated, reproducible environments
+
+Let's walk through each step:
 
 ## 1. Implement the Client
 
@@ -60,3 +72,19 @@ ENTRYPOINT ["your-server-binary", "--stdio"]
    ```
 2. Check if `.github/workflows/lsp-servers.yml` and your `ContainerFile` are updated with the latest version.
 3. Commit and push your changes. The GitHub Action will build and push the new image to GHCR.
+
+---
+
+## Your Contribution Expands the Ecosystem
+
+Adding support for a new language server is one of the most impactful contributions you can make:
+
+- **Brings language intelligence to Python developers** working in that language
+- **Reduces integration friction** for tools that need multi-language support
+- **Demonstrates real-world usage patterns** that inform future improvements
+
+The lsp-client project aims to be the go-to solution for LSP integration in Python, and that's only possible with community contributions covering diverse language ecosystems.
+
+**Questions about a specific language server?** Feel free to open an issue or discussion—we're happy to help you navigate the integration process!
+
+Thank you for helping make lsp-client better! 🚀
