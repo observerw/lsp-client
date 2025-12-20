@@ -44,7 +44,7 @@ def build_client_capabilities(cls: type) -> lsp_type.ClientCapabilities:
         notebook_document=notebook_document,
         window=window,
         general=general,
-        experimental=experimental if experimental else None,
+        experimental=experimental or None,
     )
 
 
