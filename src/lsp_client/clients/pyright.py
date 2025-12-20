@@ -35,11 +35,11 @@ from lsp_client.capability.server_request import (
     WithRespondWorkspaceFoldersRequest,
 )
 from lsp_client.client.abc import LSPClient
+from lsp_client.server.abc import LSPServer
 from lsp_client.server.docker import DockerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-PyrightLocalServer = partial(LocalServer, command=["pyright-langserver", "--stdio"])
 PyrightDockerServer = partial(
     DockerServer, image="docker.io/lspcontainers/pyright-langserver"
 )
@@ -80,6 +80,10 @@ class PyrightClient(
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.Python
+
+    @override
+    def create_default_server(self) -> LSPServer:
+        return LocalServer(command=["pyright-langserver", "--stdio"])
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:

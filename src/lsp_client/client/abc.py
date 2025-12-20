@@ -10,7 +10,7 @@ from typing import Any, Self, override
 import anyio
 import asyncer
 from anyio import AsyncContextManagerMixin
-from attrs import define, field
+from attrs import Factory, define, field
 from loguru import logger
 
 from lsp_client.capability.build import (
@@ -51,7 +51,10 @@ class LSPClient(
     AsyncContextManagerMixin,
     ABC,
 ):
-    _server: LSPServer = field(alias="server")
+    _server: LSPServer = field(
+        alias="server",
+        default=Factory(lambda self: self.create_default_server(), takes_self=True),
+    )
 
     _workspace: RawWorkspace = field(alias="workspace", factory=Path.cwd)
     sync_file: bool = True
@@ -86,6 +89,10 @@ class LSPClient(
     @abstractmethod
     def get_language_id(self) -> lsp_type.LanguageKind:
         """The language ID of the client."""
+
+    @abstractmethod
+    def create_default_server(self) -> LSPServer:
+        """Create the default server for this client."""
 
     @abstractmethod
     async def ensure_installed(self) -> None:

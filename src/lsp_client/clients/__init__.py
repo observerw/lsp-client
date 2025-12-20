@@ -7,10 +7,10 @@ from .pyright import PyrightClient
 from .rust_analyzer import RustAnalyzerClient
 from .typescript import TypescriptClient
 
-clients: Final = (
-    PyreflyClient,
+local_clients: Final = (
     PyrightClient,
     RustAnalyzerClient,
+    PyreflyClient,
     TypescriptClient,
 )
 
@@ -22,5 +22,5 @@ __all__ = [
     "PythonClient",
     "RustClient",
     "TypeScriptClient",
-    "clients",
+    "local_clients",
 ]
