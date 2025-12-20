@@ -19,4 +19,5 @@ __all__ = [
     "WithReceiveLogTrace",
     "WithReceivePublishDiagnostics",
     "WithReceiveShowMessage",
+    "capabilities",
 ]

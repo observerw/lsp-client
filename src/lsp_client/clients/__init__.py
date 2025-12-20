@@ -19,6 +19,7 @@ RustClient = RustAnalyzerClient
 TypeScriptClient = TypescriptClient
 
 __all__ = [
+    "PyreflyClient",
     "PythonClient",
     "RustClient",
     "TypeScriptClient",

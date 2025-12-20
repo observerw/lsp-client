@@ -19,4 +19,5 @@ __all__ = [
     "WithRespondShowDocumentRequest",
     "WithRespondShowMessageRequest",
     "WithRespondWorkspaceFoldersRequest",
+    "capabilities",
 ]

@@ -40,4 +40,5 @@ __all__ = [
     "WithRequestTypeDefinition",
     "WithRequestTypeHierarchy",
     "WithRequestWorkspaceSymbol",
+    "capabilities",
 ]
