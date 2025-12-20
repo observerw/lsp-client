@@ -10,7 +10,7 @@ from typing import Any, Self, override
 import anyio
 import asyncer
 from anyio import AsyncContextManagerMixin
-from attrs import Factory, define, field
+from attrs import define, field
 from loguru import logger
 
 from lsp_client.capability.build import (
@@ -51,20 +51,16 @@ class LSPClient(
     AsyncContextManagerMixin,
     ABC,
 ):
-    _server: LSPServer = field(
-        alias="server",
-        default=Factory(lambda self: self.create_default_server(), takes_self=True),
-    )
-
+    _server: LSPServer | None = field(alias="server", default=None)
     _workspace: RawWorkspace = field(alias="workspace", factory=Path.cwd)
+
     sync_file: bool = True
     request_timeout: float = 5.0
 
     _buffer: LSPFileBuffer = field(factory=LSPFileBuffer, init=False)
 
-    @property
-    def server(self) -> LSPServer:
-        return self._server
+    def get_server(self) -> LSPServer:
+        return self._server or self.create_default_server()
 
     @override
     def get_workspace(self) -> Workspace:
@@ -241,7 +237,7 @@ class LSPClient(
         async with (
             asyncer.create_task_group() as tg,
             channel[ServerRequest].create() as (sender, receiver),
-            self._server.serve(sender=sender),
+            self._server.serve(workspace=self.get_workspace(), sender=sender),
         ):
             # start to receive server requests here,
             # since server notification can be sent before `initialize`

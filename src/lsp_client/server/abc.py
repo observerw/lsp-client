@@ -18,6 +18,7 @@ from lsp_client.jsonrpc.types import (
 )
 from lsp_client.server.types import ServerRequest
 from lsp_client.utils.channel import Sender
+from lsp_client.utils.workspace import Workspace
 
 
 @define(kw_only=True)
@@ -40,7 +41,7 @@ class LSPServer(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    def run_process(self) -> AsyncGenerator[None]:
+    def run_process(self, workspace: Workspace) -> AsyncGenerator[None]:
         """Run the server process."""
 
     async def _dispatch(self, sender: Sender[ServerRequest] | None) -> None:
@@ -82,12 +83,14 @@ class LSPServer(ABC):
 
     @asynccontextmanager
     async def serve(
-        self, *, sender: Sender[ServerRequest] | None = None
+        self,
+        workspace: Workspace,
+        *,
+        sender: Sender[ServerRequest] | None = None,
     ) -> AsyncGenerator[Self]:
         async with (
-            self.run_process(),
+            self.run_process(workspace),
             asyncer.create_task_group() as tg,
         ):
             tg.soonify(self._dispatch)(sender)
-
             yield self

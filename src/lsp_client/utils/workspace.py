@@ -19,9 +19,6 @@ class WorkspaceFolder(lsp_type.WorkspaceFolder):
         return from_local_uri(self.uri)
 
 
-# type Workspace = Mapping[str, WorkspaceFolder]
-
-
 class Workspace(dict[str, WorkspaceFolder]):
     def to_folders(self) -> list[WorkspaceFolder]:
         return list(self.values())
@@ -38,10 +35,10 @@ DEFAULT_WORKSPACE: Final[Workspace] = Workspace(
     }
 )
 
-type RawWorkspace = AnyPath | Mapping[str, AnyPath]
+type RawWorkspace = AnyPath | Mapping[str, AnyPath] | Workspace
 
 
-def workspace_converter(raw: RawWorkspace) -> Workspace:
+def format_workspace(raw: RawWorkspace) -> Workspace:
     match raw:
         case str() | os.PathLike() as root_folder_path:
             return Workspace(
@@ -52,6 +49,8 @@ def workspace_converter(raw: RawWorkspace) -> Workspace:
                     )
                 }
             )
+        case Workspace() as ws:
+            return ws
         case _ as mapping:
             return Workspace(
                 {

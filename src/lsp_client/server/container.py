@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal, final, override
 
-from attrs import define, field
+from attrs import Factory, define, field
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from lsp_client.jsonrpc.parse import RawPackage
+from lsp_client.utils.workspace import Workspace
 
 from .abc import LSPServer
 from .local import LocalServer
@@ -35,7 +36,7 @@ class MountBase(BaseModel):
 
 
 class BindMount(MountBase):
-    type: Literal["bind"] = "bind"
+    type: str = "bind"
 
     bind_propagation: (
         Literal["private", "rprivate", "shared", "rshared", "slave", "rslave"] | None
@@ -63,7 +64,7 @@ class BindMount(MountBase):
 
 
 class VolumeMount(MountBase):
-    type: Literal["volume"] = "volume"
+    type: str = "volume"
 
     volume_driver: str | None = None
     volume_subpath: str | None = None
@@ -87,7 +88,7 @@ class VolumeMount(MountBase):
 
 
 class TmpfsMount(MountBase):
-    type: Literal["tmpfs"] = "tmpfs"
+    type: str = "tmpfs"
 
     tmpfs_size: int | None = None
     tmpfs_mode: int | None = None
@@ -114,7 +115,6 @@ Mount = MountPoint | str | Path
 def _format_mount(mount: Mount) -> str:
     if isinstance(mount, Path):
         mount = BindMount.from_path(mount)
-
     return str(mount)
 
 
@@ -124,22 +124,54 @@ class ContainerServer(LSPServer):
     """Runtime for container backend, e.g. `docker` or `podman`."""
 
     image: str
-    mounts: list[Mount]
+    """The container image to use."""
+
+    workdir: Path = Path("/workspace")
+    """The working directory inside the container."""
+
+    mounts: list[Mount] = Factory(list)
+    """List of extra mounts to be mounted inside the container."""
 
     backend: Literal["docker", "podman"] = "docker"
+    """The container backend to use. Can be either `docker` or `podman`."""
+
     container_name: str | None = None
+    """Optional name for the container."""
+
     extra_container_args: list[str] | None = None
+    """Extra arguments to pass to the container runtime."""
 
     _local: LocalServer = field(init=False)
 
-    def format_command(self) -> list[str]:
+    def format_command(self, workspace: Workspace) -> list[str]:
         cmd = [self.backend, "run", "--rm", "-i"]
 
         if self.container_name:
             cmd.extend(("--name", self.container_name))
 
-        for mount in self.mounts:
+        mounts = list(self.mounts)
+
+        match workspace.to_folders():
+            case [folder]:
+                mount = BindMount(
+                    source=str(folder.path),
+                    target=self.workdir.as_posix(),
+                )
+                mounts.append(mount)
+            case folders:
+                mounts.extend(
+                    BindMount(
+                        source=str(folder.path),
+                        target=(self.workdir / folder.name).as_posix(),
+                    )
+                    for folder in folders
+                )
+
+        for mount in mounts:
             cmd.extend(("--mount", _format_mount(mount)))
+
+        # Set working directory
+        cmd.extend(("--workdir", self.workdir.as_posix()))
 
         if self.extra_container_args:
             cmd.extend(self.extra_container_args)
@@ -162,8 +194,8 @@ class ContainerServer(LSPServer):
 
     @override
     @asynccontextmanager
-    async def run_process(self) -> AsyncGenerator[None]:
-        command = self.format_command()
+    async def run_process(self, workspace: Workspace) -> AsyncGenerator[None]:
+        command = self.format_command(workspace)
         logger.debug("Running docker runtime with command: {}", command)
 
         self._local = LocalServer(command=command)
