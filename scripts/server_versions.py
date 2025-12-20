@@ -41,7 +41,7 @@ def get_latest_custom(command: str) -> str:
 
 
 def main():
-    with open("registry/wiki.toml", "rb") as f:
+    with open("container/registry.toml", "rb") as f:
         wiki = tomllib.load(f)
 
     versions = {}
