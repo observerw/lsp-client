@@ -41,9 +41,7 @@ from lsp_client.server.docker import DockerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-PyreflyDockerServer = partial(
-    DockerServer, image="docker.io/lspcontainers/pyrefly"
-)
+PyreflyDockerServer = partial(DockerServer, image="docker.io/lspcontainers/pyrefly")
 
 
 @define

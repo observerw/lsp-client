@@ -3,19 +3,29 @@ from __future__ import annotations
 import pytest
 
 from lsp_client import LSPClient
-from lsp_client.clients import local_clients
+from lsp_client.clients import (
+    PyreflyClient,
+    PyrightClient,
+    RustAnalyzerClient,
+    TypescriptClient,
+)
+from lsp_client.server.docker import DockerServer
 from lsp_client.utils.inspect import inspect_capabilities
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "client_cls",
-    local_clients,
+    "client_cls,image",
+    [
+        (PyrightClient, "ghcr.io/observerw/lsp-client/pyright:latest"),
+        (RustAnalyzerClient, "ghcr.io/observerw/lsp-client/rust-analyzer:latest"),
+        (TypescriptClient, "ghcr.io/observerw/lsp-client/typescript:latest"),
+        (PyreflyClient, "ghcr.io/observerw/lsp-client/pyrefly:latest"),
+    ],
 )
-async def test_capabilities_match(client_cls: type[LSPClient]):
-    # instantiate the client directly to get its default server
-    client = client_cls()
-    server = client.server
+async def test_capabilities_match(client_cls: type[LSPClient], image: str):
+    # Use DockerServer for testing to ensure environment consistency
+    server = DockerServer(image=image, mounts=[])
 
     mismatches = []
     async for result in inspect_capabilities(server, client_cls):
@@ -26,5 +36,6 @@ async def test_capabilities_match(client_cls: type[LSPClient]):
 
     if mismatches:
         pytest.fail(
-            f"Capability mismatch for {client_cls.__name__}:\n" + "\n".join(mismatches)
+            f"Capability mismatch for {client_cls.__name__} in container {image}:\n"
+            + "\n".join(mismatches)
         )
