@@ -2,22 +2,23 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-pdoc-blue)](https://observerw.github.io/lsp-client/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/observerw/lsp-client)
 
-A full-featured, well-typed, and easy-to-use Python client for the Language Server Protocol (LSP). This library provides a clean, async-first interface for interacting with language servers, supporting both local and Docker-based runtimes.
+A full-featured, well-typed, and easy-to-use Python client for the Language Server Protocol (LSP). This library provides a clean, async-first interface for interacting with language servers, supporting both local and container-based runtimes.
 
 ## Why lsp-client?
 
 `lsp-client` is designed specifically for developers who need **high control**, **isolation**, and **extensibility**:
 
-- **🐳 Native Docker Support**: Unlike other clients that focus on local process management, `lsp-client` treats Docker as a first-class citizen. It handles the "magic" of mounting workspaces, translating file paths between your host and the container, and managing container lifecycles.
+- **🐳 Native Container Support**: Unlike other clients that focus on local process management, `lsp-client` treats containers as a first-class citizen. It handles the "magic" of mounting workspaces, translating file paths between your host and the container, and managing container lifecycles. Pre-built containers are available for all supported language servers.
 - **🧩 SDK for Custom Tooling**: Instead of being a closed wrapper, this is a true SDK. Our **Modular Capability System** allows you to build custom clients by mixing and matching only the LSP features you need, or even adding your own protocol extensions seamlessly.
-- **🛠️ Explicit over Implicit**: We prioritize predictable environments. While other tools might auto-download binaries, `lsp-client` gives you full control over your server environment (Local or Docker), making it ideal for production-grade tools where version pinning is critical.
+- **🛠️ Explicit over Implicit**: We prioritize predictable environments. While other tools might auto-download binaries, `lsp-client` gives you full control over your server environment (Local or Container), making it ideal for production-grade tools where version pinning is critical.
 - **⚡ Modern Async-First Architecture**: Built from the ground up for Python 3.12+, utilizing advanced async patterns to ensure high-performance concurrent operations without blocking your main event loop.
 
 ## Features
 
-- **🚀 Environment Agnostic**: Seamlessly switch between local processes and isolated Docker containers.
+- **🚀 Environment Agnostic**: Seamlessly switch between local processes and isolated containers.
 - **🔧 Full LSP 3.17 Support**: Comprehensive implementation of the latest protocol specification.
 - **🎯 Specialized Clients**: Out-of-the-box support for popular servers (Pyright, Deno, Rust-Analyzer, etc.).
 - **📝 Zero-Config Capabilities**: Automatically manages complex protocol handshakes and feature negotiations.
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     anyio.run(main)
 ```
 
-### Docker-based Language Server
+### Container-based Language Server
 
 ```python
 from pathlib import Path
@@ -98,13 +99,15 @@ if __name__ == "__main__":
 
 The library includes pre-configured clients for popular language servers:
 
-| Language Server            | Module Path                        | Language              |
-| -------------------------- | ---------------------------------- | --------------------- |
-| Pyright                    | `lsp_client.clients.pyright`       | Python                |
-| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                |
-| Rust Analyzer              | `lsp_client.clients.rust_analyzer` | Rust                  |
-| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript |
-| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript |
+| Language Server            | Module Path                        | Language              | Container Image                          |
+| -------------------------- | ---------------------------------- | --------------------- | ---------------------------------------- |
+| Pyright                    | `lsp_client.clients.pyright`       | Python                | `ghcr.io/observerw/lsp-client/pyright`    |
+| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                | `ghcr.io/observerw/lsp-client/pyrefly`    |
+| Rust Analyzer              | `lsp_client.clients.rust_analyzer` | Rust                  | `ghcr.io/observerw/lsp-client/rust-analyzer` |
+| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/deno`       |
+| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/typescript` |
+
+Containers are automatically updated weekly to ensure you always have the latest versions.
 
 ## Contributing
 
