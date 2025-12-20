@@ -155,11 +155,14 @@ class DenoClient(
         logger.warning("deno not found, attempting to install...")
 
         try:
-            await anyio.run_process(["npm", "install", "-g", "deno"])
-            logger.info("Successfully installed deno via npm")
+            await anyio.run_process(
+                ["sh", "-c", "curl -fsSL https://deno.land/install.sh | sh"]
+            )
+            logger.info("Successfully installed deno via shell script")
             return
         except CalledProcessError as e:
             raise RuntimeError(
-                "Could not install deno. Please install it manually with 'npm install -g deno'. "
+                "Could not install deno. Please install it manually with:\n"
+                "curl -fsSL https://deno.land/install.sh | sh\n\n"
                 "See https://deno.land/ for more information."
             ) from e
