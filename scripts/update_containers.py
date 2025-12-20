@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -8,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def update_container_file(server_name: str, version: str) -> bool:
+def update_container_file(server_name: str, version: str, force: bool = False) -> bool:
     container_file = Path(f"container/{server_name}/ContainerFile")
     if not container_file.exists():
         print(f"ContainerFile for {server_name} not found at {container_file}")
@@ -17,15 +18,19 @@ def update_container_file(server_name: str, version: str) -> bool:
     content = container_file.read_text()
     new_content = re.sub(r"ARG VERSION=.*", f"ARG VERSION={version}", content, count=1)
 
-    if content != new_content:
+    updated = content != new_content
+    if updated:
         container_file.write_text(new_content)
         print(f"Updated {server_name} to {version}")
-        return True
 
-    return False
+    return updated or force
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true", help="Force update all servers")
+    args = parser.parse_args()
+
     # Capture the output of server_versions.py
     result = subprocess.run(
         [sys.executable, "scripts/server_versions.py"],
@@ -37,7 +42,7 @@ def main():
 
     updated_servers = []
     for server, version in versions.items():
-        if update_container_file(server, version):
+        if update_container_file(server, version, args.force):
             updated_servers.append(server)
 
     if updated_servers:
