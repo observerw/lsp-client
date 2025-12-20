@@ -120,8 +120,8 @@ def _format_mount(mount: Mount) -> str:
 
 @final
 @define
-class DockerServer(LSPServer):
-    """Runtime for docker-compatible backend, e.g. `docker` or `podman`."""
+class ContainerServer(LSPServer):
+    """Runtime for container backend, e.g. `docker` or `podman`."""
 
     image: str
     mounts: list[Mount]

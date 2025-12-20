@@ -37,11 +37,13 @@ from lsp_client.capability.server_request import (
 )
 from lsp_client.client.abc import LSPClient
 from lsp_client.server.abc import LSPServer
-from lsp_client.server.docker import DockerServer
+from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-PyreflyDockerServer = partial(DockerServer, image="docker.io/lspcontainers/pyrefly")
+PyreflyContainerServer = partial(
+    ContainerServer, image="ghcr.io/observerw/lsp-client/pyrefly:latest"
+)
 
 
 @define

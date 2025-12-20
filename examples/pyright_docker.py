@@ -11,20 +11,20 @@ from pathlib import Path
 import anyio
 
 from lsp_client import Position
-from lsp_client.clients.pyright import PyrightClient, PyrightDockerServer
+from lsp_client.clients.pyright import PyrightClient, PyrightContainerServer
 
 
 async def main():
     # Set up workspace directory and mount it in Docker
     workspace = Path.cwd()
     async with PyrightClient(
-        # here we use `PyrightDockerServer`
-        server=PyrightDockerServer(
+        # here we use `PyrightContainerServer`
+        server=PyrightContainerServer(
             mounts=[workspace]  # Mount workspace into container
         ),
         workspace=workspace,
     ) as client:
-        # Find definition of PyrightDockerServer at line 12, column 28
+        # Find definition of PyrightContainerServer at line 12, column 28
         refs = await client.request_definition_locations(
             file_path=__file__,
             position=Position(12, 28),

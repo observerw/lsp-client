@@ -69,13 +69,13 @@ if __name__ == "__main__":
 from pathlib import Path
 import anyio
 from lsp_client import Position
-from lsp_client.clients.pyright import PyrightClient, PyrightDockerServer
+from lsp_client.clients.pyright import PyrightClient, PyrightContainerServer
 
 async def main():
     workspace = Path.cwd()
     async with PyrightClient(
         workspace=workspace,
-        server=PyrightDockerServer(mounts=[workspace]),
+        server=PyrightContainerServer(mounts=[workspace]),
     ) as client:
         # Find definition of something at line 11, character 28 in a file
         refs = await client.request_definition_locations(

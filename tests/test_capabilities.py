@@ -12,7 +12,7 @@ from lsp_client.clients import (
     RustAnalyzerClient,
     TypescriptClient,
 )
-from lsp_client.server.docker import DockerServer
+from lsp_client.server.container import ContainerServer
 from lsp_client.utils.inspect import inspect_capabilities
 
 
@@ -38,8 +38,8 @@ def has_docker() -> bool:
     ],
 )
 async def test_capabilities_match(client_cls: type[LSPClient], image: str):
-    # Use DockerServer for testing to ensure environment consistency
-    server = DockerServer(image=image, mounts=[])
+    # Use ContainerServer for testing to ensure environment consistency
+    server = ContainerServer(image=image, mounts=[])
 
     mismatches = []
     async for result in inspect_capabilities(server, client_cls):
