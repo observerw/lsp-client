@@ -36,13 +36,13 @@ from lsp_client.capability.server_request import (
     WithRespondWorkspaceFoldersRequest,
 )
 from lsp_client.client.abc import LSPClient
-from lsp_client.server.docker import DockerServer
+from lsp_client.server.abc import LSPServer
+from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-RustAnalyzerLocalServer = partial(LocalServer, command=["rust-analyzer"])
-RustAnalyzerDockerServer = partial(
-    DockerServer, image="docker.io/lspcontainers/rust-analyzer"
+RustAnalyzerContainerServer = partial(
+    ContainerServer, image="ghcr.io/observerw/lsp-client/rust-analyzer:latest"
 )
 
 
@@ -85,6 +85,10 @@ class RustAnalyzerClient(
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.Rust
+
+    @override
+    def create_default_server(self) -> LSPServer:
+        return LocalServer(command=["rust-analyzer"])
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:

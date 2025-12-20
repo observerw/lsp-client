@@ -1,0 +1,16 @@
+# Multi-stage build for TypeScript Language Server
+ARG VERSION=5.1.3
+FROM node:22-slim AS builder
+ARG VERSION
+RUN npm install -g typescript-language-server@${VERSION} typescript
+
+FROM node:22-slim
+ARG VERSION
+LABEL org.opencontainers.image.version="${VERSION}"
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin/typescript-language-server /usr/local/bin/typescript-language-server
+COPY --from=builder /usr/local/bin/tsserver /usr/local/bin/tsserver
+COPY --from=builder /usr/local/bin/tsc /usr/local/bin/tsc
+
+WORKDIR /workspace
+ENTRYPOINT ["typescript-language-server", "--stdio"]

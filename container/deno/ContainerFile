@@ -1,0 +1,8 @@
+# Deno has built-in LSP
+ARG VERSION=2.6.3
+FROM denoland/deno:alpine-${VERSION}
+ARG VERSION
+LABEL org.opencontainers.image.version="${VERSION}"
+
+WORKDIR /workspace
+ENTRYPOINT ["deno", "lsp"]

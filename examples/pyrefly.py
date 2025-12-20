@@ -10,7 +10,7 @@ import anyio
 
 import lsp_client
 from lsp_client import Position, Range
-from lsp_client.clients.pyrefly import PyreflyClient, PyreflyLocalServer
+from lsp_client.clients.pyrefly import PyreflyClient
 
 lsp_client.enable_logging()
 
@@ -18,7 +18,7 @@ lsp_client.enable_logging()
 async def main():
     # Initialize Pyrefly client with local server
     # if `workspace` not specified, defaults to current working directory
-    async with PyreflyClient(server=PyreflyLocalServer()) as client:
+    async with PyreflyClient() as client:
         # Request references to PyreflyClient at line 22, column 20
         refs = await client.request_references(
             file_path="src/lsp_client/clients/pyrefly.py",

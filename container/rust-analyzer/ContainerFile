@@ -1,0 +1,16 @@
+# Multi-stage build for Rust-analyzer
+ARG VERSION=2025-12-15
+FROM debian:bookworm-slim AS builder
+ARG VERSION
+RUN apt-get update && apt-get install -y curl && \
+    curl -L https://github.com/rust-lang/rust-analyzer/releases/download/${VERSION}/rust-analyzer-x86_64-unknown-linux-gnu.gz | gunzip -c - > /usr/local/bin/rust-analyzer && \
+    chmod +x /usr/local/bin/rust-analyzer
+
+FROM debian:bookworm-slim
+ARG VERSION
+LABEL org.opencontainers.image.version="${VERSION}"
+RUN apt-get update && apt-get install -y libgcc-s1 && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/bin/rust-analyzer /usr/local/bin/rust-analyzer
+
+WORKDIR /workspace
+ENTRYPOINT ["rust-analyzer"]

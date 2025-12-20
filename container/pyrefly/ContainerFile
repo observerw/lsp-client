@@ -1,0 +1,14 @@
+# Multi-stage build for Pyrefly
+ARG VERSION=0.46.0
+FROM python:3.12-slim AS builder
+ARG VERSION
+RUN pip install --no-cache-dir pyrefly==${VERSION}
+
+FROM python:3.12-slim
+ARG VERSION
+LABEL org.opencontainers.image.version="${VERSION}"
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin/pyrefly /usr/local/bin/pyrefly
+
+WORKDIR /workspace
+ENTRYPOINT ["pyrefly", "lsp"]

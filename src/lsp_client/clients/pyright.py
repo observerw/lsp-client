@@ -9,27 +9,62 @@ import anyio
 from attrs import define
 from loguru import logger
 
-from lsp_client.capability.request import WithRequestDefinition, WithRequestReferences
-from lsp_client.capability.server_notification import WithReceivePublishDiagnostics
-from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
+from lsp_client.capability.notification import (
+    WithNotifyDidChangeConfiguration,
+)
+from lsp_client.capability.request import (
+    WithRequestCallHierarchy,
+    WithRequestDeclaration,
+    WithRequestDefinition,
+    WithRequestDocumentSymbol,
+    WithRequestHover,
+    WithRequestReferences,
+    WithRequestTypeDefinition,
+    WithRequestWorkspaceSymbol,
+)
+from lsp_client.capability.server_notification import (
+    WithReceiveLogMessage,
+    WithReceiveLogTrace,
+    WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
+)
+from lsp_client.capability.server_request import (
+    WithRespondConfigurationRequest,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
+)
 from lsp_client.client.abc import LSPClient
-from lsp_client.server.docker import DockerServer
+from lsp_client.server.abc import LSPServer
+from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-PyrightLocalServer = partial(LocalServer, command=["pyright-langserver"])
-PyrightDockerServer = partial(
-    DockerServer, image="docker.io/lspcontainers/pyright-langserver"
+PyrightContainerServer = partial(
+    ContainerServer, image="ghcr.io/observerw/lsp-client/pyright:latest"
 )
 
 
 @define
 class PyrightClient(
     LSPClient,
-    WithRequestReferences,
+    WithNotifyDidChangeConfiguration,
+    WithRequestCallHierarchy,
+    WithRequestDeclaration,
     WithRequestDefinition,
+    WithRequestDocumentSymbol,
+    WithRequestHover,
+    WithRequestReferences,
+    WithRequestTypeDefinition,
+    WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
+    WithRespondConfigurationRequest,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
 ):
     """
     - Language: Python
@@ -45,6 +80,10 @@ class PyrightClient(
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.Python
+
+    @override
+    def create_default_server(self) -> LSPServer:
+        return LocalServer(command=["pyright-langserver", "--stdio"])
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:

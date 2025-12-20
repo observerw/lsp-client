@@ -1,0 +1,24 @@
+[pyright]
+type = "npm"
+package = "pyright"
+
+[typescript]
+type = "npm"
+package = "typescript-language-server"
+
+[rust-analyzer]
+type = "github"
+repo = "rust-lang/rust-analyzer"
+
+[pyrefly]
+type = "pypi"
+package = "pyrefly"
+
+[deno]
+type = "github"
+repo = "denoland/deno"
+strip_v = true
+
+# [custom-server]
+# type = "custom"
+# command = "curl -s https://api.example.com/version | jq -r .version"

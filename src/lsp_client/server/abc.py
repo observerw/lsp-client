@@ -18,6 +18,7 @@ from lsp_client.jsonrpc.types import (
 )
 from lsp_client.server.types import ServerRequest
 from lsp_client.utils.channel import Sender
+from lsp_client.utils.workspace import Workspace
 
 
 @define(kw_only=True)
@@ -40,21 +41,34 @@ class LSPServer(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    def run_process(self) -> AsyncGenerator[None]:
+    def run_process(self, workspace: Workspace) -> AsyncGenerator[None]:
         """Run the server process."""
 
-    async def _dispatch(self, sender: Sender[ServerRequest]) -> None:
+    async def _dispatch(self, sender: Sender[ServerRequest] | None) -> None:
+        if not sender:
+            logger.warning(
+                "No ServerRequest sender provided, all server requests and notifications will be ignored."
+            )
+
         async def handle(package: RawPackage) -> None:
             match package:
-                case {"result": _, "id": id} | {"error": _, "id": id} as resp:
-                    self._resp_table.send(id, resp)
-                case {"id": id, "method": _} as req:
+                case {"result": _, "id": id} | {"error": _, "id": id}:
+                    self._resp_table.send(id, package)
+                case {"id": id, "method": _}:
+                    if not sender:
+                        raise RuntimeError(
+                            "Received a server request without a sender provided."
+                        )
+
                     tx, rx = response_channel.create()
-                    await sender.send((req, tx))
+                    await sender.send((package, tx))
                     resp = await rx.receive()
                     await self.send(resp)
-                case {"method": _} as noti:
-                    await sender.send(noti)
+                case {"method": _}:
+                    if not sender:
+                        return
+
+                    await sender.send(package)
 
         async with asyncer.create_task_group() as tg:
             while package := await self.receive():
@@ -69,15 +83,14 @@ class LSPServer(ABC):
 
     @asynccontextmanager
     async def serve(
-        self, *, sender: Sender[ServerRequest] | None = None
+        self,
+        workspace: Workspace,
+        *,
+        sender: Sender[ServerRequest] | None = None,
     ) -> AsyncGenerator[Self]:
         async with (
-            self.run_process(),
+            self.run_process(workspace),
             asyncer.create_task_group() as tg,
         ):
-            if sender:
-                tg.soonify(self._dispatch)(sender)
-            else:
-                logger.debug("Server request sender not provided, skipping dispatch.")
-
+            tg.soonify(self._dispatch)(sender)
             yield self

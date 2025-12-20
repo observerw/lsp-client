@@ -9,6 +9,9 @@ import anyio
 from attrs import define
 from loguru import logger
 
+from lsp_client.capability.notification import (
+    WithNotifyDidChangeConfiguration,
+)
 from lsp_client.capability.request import (
     WithRequestDefinition,
     WithRequestDocumentSymbol,
@@ -19,23 +22,32 @@ from lsp_client.capability.request import (
     WithRequestWorkspaceSymbol,
 )
 from lsp_client.capability.server_notification import (
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
 )
 from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
+from lsp_client.capability.server_request import (
+    WithRespondConfigurationRequest,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
+)
 from lsp_client.client.abc import LSPClient
-from lsp_client.server.docker import DockerServer
+from lsp_client.server.abc import LSPServer
+from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-TypescriptServer = partial(
-    LocalServer, command=["typescript-language-server", "--stdio"]
+TypescriptContainerServer = partial(
+    ContainerServer, image="ghcr.io/observerw/lsp-client/typescript:latest"
 )
-TypescriptDockerServer = partial(DockerServer, image="docker.io/lspcontainers/tsserver")
 
 
 @define
 class TypescriptClient(
     LSPClient,
+    WithNotifyDidChangeConfiguration,
     WithRequestHover,
     WithRequestDefinition,
     WithRequestReferences,
@@ -44,7 +56,13 @@ class TypescriptClient(
     WithRequestDocumentSymbol,
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
+    WithRespondConfigurationRequest,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
 ):
     """
     - Language: TypeScript, JavaScript
@@ -64,6 +82,10 @@ class TypescriptClient(
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
         return lsp_type.LanguageKind.TypeScript
+
+    @override
+    def create_default_server(self) -> LSPServer:
+        return LocalServer(command=["typescript-language-server", "--stdio"])
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
