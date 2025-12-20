@@ -57,7 +57,7 @@ class LocalServer(LSPServer):
             package = await read_raw_package(self.stdout)
             logger.debug("Received package: {}", package)
             return package
-        except (anyio.EndOfStream, anyio.IncompleteRead):
+        except (anyio.EndOfStream, anyio.IncompleteRead, anyio.ClosedResourceError):
             logger.debug("Process stdout closed")
             return None
 
