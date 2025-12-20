@@ -1,6 +1,15 @@
 # How to Add a New LSP Capability
 
-This guide details the process for adding new Language Server Protocol (LSP) capabilities to this library. Familiarity with the [LSP 3.17 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) and the library's Protocol/Mixin design pattern is recommended.
+**Why this matters**: The Language Server Protocol specification includes 50+ capabilities, from basic autocomplete to advanced refactoring. Each capability you implement opens up new possibilities for developers building intelligent tools. This project needs contributors familiar with different parts of the LSP spec to help achieve complete coverage.
+
+This guide provides a comprehensive walkthrough for adding new LSP capabilities to the library. Whether you're implementing a common capability like `textDocument/inlayHint` or something more specialized, this guide will help you follow the project's architecture patterns.
+
+## Prerequisites
+
+Before starting, familiarize yourself with:
+- The [LSP 3.17 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)
+- The library's Protocol/Mixin design pattern (see examples in `src/lsp_client/capability/`)
+- Python's `Protocol` and `runtime_checkable` decorators
 
 ## Design Philosophy
 
@@ -481,3 +490,19 @@ Add a `match` branch for the new capability in the server request dispatch funct
 ## Default Capabilities
 
 Optionally mix in `WithDefaultCapabilities` to enable baseline capabilities (logging and text document synchronization).
+
+---
+
+## Your Contribution Makes a Difference
+
+Implementing LSP capabilities is at the heart of this project. Each capability you add:
+
+- **Enables new use cases** for developers building intelligent tools
+- **Improves compatibility** across different language servers
+- **Advances the Python ecosystem** by making LSP more accessible
+
+The LSP specification is vast, and we can't cover it all alone. Your expertise—whether it's understanding debugger protocols, refactoring operations, or any other LSP feature—is invaluable.
+
+**Questions or stuck on something?** Don't hesitate to open an issue or discussion. We're here to help guide you through the process!
+
+Thank you for contributing to lsp-client! 🎉

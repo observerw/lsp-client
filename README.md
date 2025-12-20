@@ -107,12 +107,17 @@ Container images are automatically updated weekly to ensure access to the latest
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](docs/contribution/) for details on:
+**We need your help!** 🙌 This project aims to support every major language server, each requiring detailed integration work with upstream projects. Whether you're an expert in Rust, Go, Java, or any other language, your contribution makes a real difference.
 
-- Adding new language server support
-- Extending protocol capabilities
-- Container image updates
-- Development workflow
+### How You Can Contribute
+
+- **🚀 Add new language servers** - Know a language server that should be supported? [Add it!](docs/contribution/how-to-add-new-servers.md)
+- **🧩 Implement LSP capabilities** - Help us support more of the LSP 3.17 spec. [Guide here](docs/contribution/how-to-add-new-capabilities.md)
+- **🐳 Improve containers** - Optimize images, update versions, enhance cross-platform support
+- **📚 Write docs & examples** - Tutorials, use cases, translations
+- **🐛 Report bugs & test** - Share your experiences and edge cases
+
+Every contribution—from fixing typos to implementing complex capabilities—helps the entire Python community. Read our [**Contributing Guide**](CONTRIBUTING.md) to get started!
 
 ## License
 
