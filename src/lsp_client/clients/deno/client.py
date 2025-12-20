@@ -155,6 +155,7 @@ class DenoClient(
         logger.warning("deno not found, attempting to install...")
 
         try:
+            # Use shell to execute the piped command
             await anyio.run_process(
                 ["sh", "-c", "curl -fsSL https://deno.land/install.sh | sh"]
             )
