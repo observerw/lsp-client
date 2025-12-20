@@ -5,113 +5,114 @@
 [![Documentation](https://img.shields.io/badge/docs-pdoc-blue)](https://observerw.github.io/lsp-client/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/observerw/lsp-client)
 
-A full-featured, well-typed, and easy-to-use Python client for the Language Server Protocol (LSP). This library provides a clean, async-first interface for interacting with language servers, supporting both local and container-based runtimes.
+A production-ready, async-first Python client for the Language Server Protocol (LSP). Built for developers who need fine-grained control, container isolation, and extensibility when integrating language intelligence into their tools.
 
 ## Why lsp-client?
 
-`lsp-client` is designed specifically for developers who need **high control**, **isolation**, and **extensibility**:
+`lsp-client` is engineered for developers building **production-grade tooling** that requires precise control over language server environments:
 
-- **🐳 Native Container Support**: Unlike other clients that focus on local process management, `lsp-client` treats containers as a first-class citizen. It handles the "magic" of mounting workspaces, translating file paths between your host and the container, and managing container lifecycles. Pre-built containers are available for all supported language servers.
-- **🧩 SDK for Custom Tooling**: Instead of being a closed wrapper, this is a true SDK. Our **Modular Capability System** allows you to build custom clients by mixing and matching only the LSP features you need, or even adding your own protocol extensions seamlessly.
-- **🛠️ Explicit over Implicit**: We prioritize predictable environments. While other tools might auto-download binaries, `lsp-client` gives you full control over your server environment (Local or Container), making it ideal for production-grade tools where version pinning is critical.
-- **⚡ Modern Async-First Architecture**: Built from the ground up for Python 3.12+, utilizing advanced async patterns to ensure high-performance concurrent operations without blocking your main event loop.
-
-## Features
-
-- **🚀 Environment Agnostic**: Seamlessly switch between local processes and isolated containers.
-- **🔧 Full LSP 3.17 Support**: Comprehensive implementation of the latest protocol specification.
-- **🎯 Specialized Clients**: Out-of-the-box support for popular servers (Pyright, Deno, Rust-Analyzer, etc.).
-- **📝 Zero-Config Capabilities**: Automatically manages complex protocol handshakes and feature negotiations.
-- **🧩 Pluggable & Modular**: Easily extend functionality or add support for custom LSP extensions.
-- **🔒 Production-Grade Reliability**: Robust error handling, automatic retries, and full type safety.
+- **🐳 Container-First Architecture**: Containers as first-class citizens with workspace mounting, path translation, and lifecycle management. Pre-built images available, seamless switching between local and container environments.
+- **🧩 Intelligent Capability Management**: Zero-overhead mixin system with automatic registration, negotiation, and availability checks. Only access methods for registered capabilities.
+- **🎯 Complete LSP 3.17 Support**: Full specification implementation with pre-configured clients for Pyright, Rust-Analyzer, Deno, TypeScript, and Pyrefly.
+- **⚡ Production-Ready & Modern**: Explicit environment control with no auto-downloads. Built with async patterns, comprehensive error handling, retries, and full type safety.
 
 ## Quick Start
 
 ### Installation
 
 ```bash
+# Recommended: Use uv for modern Python dependency management
 uv add lsp-client
+
+# Or with pip
+pip install lsp-client
 ```
 
-### Basic Usage
+### Local Language Server
+
+The following code snippet can be run as-is, try it out:
 
 ```python
-from pathlib import Path
+# install pyrefly with `uv tool install pyrefly` first
 import anyio
 from lsp_client import Position
-from lsp_client.clients.pyright import PyrightClient, PyrightLocalServer
+from lsp_client.clients.pyrefly import PyreflyClient
 
 async def main():
-    workspace = Path.cwd()
-    async with PyrightClient(
-        workspace=workspace,
-        server=PyrightLocalServer(),
-    ) as client:
-        # Find definition of something at line 11, character 28 in a file
-        refs = await client.request_definition_locations(
-            file_path="src/main.py",
-            position=Position(11, 28)  # line 12, character 29 (1-indexed)
+    async with PyreflyClient() as client:
+        refs = await client.request_references(
+            file_path="example.py",
+            position=Position(10, 5)
         )
-
-        if not refs:
-            print("No definition found.")
-            return
-
         for ref in refs:
-            print(f"Found definition at: {ref.uri} - Range: {ref.range}")
+            print(f"Reference at {ref.uri}: {ref.range}")
 
-if __name__ == "__main__":
-    anyio.run(main)
+anyio.run(main)
 ```
 
 ### Container-based Language Server
 
 ```python
-from pathlib import Path
-import anyio
-from lsp_client import Position
-from lsp_client.clients.pyright import PyrightClient, PyrightContainerServer
-
 async def main():
     workspace = Path.cwd()
     async with PyrightClient(
-        workspace=workspace,
         server=PyrightContainerServer(mounts=[workspace]),
+        workspace=workspace
     ) as client:
-        # Find definition of something at line 11, character 28 in a file
-        refs = await client.request_definition_locations(
-            file_path="src/main.py",
-            position=Position(11, 28)
+        # Find definition of a symbol
+        definitions = await client.request_definition_locations(
+            file_path="example.py",
+            position=Position(10, 5)
         )
+        for def_loc in definitions:
+            print(f"Definition at {def_loc.uri}: {def_loc.range}")
 
-        if not refs:
-            print("No definition found.")
-            return
+anyio.run(main)
+```
 
-        for ref in refs:
-            print(f"Found definition at: {ref.uri} - Range: {ref.range}")
+### More Examples
 
-if __name__ == "__main__":
-    anyio.run(main)
+The `examples/` directory contains comprehensive usage examples:
+
+- `pyright_docker.py` - Using Pyright in Docker for Python analysis
+- `rust_analyzer.py` - Rust code intelligence with Rust-Analyzer
+- `pyrefly.py` - Python linting and analysis with Pyrefly
+- `protocol.py` - Direct LSP protocol usage
+
+Run examples with:
+
+```bash
+uv run examples/pyright_docker.py
 ```
 
 ## Supported Language Servers
 
-The library includes pre-configured clients for popular language servers:
-
-| Language Server            | Module Path                        | Language              | Container Image                          |
-| -------------------------- | ---------------------------------- | --------------------- | ---------------------------------------- |
-| Pyright                    | `lsp_client.clients.pyright`       | Python                | `ghcr.io/observerw/lsp-client/pyright`    |
-| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                | `ghcr.io/observerw/lsp-client/pyrefly`    |
+| Language Server            | Module Path                        | Language              | Container Image                              |
+| -------------------------- | ---------------------------------- | --------------------- | -------------------------------------------- |
+| Pyright                    | `lsp_client.clients.pyright`       | Python                | `ghcr.io/observerw/lsp-client/pyright`       |
+| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                | `ghcr.io/observerw/lsp-client/pyrefly`       |
 | Rust Analyzer              | `lsp_client.clients.rust_analyzer` | Rust                  | `ghcr.io/observerw/lsp-client/rust-analyzer` |
-| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/deno`       |
-| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/typescript` |
+| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/deno`          |
+| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/typescript`    |
 
-Containers are automatically updated weekly to ensure you always have the latest versions.
+Container images are automatically updated weekly to ensure access to the latest language server versions.
+
+### Key Benefits
+
+1. **Method Safety**: You can only call methods for capabilities you've registered. No runtime surprises from unavailable capabilities.
+2. **Automatic Registration**: The mixin system automatically handles client registration, capability negotiation, and availability checks behind the scenes.
+3. **Zero Boilerplate**: No manual capability checking, no complex initialization logic, no error handling for missing capabilities.
+4. **Type Safety**: Full type annotations ensure you get compile-time guarantees about available methods.
+5. **Composability**: Mix and match exactly the capabilities you need, creating perfectly tailored clients.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](docs/contribution/) for details.
+We welcome contributions! Please see our [Contributing Guide](docs/contribution/) for details on:
+
+- Adding new language server support
+- Extending protocol capabilities
+- Container image updates
+- Development workflow
 
 ## License
 
@@ -121,4 +122,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built on the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) specification
 - Uses [lsprotocol](https://github.com/microsoft/lsprotocol) for LSP type definitions
-- Inspired by [multilspy](https://github.com/microsoft/multilspy) and other LSP clients
+- Architecture inspired by [multilspy](https://github.com/microsoft/multilspy) and other LSP clients

@@ -9,14 +9,14 @@ from __future__ import annotations
 import anyio
 
 import lsp_client
-from lsp_client.clients.rust_analyzer import RustAnalyzerClient, RustAnalyzerLocalServer
+from lsp_client.clients.rust_analyzer import RustAnalyzerClient
 
 lsp_client.enable_logging()
 
 
 async def main():
     # Initialize Rust Analyzer client with local server
-    async with RustAnalyzerClient(server=RustAnalyzerLocalServer()) as client:
+    async with RustAnalyzerClient() as client:
         # Get and display the language ID for this client
         # This should return "rust" for Rust Analyzer
         print(client.get_language_id())
