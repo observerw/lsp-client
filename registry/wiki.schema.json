@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LSP Servers Registry",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["type"],
+    "properties": {
+      "type": {
+        "enum": ["npm", "pypi", "github", "custom"]
+      },
+      "package": {
+        "type": "string"
+      },
+      "repo": {
+        "type": "string"
+      },
+      "command": {
+        "type": "string"
+      },
+      "strip_v": {
+        "type": "boolean"
+      }
+    },
+    "if": {
+      "properties": { "type": { "const": "npm" } }
+    },
+    "then": {
+      "required": ["package"]
+    },
+    "else": {
+      "if": {
+        "properties": { "type": { "const": "pypi" } }
+      },
+      "then": {
+        "required": ["package"]
+      },
+      "else": {
+        "if": {
+          "properties": { "type": { "const": "github" } }
+        },
+        "then": {
+          "required": ["repo"]
+        },
+        "else": {
+          "if": {
+            "properties": { "type": { "const": "custom" } }
+          },
+          "then": {
+            "required": ["command"]
+          }
+        }
+      }
+    }
+  }
+}
