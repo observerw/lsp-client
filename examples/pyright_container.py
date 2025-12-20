@@ -18,11 +18,9 @@ async def main():
     # Set up workspace directory and mount it in Docker
     workspace = Path.cwd()
     async with PyrightClient(
-        # here we use `PyrightContainerServer`
-        server=PyrightContainerServer(
-            mounts=[workspace]  # Mount workspace into container
-        ),
         workspace=workspace,
+        # here we use the containerized Pyright server
+        server=PyrightContainerServer(),
     ) as client:
         # Find definition of PyrightContainerServer at line 12, column 28
         refs = await client.request_definition_locations(
