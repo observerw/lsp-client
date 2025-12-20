@@ -17,21 +17,24 @@ lsp_client.enable_logging()
 
 async def main():
     # Initialize Pyrefly client with local server
+    # if `workspace` not specified, defaults to current working directory
     async with PyreflyClient(server=PyreflyLocalServer()) as client:
-        # Request references to PyreflyClient at line 21, column 19
+        # Request references to PyreflyClient at line 22, column 20
         refs = await client.request_references(
             file_path="src/lsp_client/clients/pyrefly.py",
             position=Position(21, 19),
-            include_declaration=False,  # Don't include the declaration itself
+            # some requests may support additional options,
+            # e.g. this one excludes the declaration itself from results
+            include_declaration=False,
         )
 
-        if not refs:
-            print("No references found.")
-            return
+        assert refs, "No references found."
 
-        # Print all found references
         for ref in refs:
-            print(f"Reference found at {ref.uri} - Range: {ref.range}")
+            # LSP Server always returns URI instead of file paths
+            # So we need to convert it back to file path using `from_uri`
+            file_path = client.from_uri(ref.uri)
+            print(f"Reference found at {file_path} - Range: {ref.range}")
 
         # Verify that this example file contains a reference to PyreflyClient
         # This demonstrates the reference finding functionality works correctly
@@ -44,8 +47,7 @@ async def main():
             )
             for ref in refs
         )
-        print("Reference assertion passed.")
 
 
 if __name__ == "__main__":
-    anyio.run(main)  # Run the async example
+    anyio.run(main)

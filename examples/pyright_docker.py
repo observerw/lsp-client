@@ -18,9 +18,10 @@ async def main():
     # Set up workspace directory and mount it in Docker
     workspace = Path.cwd()
     async with PyrightClient(
+        # here we use `PyrightDockerServer`
         server=PyrightDockerServer(
-            mounts=[workspace]
-        ),  # Mount workspace into container
+            mounts=[workspace]  # Mount workspace into container
+        ),
         workspace=workspace,
     ) as client:
         # Find definition of PyrightDockerServer at line 12, column 28
