@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 
 from attrs import frozen
 
+from lsp_client.capability.build import build_client_capabilities
 from lsp_client.capability.notification import capabilities as notification_capabilities
 from lsp_client.capability.request import capabilities as request_capabilities
 from lsp_client.capability.server_notification import (
@@ -27,7 +28,7 @@ class CapabilityInspectResult:
 
 async def inspect_capabilities(
     server: LSPServer, client_cls: type[LSPClient]
-) -> AsyncGenerator[CapabilityInspectResult]:
+) -> AsyncGenerator[CapabilityInspectResult, None]:
     if not __debug__:
         raise RuntimeError("inspect_capabilities can only be used in debug mode")
 
@@ -36,11 +37,11 @@ async def inspect_capabilities(
         req = lsp_type.InitializeRequest(
             id="initialize",
             params=lsp_type.InitializeParams(
-                capabilities=lsp_type.ClientCapabilities()
+                capabilities=build_client_capabilities(client_cls)
             ),
         )
-        resp = await server.request(request_serialize(req))
-        resp = response_deserialize(resp, lsp_type.InitializeResponse)
+        raw_resp = await server.request(request_serialize(req))
+        resp = response_deserialize(raw_resp, lsp_type.InitializeResponse)
         await server.kill()
 
     server_capabilities = resp.capabilities
