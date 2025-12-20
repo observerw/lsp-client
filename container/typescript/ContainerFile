@@ -5,6 +5,7 @@ ARG VERSION
 RUN npm install -g typescript-language-server@${VERSION} typescript
 
 FROM node:22-slim
+ARG VERSION
 LABEL org.opencontainers.image.version="${VERSION}"
 COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder /usr/local/bin/typescript-language-server /usr/local/bin/typescript-language-server

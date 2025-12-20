@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y curl && \
     chmod +x /usr/local/bin/rust-analyzer
 
 FROM debian:bookworm-slim
+ARG VERSION
 LABEL org.opencontainers.image.version="${VERSION}"
 RUN apt-get update && apt-get install -y libgcc-s1 && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/rust-analyzer /usr/local/bin/rust-analyzer
