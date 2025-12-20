@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
+
 import pytest
 
 from lsp_client import LSPClient
@@ -13,6 +16,17 @@ from lsp_client.server.docker import DockerServer
 from lsp_client.utils.inspect import inspect_capabilities
 
 
+def has_docker() -> bool:
+    if not shutil.which("docker"):
+        return False
+    try:
+        subprocess.run(["docker", "info"], check=True, capture_output=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+@pytest.mark.skipif(not has_docker(), reason="Docker not available")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "client_cls,image",
