@@ -9,6 +9,9 @@ import anyio
 from attrs import define
 from loguru import logger
 
+from lsp_client.capability.notification import (
+    WithNotifyDidChangeConfiguration,
+)
 from lsp_client.capability.request import (
     WithRequestDefinition,
     WithRequestDocumentSymbol,
@@ -19,9 +22,17 @@ from lsp_client.capability.request import (
     WithRequestWorkspaceSymbol,
 )
 from lsp_client.capability.server_notification import (
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
 )
 from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
+from lsp_client.capability.server_request import (
+    WithRespondConfigurationRequest,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
+)
 from lsp_client.client.abc import LSPClient
 from lsp_client.server.docker import DockerServer
 from lsp_client.server.local import LocalServer
@@ -36,6 +47,7 @@ TypescriptDockerServer = partial(DockerServer, image="docker.io/lspcontainers/ts
 @define
 class TypescriptClient(
     LSPClient,
+    WithNotifyDidChangeConfiguration,
     WithRequestHover,
     WithRequestDefinition,
     WithRequestReferences,
@@ -44,7 +56,13 @@ class TypescriptClient(
     WithRequestDocumentSymbol,
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
+    WithRespondConfigurationRequest,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
 ):
     """
     - Language: TypeScript, JavaScript
