@@ -15,6 +15,7 @@ from loguru import logger
 from lsp_client.jsonrpc.parse import read_raw_package, write_raw_package
 from lsp_client.jsonrpc.types import RawPackage
 from lsp_client.server.abc import LSPServer
+from lsp_client.utils.workspace import Workspace
 
 
 @final
@@ -69,7 +70,7 @@ class LocalServer(LSPServer):
 
     @override
     @asynccontextmanager
-    async def run_process(self) -> AsyncGenerator[None]:
+    async def run_process(self, workspace: Workspace) -> AsyncGenerator[None]:
         command = [*self.command, *self.args]
         logger.debug("Running with command: {}", command)
 

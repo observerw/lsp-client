@@ -14,6 +14,11 @@ repo = "rust-lang/rust-analyzer"
 type = "pypi"
 package = "pyrefly"
 
+[ty]
+type = "github"
+repo = "astral-sh/ty"
+strip_v = true
+
 [deno]
 type = "github"
 repo = "denoland/deno"

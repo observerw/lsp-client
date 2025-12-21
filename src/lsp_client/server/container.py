@@ -199,5 +199,5 @@ class ContainerServer(LSPServer):
         logger.debug("Running docker runtime with command: {}", command)
 
         self._local = LocalServer(command=command)
-        async with self._local.run_process():
+        async with self._local.run_process(workspace):
             yield
