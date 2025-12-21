@@ -13,6 +13,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "typer>=0.12.0",
     "anyio>=4.10.0",
     "asyncer>=0.0.10",
     "attrs>=25.3.0",
@@ -22,6 +23,9 @@ dependencies = [
     "semver>=3.0.4",
     "tenacity>=9.1.2",
 ]
+
+[project.scripts]
+lsp-client = "lsp_client.cli:app"
 
 [dependency-groups]
 dev = [
