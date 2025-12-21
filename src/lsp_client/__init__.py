@@ -35,10 +35,10 @@ from __future__ import annotations
 
 from loguru import logger
 
-from .client.abc import LSPClient
+from .client.abc import Client
 from .clients import PythonClient, RustClient, TypeScriptClient
 from .clients.pyrefly import PyreflyClient
-from .server.abc import LSPServer
+from .server.abc import Server
 from .server.container import ContainerServer
 from .server.local import LocalServer
 from .utils.types import *  # noqa: F403
