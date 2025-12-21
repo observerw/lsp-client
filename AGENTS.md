@@ -3,7 +3,7 @@
 ## Development Commands
 
 - Lint & format: `ruff check --fix && ruff format`
-- Type checking: `mypy src/`
+- Type checking: `ty check <dir_or_file>`
 - Run tests: `pytest`
 
 ## Code Style Guidelines
