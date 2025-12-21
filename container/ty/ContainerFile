@@ -1,8 +1,11 @@
 # ty has built-in LSP
-ARG VERSION=0.0.5
-FROM ghcr.io/astral-sh/ty:${VERSION}
+ARG VERSION=latest
+FROM ghcr.io/astral-sh/uv:python3.11-trixie-slim AS builder
 ARG VERSION
-LABEL org.opencontainers.image.version="${VERSION}"
+RUN uv tool install ty@${VERSION}
+
+FROM gcr.io/distroless/cc-debian12
+COPY --from=builder /usr/local/bin/ty /usr/local/bin/ty
 
 WORKDIR /workspace
-ENTRYPOINT ["ty", "server"]
+ENTRYPOINT ["/usr/local/bin/ty", "server"]
