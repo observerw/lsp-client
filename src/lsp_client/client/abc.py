@@ -153,7 +153,7 @@ class LSPClient(
     ) -> R:
         req = request_serialize(req)
         with anyio.fail_after(self.request_timeout):
-            raw_resp = await self._server.request(req)
+            raw_resp = await self.get_server().request(req)
             return response_deserialize(raw_resp, schema)
 
     @override
@@ -161,7 +161,7 @@ class LSPClient(
     async def notify(self, msg: Notification) -> None:
         noti = notification_serialize(msg)
         with anyio.fail_after(self.request_timeout):
-            await self._server.notify(noti)
+            await self.get_server().notify(noti)
 
     async def _dispatch_server_requests(
         self, receiver: Receiver[ServerRequest]
@@ -239,7 +239,7 @@ class LSPClient(
         async with (
             asyncer.create_task_group() as tg,
             channel[ServerRequest].create() as (sender, receiver),
-            self._server.serve(workspace=self.get_workspace(), sender=sender),
+            self.get_server().serve(workspace=self.get_workspace(), sender=sender),
         ):
             # start to receive server requests here,
             # since server notification can be sent before `initialize`
