@@ -74,6 +74,8 @@ class LSPClient(
                         )
                     }
                 )
+            case Workspace() as ws:
+                return ws
             case _ as mapping:
                 return Workspace(
                     {
