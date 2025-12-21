@@ -1,0 +1,8 @@
+# ty has built-in LSP
+ARG VERSION=0.0.5
+FROM ghcr.io/astral-sh/ty:${VERSION}
+ARG VERSION
+LABEL org.opencontainers.image.version="${VERSION}"
+
+WORKDIR /workspace
+ENTRYPOINT ["ty", "server"]
