@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Self
 
@@ -22,8 +22,8 @@ from lsp_client.utils.workspace import Workspace
 
 
 @define(kw_only=True)
-class LSPServer(ABC):
-    args: list[str] = Factory(list)
+class Server(ABC):
+    args: Sequence[str] = Factory(list)
 
     _resp_table: ResponseTable = field(factory=ResponseTable, init=False)
 
@@ -82,7 +82,7 @@ class LSPServer(ABC):
         await self.send(notification)
 
     @asynccontextmanager
-    async def serve(
+    async def run(
         self,
         workspace: Workspace,
         *,
