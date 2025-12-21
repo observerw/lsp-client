@@ -3,13 +3,12 @@
 ## Development Commands
 
 - Lint & format: `ruff check --fix && ruff format`
-- Type checking: `mypy src/`
+- Type checking: `ty check <dir_or_file>`
 - Run tests: `pytest`
 
 ## Code Style Guidelines
 
 - Python: 3.12+ required
-- Imports & Formatting: use ruff
 - Types: Full type annotations required, use `lsp_client.utils.types.lsp_type` for standard LSP types
 - Error handling: Use tenacity for retries, `anyio.fail_after` for timeouts
 - Async: Use async/await, `asyncer.TaskGroup` for concurrency

@@ -264,6 +264,7 @@ dependencies = [
     { name = "loguru" },
     { name = "lsprotocol" },
     { name = "pydantic" },
+    { name = "rich" },
     { name = "semver" },
     { name = "tenacity" },
 ]
@@ -291,6 +292,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "lsprotocol", specifier = ">=2025.0.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "rich", specifier = ">=14.2.0" },
     { name = "semver", specifier = ">=3.0.4" },
     { name = "tenacity", specifier = ">=9.1.2" },
 ]
