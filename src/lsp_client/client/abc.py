@@ -239,11 +239,11 @@ class LSPClient(
         async with (
             asyncer.create_task_group() as tg,
             channel[ServerRequest].create() as (sender, receiver),
-            self.get_server().serve(workspace=self.get_workspace(), sender=sender),
+            self.get_server().serve(workspace=self.get_workspace(), sender=sender),  # ty: ignore[invalid-argument-type]
         ):
             # start to receive server requests here,
             # since server notification can be sent before `initialize`
-            tg.soonify(self._dispatch_server_requests)(receiver)
+            tg.soonify(self._dispatch_server_requests)(receiver)  # ty: ignore[invalid-argument-type]
 
             root_workspace = self.get_workspace().get(DEFAULT_WORKSPACE_DIR)
             root_path = root_workspace.path.as_posix() if root_workspace else None
