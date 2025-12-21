@@ -35,8 +35,8 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import LSPClient
-from lsp_client.server.abc import LSPServer
+from lsp_client.client.abc import Client
+from lsp_client.server import DefaultServers
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -46,9 +46,37 @@ PyreflyContainerServer = partial(
 )
 
 
+async def ensure_pyrefly_installed() -> None:
+    """When using local runtime, check and install the server if necessary."""
+    if shutil.which("pyrefly"):
+        return
+
+    logger.warning("pyrefly not found, attempting to install...")
+
+    try:
+        if shutil.which("uv"):
+            await anyio.run_process(["uv", "tool", "install", "pyrefly"])
+        elif shutil.which("pip"):
+            await anyio.run_process(["pip", "install", "pyrefly"])
+        logger.info("Successfully installed pyrefly via uv tool")
+    except CalledProcessError as e:
+        raise RuntimeError(
+            "Could not install pyrefly. Please install it manually with 'pip install pyrefly'. "
+            "See https://pyrefly.org/ for more information."
+        ) from e
+
+
+PyreflyLocalServer = partial(
+    LocalServer,
+    program="pyrefly",
+    args=["lsp"],
+    ensure_installed=ensure_pyrefly_installed,
+)
+
+
 @define
 class PyreflyClient(
-    LSPClient,
+    Client,
     WithNotifyDidChangeConfiguration,
     WithRequestCallHierarchy,
     WithRequestDeclaration,
@@ -87,8 +115,11 @@ class PyreflyClient(
         return lsp_type.LanguageKind.Python
 
     @override
-    def create_default_server(self) -> LSPServer:
-        return LocalServer(command=["pyrefly", "lsp"])
+    def create_default_servers(self) -> DefaultServers:
+        return DefaultServers(
+            local=PyreflyLocalServer(),
+            container=PyreflyContainerServer(),
+        )
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
@@ -102,23 +133,3 @@ class PyreflyClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
-
-    @override
-    async def ensure_installed(self) -> None:
-        """When using local runtime, check and install the server if necessary."""
-        if shutil.which("pyrefly"):
-            return
-
-        logger.warning("pyrefly not found, attempting to install...")
-
-        try:
-            if shutil.which("uv"):
-                await anyio.run_process(["uv", "tool", "install", "pyrefly"])
-            elif shutil.which("pip"):
-                await anyio.run_process(["pip", "install", "pyrefly"])
-            logger.info("Successfully installed pyrefly via uv tool")
-        except CalledProcessError as e:
-            raise RuntimeError(
-                "Could not install pyrefly. Please install it manually with 'pip install pyrefly'. "
-                "See https://pyrefly.org/ for more information."
-            ) from e

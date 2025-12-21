@@ -23,8 +23,8 @@ from lsp_client.capability.server_notification import (
     WithReceivePublishDiagnostics,
 )
 from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
-from lsp_client.client.abc import LSPClient
-from lsp_client.server.abc import LSPServer
+from lsp_client.client.abc import Client
+from lsp_client.server import DefaultServers
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -48,9 +48,38 @@ DenoContainerServer = partial(
 )
 
 
+async def ensure_deno_installed() -> None:
+    if shutil.which("deno"):
+        return
+
+    logger.warning("deno not found, attempting to install...")
+
+    try:
+        # Use shell to execute the piped command
+        await anyio.run_process(
+            ["sh", "-c", "curl -fsSL https://deno.land/install.sh | sh"]
+        )
+        logger.info("Successfully installed deno via shell script")
+        return
+    except CalledProcessError as e:
+        raise RuntimeError(
+            "Could not install deno. Please install it manually with:\n"
+            "curl -fsSL https://deno.land/install.sh | sh\n\n"
+            "See https://deno.land/ for more information."
+        ) from e
+
+
+DenoLocalServer = partial(
+    LocalServer,
+    program="deno",
+    args=["lsp"],
+    ensure_installed=ensure_deno_installed,
+)
+
+
 @define
 class DenoClient(
-    LSPClient,
+    Client,
     WithRequestHover,
     WithRequestDefinition,
     WithRequestReferences,
@@ -108,8 +137,11 @@ class DenoClient(
         return lsp_type.LanguageKind.TypeScript
 
     @override
-    def create_default_server(self) -> LSPServer:
-        return LocalServer(command=["deno", "lsp"])
+    def create_default_servers(self) -> DefaultServers:
+        return DefaultServers(
+            local=DenoLocalServer(),
+            container=DenoContainerServer(),
+        )
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
@@ -152,24 +184,3 @@ class DenoClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
-
-    @override
-    async def ensure_installed(self) -> None:
-        if shutil.which("deno"):
-            return
-
-        logger.warning("deno not found, attempting to install...")
-
-        try:
-            # Use shell to execute the piped command
-            await anyio.run_process(
-                ["sh", "-c", "curl -fsSL https://deno.land/install.sh | sh"]
-            )
-            logger.info("Successfully installed deno via shell script")
-            return
-        except CalledProcessError as e:
-            raise RuntimeError(
-                "Could not install deno. Please install it manually with:\n"
-                "curl -fsSL https://deno.land/install.sh | sh\n\n"
-                "See https://deno.land/ for more information."
-            ) from e
