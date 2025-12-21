@@ -1,27 +1,20 @@
 from __future__ import annotations
 
-from typing import Final
-
+from .deno import DenoClient
 from .pyrefly import PyreflyClient
 from .pyright import PyrightClient
 from .rust_analyzer import RustAnalyzerClient
 from .typescript import TypescriptClient
 
-local_clients: Final = (
-    PyrightClient,
-    RustAnalyzerClient,
-    PyreflyClient,
-    TypescriptClient,
-)
-
 PythonClient = PyrightClient
 RustClient = RustAnalyzerClient
 TypeScriptClient = TypescriptClient
+DenoLSPClient = DenoClient
 
 __all__ = [
+    "DenoLSPClient",
     "PyreflyClient",
     "PythonClient",
     "RustClient",
     "TypeScriptClient",
-    "local_clients",
 ]
