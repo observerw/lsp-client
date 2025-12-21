@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Self, override
@@ -30,8 +30,7 @@ from lsp_client.protocol import (
     CapabilityClientProtocol,
     CapabilityProtocol,
 )
-from lsp_client.server import LocalServer
-from lsp_client.server.abc import LSPServer
+from lsp_client.server import DefaultServers, Server, ServerRuntimeError
 from lsp_client.server.types import ServerRequest
 from lsp_client.utils.channel import Receiver, channel
 from lsp_client.utils.types import AnyPath, Notification, Request, Response, lsp_type
@@ -39,66 +38,75 @@ from lsp_client.utils.workspace import (
     DEFAULT_WORKSPACE_DIR,
     RawWorkspace,
     Workspace,
-    WorkspaceFolder,
+    format_workspace,
 )
 
 
 @define
-class LSPClient(
+class Client(
     # text sync support is mandatory
     WithNotifyTextDocumentSynchronize,
     CapabilityClientProtocol,
     AsyncContextManagerMixin,
     ABC,
 ):
-    _server: LSPServer | None = field(alias="server", default=None)
-    _workspace: RawWorkspace = field(alias="workspace", factory=Path.cwd)
+    _server_arg: Server | None = field(alias="server", default=None)
+    _workspace_arg: RawWorkspace = field(alias="workspace", factory=Path.cwd)
 
     sync_file: bool = True
     request_timeout: float = 5.0
 
+    _server: Server = field(init=False)
+    _workspace: Workspace = field(init=False)
     _buffer: LSPFileBuffer = field(factory=LSPFileBuffer, init=False)
 
-    def get_server(self) -> LSPServer:
-        return self._server or self.create_default_server()
+    def _iter_candidate_servers(self) -> Iterable[Server]:
+        """
+        Server candidates in order of priority:
+        1. User-provided server
+        2. Containerized server
+        3. Local server (maybe with auto-installation)
+        """
+
+        if self._server_arg:
+            yield self._server_arg
+        defaults = self.create_default_servers()
+        yield defaults.container
+        yield defaults.local
+
+    @asynccontextmanager
+    async def _run_server(
+        self,
+    ) -> AsyncGenerator[tuple[Server, Receiver[ServerRequest]]]:
+        async with channel[ServerRequest].create() as (sender, receiver):
+            errors: list[ServerRuntimeError] = []
+            for server in self._iter_candidate_servers():
+                try:
+                    async with server.run(self.get_workspace(), sender=sender) as s:  # ty: ignore[invalid-argument-type]
+                        yield s, receiver
+                        return
+                except ServerRuntimeError as e:
+                    logger.debug("Failed to start server {}: {}", server, e)
+                    errors.append(e)
+
+            raise ExceptionGroup(
+                f"All servers failed to start for {type(self).__name__}", errors
+            )
 
     @override
     def get_workspace(self) -> Workspace:
-        match self._workspace:
-            case str() | os.PathLike() as root_folder_path:
-                return Workspace(
-                    {
-                        DEFAULT_WORKSPACE_DIR: WorkspaceFolder(
-                            uri=Path(root_folder_path).as_uri(),
-                            name="root",
-                        )
-                    }
-                )
-            case Workspace() as ws:
-                return ws
-            case _ as mapping:
-                return Workspace(
-                    {
-                        name: WorkspaceFolder(uri=Path(path).as_uri(), name=name)
-                        for name, path in mapping.items()
-                    }
-                )
+        return self._workspace
+
+    def get_server(self) -> Server:
+        return self._server
 
     @abstractmethod
     def get_language_id(self) -> lsp_type.LanguageKind:
         """The language ID of the client."""
 
     @abstractmethod
-    def create_default_server(self) -> LSPServer:
-        """Create the default server for this client."""
-
-    @abstractmethod
-    async def ensure_installed(self) -> None:
-        """
-        Check and install the server if necessary.
-
-        Note: For local runtime only.
-        """
+    def create_default_servers(self) -> DefaultServers:
+        """Create default servers for this client."""
 
     @abstractmethod
     def create_initialization_options(self) -> dict[str, Any]:
@@ -230,21 +238,19 @@ class LSPClient(
     @asynccontextmanager
     @logger.catch(reraise=True)
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        if isinstance(self._server, LocalServer):
-            await self.ensure_installed()
-
-        self._hook = build_server_request_hooks(self)
-        client_capabilities = build_client_capabilities(self.__class__)
+        self._workspace = format_workspace(self._workspace_arg)
 
         async with (
             asyncer.create_task_group() as tg,
-            channel[ServerRequest].create() as (sender, receiver),
-            self.get_server().serve(workspace=self.get_workspace(), sender=sender),  # ty: ignore[invalid-argument-type]
+            self._run_server() as (server, receiver),  # ty: ignore[invalid-argument-type]
         ):
+            self._server = server
+
             # start to receive server requests here,
             # since server notification can be sent before `initialize`
             tg.soonify(self._dispatch_server_requests)(receiver)  # ty: ignore[invalid-argument-type]
 
+            client_capabilities = build_client_capabilities(self.__class__)
             root_workspace = self.get_workspace().get(DEFAULT_WORKSPACE_DIR)
             root_path = root_workspace.path.as_posix() if root_workspace else None
             root_uri = root_workspace.uri if root_workspace else None
