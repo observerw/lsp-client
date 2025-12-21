@@ -33,8 +33,8 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import LSPClient
-from lsp_client.server.abc import LSPServer
+from lsp_client.client.abc import Client
+from lsp_client.server import DefaultServers
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -44,9 +44,40 @@ TypescriptContainerServer = partial(
 )
 
 
+async def ensure_typescript_installed() -> None:
+    if shutil.which("typescript-language-server"):
+        return
+
+    logger.warning(
+        "typescript-language-server not found, attempting to install via npm..."
+    )
+
+    try:
+        # typescript-language-server requires the TypeScript compiler as a peer dependency
+        # Reference: https://github.com/typescript-language-server/typescript-language-server#installing
+        await anyio.run_process(
+            ["npm", "install", "-g", "typescript-language-server", "typescript"]
+        )
+        logger.info("Successfully installed typescript-language-server via npm")
+        return
+    except CalledProcessError as e:
+        raise RuntimeError(
+            "Could not install typescript-language-server and typescript. Please install them manually with 'npm install -g typescript-language-server typescript'. "
+            "See https://github.com/typescript-language-server/typescript-language-server for more information."
+        ) from e
+
+
+TypescriptLocalServer = partial(
+    LocalServer,
+    program="typescript-language-server",
+    args=["--stdio"],
+    ensure_installed=ensure_typescript_installed,
+)
+
+
 @define
 class TypescriptClient(
-    LSPClient,
+    Client,
     WithNotifyDidChangeConfiguration,
     WithRequestHover,
     WithRequestDefinition,
@@ -84,8 +115,11 @@ class TypescriptClient(
         return lsp_type.LanguageKind.TypeScript
 
     @override
-    def create_default_server(self) -> LSPServer:
-        return LocalServer(command=["typescript-language-server", "--stdio"])
+    def create_default_servers(self) -> DefaultServers:
+        return DefaultServers(
+            local=TypescriptLocalServer(),
+            container=TypescriptContainerServer(),
+        )
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
@@ -103,26 +137,3 @@ class TypescriptClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
-
-    @override
-    async def ensure_installed(self) -> None:
-        if shutil.which("typescript-language-server"):
-            return
-
-        logger.warning(
-            "typescript-language-server not found, attempting to install via npm..."
-        )
-
-        try:
-            # typescript-language-server requires the TypeScript compiler as a peer dependency
-            # Reference: https://github.com/typescript-language-server/typescript-language-server#installing
-            await anyio.run_process(
-                ["npm", "install", "-g", "typescript-language-server", "typescript"]
-            )
-            logger.info("Successfully installed typescript-language-server via npm")
-            return
-        except CalledProcessError as e:
-            raise RuntimeError(
-                "Could not install typescript-language-server and typescript. Please install them manually with 'npm install -g typescript-language-server typescript'. "
-                "See https://github.com/typescript-language-server/typescript-language-server for more information."
-            ) from e

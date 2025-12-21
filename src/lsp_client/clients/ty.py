@@ -34,8 +34,8 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import LSPClient
-from lsp_client.server.abc import LSPServer
+from lsp_client.client.abc import Client
+from lsp_client.server import DefaultServers
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -43,9 +43,34 @@ from lsp_client.utils.types import lsp_type
 TyContainerServer = partial(ContainerServer, image="ghcr.io/astral-sh/ty:latest")
 
 
+async def ensure_ty_installed() -> None:
+    if shutil.which("ty"):
+        return
+
+    logger.warning("ty not found, attempting to install via pip...")
+
+    try:
+        await anyio.run_process([sys.executable, "-m", "pip", "install", "ty"])
+        logger.info("Successfully installed ty via pip")
+        return
+    except CalledProcessError as e:
+        raise RuntimeError(
+            "Could not install ty. Please install it manually with 'pip install ty' or 'uv tool install ty'. "
+            "See https://docs.astral.sh/ty/installation/ for more information."
+        ) from e
+
+
+TyLocalServer = partial(
+    LocalServer,
+    program="ty",
+    args=["server"],
+    ensure_installed=ensure_ty_installed,
+)
+
+
 @define
 class TyClient(
-    LSPClient,
+    Client,
     WithNotifyDidChangeConfiguration,
     WithRequestDeclaration,
     WithRequestDefinition,
@@ -66,7 +91,9 @@ class TyClient(
     """
     - Language: Python
     - Homepage: https://docs.astral.sh/ty/
+    - Doc: https://docs.astral.sh/ty/
     - Github: https://github.com/astral-sh/ty
+    - VSCode Extension: https://docs.astral.sh/ty/editors/vscode/
     """
 
     log_level: Literal["trace", "debug", "info", "warn", "error"] = "info"
@@ -79,8 +106,11 @@ class TyClient(
         return lsp_type.LanguageKind.Python
 
     @override
-    def create_default_server(self) -> LSPServer:
-        return LocalServer(command=["ty", "server"])
+    def create_default_servers(self) -> DefaultServers:
+        return DefaultServers(
+            local=TyLocalServer(),
+            container=TyContainerServer(),
+        )
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
@@ -96,20 +126,3 @@ class TyClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
-
-    @override
-    async def ensure_installed(self) -> None:
-        if shutil.which("ty"):
-            return
-
-        logger.warning("ty not found, attempting to install via pip...")
-
-        try:
-            await anyio.run_process([sys.executable, "-m", "pip", "install", "ty"])
-            logger.info("Successfully installed ty via pip")
-            return
-        except CalledProcessError as e:
-            raise RuntimeError(
-                "Could not install ty. Please install it manually with 'pip install ty' or 'uv tool install ty'. "
-                "See https://docs.astral.sh/ty/installation/ for more information."
-            ) from e

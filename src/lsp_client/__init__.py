@@ -35,10 +35,8 @@ from __future__ import annotations
 
 from loguru import logger
 
-from .client.abc import LSPClient
-from .clients import PythonClient, RustClient, TypeScriptClient
-from .clients.pyrefly import PyreflyClient
-from .server.abc import LSPServer
+from .client.abc import Client
+from .server.abc import Server
 from .server.container import ContainerServer
 from .server.local import LocalServer
 from .utils.types import *  # noqa: F403
@@ -61,14 +59,10 @@ __pdoc__ = {
 }
 
 __all__ = [
+    "Client",
     "ContainerServer",
-    "LSPClient",
-    "LSPServer",
     "LocalServer",
-    "PyreflyClient",
-    "PythonClient",
-    "RustClient",
-    "TypeScriptClient",
+    "Server",
     "disable_logging",
     "enable_logging",
 ]

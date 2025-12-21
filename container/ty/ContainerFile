@@ -1,5 +1,5 @@
 # ty has built-in LSP
-ARG VERSION=latest
+ARG VERSION=0.0.5
 FROM ghcr.io/astral-sh/uv:python3.11-trixie-slim AS builder
 ARG VERSION
 RUN uv tool install ty@${VERSION}

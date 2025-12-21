@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from lsp_client import LSPClient
+from lsp_client import Client
 from lsp_client.capability.request import (
     WithRequestCallHierarchy,
     WithRequestDefinition,
@@ -32,7 +32,7 @@ class ExpectClientProtocol(
 
 
 class BadClient(
-    LSPClient,
+    Client,
     WithRequestDocumentSymbol,
 ):
     """Client that fails to meet protocol requirements.
@@ -44,7 +44,7 @@ class BadClient(
 
 
 class GoodClient(
-    LSPClient,
+    Client,
     WithRequestReferences,
     WithRequestDefinition,
     WithRequestCallHierarchy,
