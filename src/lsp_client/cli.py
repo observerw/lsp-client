@@ -18,7 +18,7 @@ def hover(
     raise typer.Exit()
 
 
-@app.command(name="def")
+@app.command()
 def definition(
     path: str = typer.Argument(..., help="Path to the file"),
     line: int = typer.Argument(..., help="Line number (0-indexed)"),
@@ -31,7 +31,7 @@ def definition(
     raise typer.Exit()
 
 
-@app.command(name="ref")
+@app.command()
 def references(
     path: str = typer.Argument(..., help="Path to the file"),
     line: int = typer.Argument(..., help="Line number (0-indexed)"),
@@ -44,7 +44,7 @@ def references(
     raise typer.Exit()
 
 
-@app.command(name="impl")
+@app.command()
 def implementation(
     path: str = typer.Argument(..., help="Path to the file"),
     line: int = typer.Argument(..., help="Line number (0-indexed)"),
@@ -57,7 +57,7 @@ def implementation(
     raise typer.Exit()
 
 
-@app.command(name="type-def")
+@app.command(name="type-definition")
 def type_definition(
     path: str = typer.Argument(..., help="Path to the file"),
     line: int = typer.Argument(..., help="Line number (0-indexed)"),
@@ -70,7 +70,7 @@ def type_definition(
     raise typer.Exit()
 
 
-@app.command(name="sym")
+@app.command()
 def symbols(
     path: str = typer.Argument(..., help="Path to the file"),
 ):
@@ -81,7 +81,7 @@ def symbols(
     raise typer.Exit()
 
 
-@app.command(name="ws-sym")
+@app.command(name="workspace-symbols")
 def workspace_symbols(
     query: str = typer.Argument(..., help="Search query for workspace symbols"),
 ):
@@ -92,7 +92,7 @@ def workspace_symbols(
     raise typer.Exit()
 
 
-@app.command(name="rn")
+@app.command()
 def rename(
     path: str = typer.Argument(..., help="Path to the file"),
     line: int = typer.Argument(..., help="Line number (0-indexed)"),
