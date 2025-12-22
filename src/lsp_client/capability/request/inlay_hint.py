@@ -106,6 +106,21 @@ class WithRequestInlayHint(
         self,
         hint: lsp_type.InlayHint,
     ) -> lsp_type.InlayHint:
+        """
+        Resolve additional details for a previously returned inlay hint.
+
+        This sends an LSP ``inlayHint/resolve`` request to the server for the
+        given ``hint``. Servers may initially return inlay hints with only a
+        subset of properties populated and require a subsequent resolve
+        request to fill in optional fields such as tooltips, locations, or
+        text edits.
+
+        :param hint: An :class:`lsp_type.InlayHint` instance obtained from a
+            prior ``textDocument/inlayHint`` request that should be fully
+            resolved by the server.
+        :return: A new :class:`lsp_type.InlayHint` containing any additional
+            data supplied by the server.
+        """
         return await self.request(
             lsp_type.InlayHintResolveRequest(
                 id=jsonrpc_uuid(),
