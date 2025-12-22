@@ -13,11 +13,10 @@ for building Python clients and servers. It offers:
 Example:
     ```python
     import anyio
-    from lsp_client.clients.pyrefly import PyreflyClient, PyreflyLocalServer
-    from lsp_client import Position
+    from lsp_client import PyreflyClient, Position
 
     async def main():
-        async with PyreflyClient(server=PyreflyLocalServer()) as client:
+        async with PyreflyClient() as client:
             refs = await client.request_references(
                 file_path="src/main.py",
                 position=Position(21, 19),
@@ -36,8 +35,10 @@ from __future__ import annotations
 
 from loguru import logger
 
-from .client.abc import LSPClient
-from .server.abc import LSPServer
+from .client.abc import Client
+from .server.abc import Server
+from .server.container import ContainerServer
+from .server.local import LocalServer
 from .utils.types import *  # noqa: F403
 
 logger.disable(__name__)
@@ -58,8 +59,10 @@ __pdoc__ = {
 }
 
 __all__ = [
-    "LSPClient",
-    "LSPServer",
+    "Client",
+    "ContainerServer",
+    "LocalServer",
+    "Server",
     "disable_logging",
     "enable_logging",
 ]

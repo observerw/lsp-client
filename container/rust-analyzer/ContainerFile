@@ -1,16 +1,32 @@
-# Multi-stage build for Rust-analyzer
+# Multi-stage build for rust-analyzer
 ARG VERSION=2025-12-15
-FROM debian:bookworm-slim AS builder
+FROM docker.io/library/rust:slim-bookworm AS builder
 ARG VERSION
-RUN apt-get update && apt-get install -y curl && \
-    curl -L https://github.com/rust-lang/rust-analyzer/releases/download/${VERSION}/rust-analyzer-x86_64-unknown-linux-gnu.gz | gunzip -c - > /usr/local/bin/rust-analyzer && \
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Determine architecture and download appropriate binary
+# rust-analyzer releases use x86_64-unknown-linux-gnu or aarch64-unknown-linux-gnu
+RUN set -eux; \
+    arch=$(uname -m); \
+    case "$arch" in \
+        x86_64) bin="rust-analyzer-x86_64-unknown-linux-gnu.gz" ;; \
+        aarch64) bin="rust-analyzer-aarch64-unknown-linux-gnu.gz" ;; \
+        *) echo "Unsupported architecture: $arch"; exit 1 ;; \
+    esac; \
+    curl -L "https://github.com/rust-lang/rust-analyzer/releases/download/${VERSION}/${bin}" | gunzip -c - > /usr/local/bin/rust-analyzer; \
     chmod +x /usr/local/bin/rust-analyzer
 
-FROM debian:bookworm-slim
+FROM gcr.io/distroless/cc-debian12
 ARG VERSION
-LABEL org.opencontainers.image.version="${VERSION}"
-RUN apt-get update && apt-get install -y libgcc-s1 && rm -rf /var/lib/apt/lists/*
+LABEL org.opencontainers.image.title="rust-analyzer" \
+      org.opencontainers.image.description="Rust Language Server" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.source="https://github.com/wangbowei/lsp-client" \
+      org.opencontainers.image.licenses="MIT"
+
 COPY --from=builder /usr/local/bin/rust-analyzer /usr/local/bin/rust-analyzer
 
 WORKDIR /workspace
-ENTRYPOINT ["rust-analyzer"]
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/rust-analyzer"]
+

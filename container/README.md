@@ -27,11 +27,11 @@ Create a new directory with the server name and add a `ContainerFile`:
 ```dockerfile
 # Example ContainerFile for a Node.js based LSP server
 ARG VERSION=1.0.0
-FROM node:22-slim AS builder
+FROM docker.io/library/node:22-slim AS builder
 ARG VERSION
 RUN npm install -g <package-name>@${VERSION}
 
-FROM node:22-slim
+FROM docker.io/library/node:22-slim
 ARG VERSION
 LABEL org.opencontainers.image.version="${VERSION}"
 COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
@@ -104,8 +104,11 @@ The CI system will automatically:
 
 To manually test:
 ```bash
-# Build container
+# Build container (works with both Docker and Podman)
+# Podman will automatically pick up 'ContainerFile'
 docker build -f container/<server-name>/ContainerFile -t lsp/<server-name>:latest .
+# or
+podman build -t lsp/<server-name>:latest container/<server-name>/
 
 # Test the container
 docker run --rm lsp/<server-name>:latest --version

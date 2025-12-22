@@ -14,9 +14,10 @@ from lsp_client.capability.server_notification import (
 from lsp_client.capability.server_request import (
     capabilities as server_request_capabilities,
 )
-from lsp_client.client.abc import LSPClient
+from lsp_client.client.abc import Client
 from lsp_client.jsonrpc.convert import lsp_type, request_serialize, response_deserialize
-from lsp_client.server.abc import LSPServer
+from lsp_client.server.abc import Server
+from lsp_client.utils.workspace import DEFAULT_WORKSPACE
 
 
 @frozen
@@ -27,12 +28,12 @@ class CapabilityInspectResult:
 
 
 async def inspect_capabilities(
-    server: LSPServer, client_cls: type[LSPClient]
+    server: Server, client_cls: type[Client]
 ) -> AsyncGenerator[CapabilityInspectResult, None]:
     if not __debug__:
         raise RuntimeError("inspect_capabilities can only be used in debug mode")
 
-    async with server.serve():
+    async with server.run(DEFAULT_WORKSPACE):
         # send a fake initialize request to get server capabilities
         req = lsp_type.InitializeRequest(
             id="initialize",

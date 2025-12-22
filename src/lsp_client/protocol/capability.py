@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from lsp_client.utils.types import lsp_type
 
@@ -112,4 +112,18 @@ class GeneralCapabilityProtocol(
     def register_general_capability(
         cls, cap: lsp_type.GeneralClientCapabilities
     ) -> None:
+        return
+
+
+@runtime_checkable
+class ExperimentalCapabilityProtocol(
+    CapabilityProtocol,
+    Protocol,
+):
+    """
+    LSP `experimental` capability.
+    """
+
+    @classmethod
+    def register_experimental_capability(cls, cap: dict[str, Any]) -> None:
         return

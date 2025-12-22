@@ -34,8 +34,8 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import LSPClient
-from lsp_client.server.abc import LSPServer
+from lsp_client.client.abc import Client
+from lsp_client.server import DefaultServers
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -45,9 +45,34 @@ PyrightContainerServer = partial(
 )
 
 
+async def ensure_pyright_installed() -> None:
+    if shutil.which("pyright-langserver"):
+        return
+
+    logger.warning("pyright-langserver not found, attempting to install via npm...")
+
+    try:
+        await anyio.run_process(["npm", "install", "-g", "pyright"])
+        logger.info("Successfully installed pyright-langserver via npm")
+        return
+    except CalledProcessError as e:
+        raise RuntimeError(
+            "Could not install pyright-langserver. Please install it manually with 'npm install -g pyright'. "
+            "See https://microsoft.github.io/pyright/ for more information."
+        ) from e
+
+
+PyrightLocalServer = partial(
+    LocalServer,
+    program="pyright-langserver",
+    args=["--stdio"],
+    ensure_installed=ensure_pyright_installed,
+)
+
+
 @define
 class PyrightClient(
-    LSPClient,
+    Client,
     WithNotifyDidChangeConfiguration,
     WithRequestCallHierarchy,
     WithRequestDeclaration,
@@ -82,8 +107,11 @@ class PyrightClient(
         return lsp_type.LanguageKind.Python
 
     @override
-    def create_default_server(self) -> LSPServer:
-        return LocalServer(command=["pyright-langserver", "--stdio"])
+    def create_default_servers(self) -> DefaultServers:
+        return DefaultServers(
+            local=PyrightLocalServer(),
+            container=PyrightContainerServer(),
+        )
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
@@ -95,20 +123,3 @@ class PyrightClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
-
-    @override
-    async def ensure_installed(self) -> None:
-        if shutil.which("pyright-langserver"):
-            return
-
-        logger.warning("pyright-langserver not found, attempting to install via npm...")
-
-        try:
-            await anyio.run_process(["npm", "install", "-g", "pyright"])
-            logger.info("Successfully installed pyright-langserver via npm")
-            return
-        except CalledProcessError as e:
-            raise RuntimeError(
-                "Could not install pyright-langserver. Please install it manually with 'npm install -g pyright'. "
-                "See https://microsoft.github.io/pyright/ for more information."
-            ) from e

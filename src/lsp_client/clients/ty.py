@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from functools import partial
 from subprocess import CalledProcessError
 from typing import Any, Literal, override
@@ -13,12 +14,10 @@ from lsp_client.capability.notification import (
     WithNotifyDidChangeConfiguration,
 )
 from lsp_client.capability.request import (
-    WithRequestCallHierarchy,
     WithRequestDeclaration,
     WithRequestDefinition,
     WithRequestDocumentSymbol,
     WithRequestHover,
-    WithRequestImplementation,
     WithRequestReferences,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
@@ -41,49 +40,42 @@ from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-PyreflyContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/pyrefly:latest"
-)
+TyContainerServer = partial(ContainerServer, image="ghcr.io/astral-sh/ty:latest")
 
 
-async def ensure_pyrefly_installed() -> None:
-    """When using local runtime, check and install the server if necessary."""
-    if shutil.which("pyrefly"):
+async def ensure_ty_installed() -> None:
+    if shutil.which("ty"):
         return
 
-    logger.warning("pyrefly not found, attempting to install...")
+    logger.warning("ty not found, attempting to install via pip...")
 
     try:
-        if shutil.which("uv"):
-            await anyio.run_process(["uv", "tool", "install", "pyrefly"])
-        elif shutil.which("pip"):
-            await anyio.run_process(["pip", "install", "pyrefly"])
-        logger.info("Successfully installed pyrefly via uv tool")
+        await anyio.run_process([sys.executable, "-m", "pip", "install", "ty"])
+        logger.info("Successfully installed ty via pip")
+        return
     except CalledProcessError as e:
         raise RuntimeError(
-            "Could not install pyrefly. Please install it manually with 'pip install pyrefly'. "
-            "See https://pyrefly.org/ for more information."
+            "Could not install ty. Please install it manually with 'pip install ty' or 'uv tool install ty'. "
+            "See https://docs.astral.sh/ty/installation/ for more information."
         ) from e
 
 
-PyreflyLocalServer = partial(
+TyLocalServer = partial(
     LocalServer,
-    program="pyrefly",
-    args=["lsp"],
-    ensure_installed=ensure_pyrefly_installed,
+    program="ty",
+    args=["server"],
+    ensure_installed=ensure_ty_installed,
 )
 
 
 @define
-class PyreflyClient(
+class TyClient(
     Client,
     WithNotifyDidChangeConfiguration,
-    WithRequestCallHierarchy,
     WithRequestDeclaration,
     WithRequestDefinition,
     WithRequestDocumentSymbol,
     WithRequestHover,
-    WithRequestImplementation,
     WithRequestReferences,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
@@ -98,17 +90,16 @@ class PyreflyClient(
 ):
     """
     - Language: Python
-    - Homepage: https://pyrefly.org/
-    - Doc: https://pyrefly.org/en/docs/
-    - Github: https://github.com/facebook/pyrefly
-    - VSCode Extension: https://github.com/facebook/pyrefly/tree/main/lsp
+    - Homepage: https://docs.astral.sh/ty/
+    - Doc: https://docs.astral.sh/ty/
+    - Github: https://github.com/astral-sh/ty
+    - VSCode Extension: https://docs.astral.sh/ty/editors/vscode/
     """
 
-    trace_server: Literal["off", "verbose"] = "off"
-    """LSP trace output verbosity"""
-
-    diagnostic_mode: Literal["Workspace", "OpenFilesOnly"] = "Workspace"
-    """How diagnostics are reported"""
+    log_level: Literal["trace", "debug", "info", "warn", "error"] = "info"
+    diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
+    inlay_hints_variable_types: bool = True
+    inlay_hints_call_argument_names: bool = True
 
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:
@@ -117,18 +108,20 @@ class PyreflyClient(
     @override
     def create_default_servers(self) -> DefaultServers:
         return DefaultServers(
-            local=PyreflyLocalServer(),
-            container=PyreflyContainerServer(),
+            local=TyLocalServer(),
+            container=TyContainerServer(),
         )
 
     @override
     def create_initialization_options(self) -> dict[str, Any]:
-        options: dict[str, Any] = {}
-
-        options["trace"] = {"server": self.trace_server}
-        options["diagnostic_mode"] = self.diagnostic_mode
-
-        return options
+        return {
+            "logLevel": self.log_level,
+            "diagnosticMode": self.diagnostic_mode,
+            "inlayHints": {
+                "variableTypes": self.inlay_hints_variable_types,
+                "callArgumentNames": self.inlay_hints_call_argument_names,
+            },
+        }
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:

@@ -13,4 +13,5 @@ capabilities: Final = (
 __all__ = [
     "WithNotifyDidChangeConfiguration",
     "WithNotifyTextDocumentSynchronize",
+    "capabilities",
 ]

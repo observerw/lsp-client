@@ -36,6 +36,9 @@ class RawResponse(TypedDict):
     jsonrpc: str
 
 
+# -------------------------------- package type ------------------------------- #
+
+
 type RawRequestPackage = RawRequest | RawNotification
 type RawResponsePackage = RawResponse | RawError
 type RawPackage = RawRequestPackage | RawResponsePackage

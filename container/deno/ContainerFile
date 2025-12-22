@@ -1,8 +1,13 @@
 # Deno has built-in LSP
 ARG VERSION=2.6.3
-FROM denoland/deno:alpine-${VERSION}
+FROM docker.io/denoland/deno:alpine-${VERSION}
 ARG VERSION
-LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.title="Deno LSP" \
+      org.opencontainers.image.description="Deno Language Server" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.source="https://github.com/wangbowei/lsp-client" \
+      org.opencontainers.image.licenses="MIT"
 
 WORKDIR /workspace
+USER deno
 ENTRYPOINT ["deno", "lsp"]

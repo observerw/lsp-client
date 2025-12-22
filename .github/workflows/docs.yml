@@ -3,6 +3,9 @@ name: Deploy Documentation
 on:
   push:
     branches: ["main"]
+    paths:
+      - "src/**"
+      - "pyproject.toml"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +15,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:

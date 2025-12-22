@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from lsp_client.jsonrpc.parse import RawPackage
 from lsp_client.utils.workspace import Workspace
 
-from .abc import LSPServer
+from .abc import Server
 from .local import LocalServer
 
 
@@ -120,7 +120,7 @@ def _format_mount(mount: Mount) -> str:
 
 @final
 @define
-class ContainerServer(LSPServer):
+class ContainerServer(Server):
     """Runtime for container backend, e.g. `docker` or `podman`."""
 
     image: str
@@ -143,11 +143,11 @@ class ContainerServer(LSPServer):
 
     _local: LocalServer = field(init=False)
 
-    def format_command(self, workspace: Workspace) -> list[str]:
-        cmd = [self.backend, "run", "--rm", "-i"]
+    def format_args(self, workspace: Workspace) -> list[str]:
+        args = ["run", "--rm", "-i"]
 
         if self.container_name:
-            cmd.extend(("--name", self.container_name))
+            args.extend(("--name", self.container_name))
 
         mounts = list(self.mounts)
 
@@ -168,17 +168,16 @@ class ContainerServer(LSPServer):
                 )
 
         for mount in mounts:
-            cmd.extend(("--mount", _format_mount(mount)))
+            args.extend(("--mount", _format_mount(mount)))
 
-        # Set working directory
-        cmd.extend(("--workdir", self.workdir.as_posix()))
+        args.extend(("--workdir", self.workdir.as_posix()))
 
         if self.extra_container_args:
-            cmd.extend(self.extra_container_args)
+            args.extend(self.extra_container_args)
 
-        cmd.append(self.image)
+        args.append(self.image)
 
-        return cmd
+        return args
 
     @override
     async def send(self, package: RawPackage) -> None:
@@ -195,9 +194,9 @@ class ContainerServer(LSPServer):
     @override
     @asynccontextmanager
     async def run_process(self, workspace: Workspace) -> AsyncGenerator[None]:
-        command = self.format_command(workspace)
-        logger.debug("Running docker runtime with command: {}", command)
+        args = self.format_args(workspace)
+        logger.debug("Running docker runtime with command: {}", args)
 
-        self._local = LocalServer(command=command)
-        async with self._local.run_process():
+        self._local = LocalServer(program=self.backend, args=args)
+        async with self._local.run_process(workspace):
             yield

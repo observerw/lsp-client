@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Self
 
@@ -22,8 +22,8 @@ from lsp_client.utils.workspace import Workspace
 
 
 @define(kw_only=True)
-class LSPServer(ABC):
-    args: list[str] = Factory(list)
+class Server(ABC):
+    args: Sequence[str] = Factory(list)
 
     _resp_table: ResponseTable = field(factory=ResponseTable, init=False)
 
@@ -53,7 +53,7 @@ class LSPServer(ABC):
         async def handle(package: RawPackage) -> None:
             match package:
                 case {"result": _, "id": id} | {"error": _, "id": id}:
-                    self._resp_table.send(id, package)
+                    self._resp_table.send(id, package)  # ty: ignore[invalid-argument-type]
                 case {"id": id, "method": _}:
                     if not sender:
                         raise RuntimeError(
@@ -61,14 +61,14 @@ class LSPServer(ABC):
                         )
 
                     tx, rx = response_channel.create()
-                    await sender.send((package, tx))
+                    await sender.send((package, tx))  # ty: ignore[invalid-argument-type]
                     resp = await rx.receive()
                     await self.send(resp)
                 case {"method": _}:
                     if not sender:
                         return
 
-                    await sender.send(package)
+                    await sender.send(package)  # ty: ignore[invalid-argument-type]
 
         async with asyncer.create_task_group() as tg:
             while package := await self.receive():
@@ -82,7 +82,7 @@ class LSPServer(ABC):
         await self.send(notification)
 
     @asynccontextmanager
-    async def serve(
+    async def run(
         self,
         workspace: Workspace,
         *,
