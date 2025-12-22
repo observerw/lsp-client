@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
+from loguru import logger
+
 from lsp_client.jsonrpc.id import jsonrpc_uuid
 from lsp_client.protocol import (
     CapabilityClientProtocol,
@@ -53,9 +55,10 @@ class WithRequestPullDiagnostic(
         super().check_server_capability(cap, info)
         assert cap.diagnostic_provider
 
-    async def request_diagnostic_report(
+    async def request_diagnostic(
         self,
         file_path: AnyPath,
+        *,
         identifier: str | None = None,
         previous_result_id: str | None = None,
     ) -> lsp_type.DocumentDiagnosticReport | None:
@@ -80,6 +83,7 @@ class WithRequestPullDiagnostic(
     async def request_diagnostics(
         self,
         file_path: AnyPath,
+        *,
         identifier: str | None = None,
         previous_result_id: str | None = None,
     ) -> Sequence[lsp_type.Diagnostic] | None:
@@ -96,4 +100,8 @@ class WithRequestPullDiagnostic(
             case lsp_type.FullDocumentDiagnosticReport(items=items):
                 return items
             case _:
+                logger.warning(
+                    "Unsupported diagnostic report type for file {}",
+                    file_path,
+                )
                 return None
