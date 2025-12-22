@@ -38,25 +38,22 @@ class LocalServer(Server):
 
     ensure_installed: EnsureInstalledProtocol | None = None
 
-    _process: Process | None = field(init=False, default=None)
+    _process: Process = field(init=False, default=None)
 
     @cached_property
     def stdin(self) -> AnyByteSendStream:
-        assert self._process, "Process is not started"
         stdin = self._process.stdin
         assert stdin, "Process stdin is not available"
         return stdin
 
     @cached_property
     def stdout(self) -> BufferedByteReceiveStream:
-        assert self._process, "Process is not started"
         stdout = self._process.stdout
         assert stdout, "Process stdout is not available"
         return BufferedByteReceiveStream(stdout)
 
     @cached_property
     def stderr(self) -> BufferedByteReceiveStream:
-        assert self._process, "Process is not started"
         stderr = self._process.stderr
         assert stderr, "Process stderr is not available"
         return BufferedByteReceiveStream(stderr)
@@ -117,6 +114,9 @@ class LocalServer(Server):
             raise ServerRuntimeError(self, "Failed to start server process") from e
         finally:
             try:
+                if self._process.returncode is None:
+                    self._process.terminate()
+
                 with anyio.fail_after(self.shutdown_timeout):
                     if (returncode := await self._process.wait()) != 0:
                         logger.warning("Process exited with code {}", returncode)
