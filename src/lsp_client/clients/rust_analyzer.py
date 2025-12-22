@@ -36,7 +36,7 @@ from lsp_client.capability.server_request import (
     WithRespondWorkspaceFoldersRequest,
 )
 from lsp_client.client.abc import Client
-from lsp_client.server import DefaultServers
+from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -56,7 +56,7 @@ async def ensure_rust_analyzer_installed() -> None:
         await anyio.run_process(["rustup", "component", "add", "rust-analyzer"])
         logger.info("Successfully installed rust-analyzer via rustup")
     except CalledProcessError as e:
-        raise RuntimeError(
+        raise ServerInstallationError(
             "Could not install rust-analyzer. Please install it manually with 'rustup component add rust-analyzer'. "
             "See https://rust-analyzer.github.io/ for more information."
         ) from e

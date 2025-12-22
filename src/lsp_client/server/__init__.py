@@ -4,7 +4,7 @@ from attrs import frozen
 
 from .abc import Server
 from .container import ContainerServer
-from .exception import ServerRuntimeError
+from .exception import ServerError, ServerInstallationError, ServerRuntimeError
 from .local import LocalServer
 
 
@@ -17,8 +17,9 @@ class DefaultServers:
 __all__ = [
     "ContainerServer",
     "DefaultServers",
-    "LSPServer",
     "LocalServer",
     "Server",
+    "ServerError",
+    "ServerInstallationError",
     "ServerRuntimeError",
 ]

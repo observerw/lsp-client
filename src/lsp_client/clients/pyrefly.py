@@ -36,7 +36,7 @@ from lsp_client.capability.server_request import (
     WithRespondWorkspaceFoldersRequest,
 )
 from lsp_client.client.abc import Client
-from lsp_client.server import DefaultServers
+from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -60,7 +60,7 @@ async def ensure_pyrefly_installed() -> None:
             await anyio.run_process(["pip", "install", "pyrefly"])
         logger.info("Successfully installed pyrefly via uv tool")
     except CalledProcessError as e:
-        raise RuntimeError(
+        raise ServerInstallationError(
             "Could not install pyrefly. Please install it manually with 'pip install pyrefly'. "
             "See https://pyrefly.org/ for more information."
         ) from e
