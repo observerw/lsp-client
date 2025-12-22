@@ -1,40 +1,48 @@
-import type { MessageConnection } from 'vscode-jsonrpc';
+import type { MessageConnection } from "vscode-jsonrpc";
 
-export abstract class LSPServer {
-  protected args: string[];
-  protected connection?: MessageConnection;
+export abstract class LSPServer implements Disposable {
+	protected args: string[];
+	protected connection?: MessageConnection;
 
-  public abstract start(): Promise<MessageConnection>;
-  public abstract kill(): Promise<void>;
+	constructor(args: string[]) {
+		this.args = args;
+	}
 
-  public get isRunning(): boolean {
-    return this.connection !== undefined;
-  }
+	public abstract start(): Promise<MessageConnection>;
+	public abstract kill(): Promise<void>;
 
-  public getConnection(): MessageConnection {
-    if (!this.connection) {
-      throw new Error('Server not started');
-    }
-    return this.connection;
-  }
+	public get isRunning(): boolean {
+		return this.connection !== undefined;
+	}
+
+	public getConnection(): MessageConnection {
+		if (!this.connection) {
+			throw new Error("Server not started");
+		}
+		return this.connection;
+	}
+
+	[Symbol.dispose]() {
+		this.kill().catch(() => {});
+	}
 }
 
 export class LSPServerConnection implements Disposable {
-  private disposed = false;
+	private disposed = false;
 
-  constructor(public connection: MessageConnection) {}
+	constructor(public connection: MessageConnection) {}
 
-  public getConnection(): MessageConnection {
-    if (this.disposed) {
-      throw new Error('Connection has been disposed');
-    }
-    return this.connection;
-  }
+	public getConnection(): MessageConnection {
+		if (this.disposed) {
+			throw new Error("Connection has been disposed");
+		}
+		return this.connection;
+	}
 
-  [Symbol.dispose]() {
-    if (!this.disposed) {
-      this.connection.dispose();
-      this.disposed = true;
-    }
-  }
+	[Symbol.dispose]() {
+		if (!this.disposed) {
+			this.connection.dispose();
+			this.disposed = true;
+		}
+	}
 }

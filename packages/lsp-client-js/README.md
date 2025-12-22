@@ -19,6 +19,39 @@ The project follows the design principles outlined in `docs/DESIGN.md`:
 
 ## Development
 
+### Prerequisites
+
+- [Bun](https://bun.sh) installed.
+
+### Setup
+
+```bash
+bun install
+```
+
+### Linting & Formatting
+
+We use [Biome](https://biomejs.dev/) for linting and formatting.
+
+```bash
+# Check for linting issues
+bun run lint
+
+# Fix linting and formatting issues
+bun run lint:fix
+
+# Format code
+bun run format
+```
+
+### Running Tests
+
+```bash
+bun test
+```
+
+### Running Examples
+
 To run the examples:
 
 ```bash
@@ -27,6 +60,7 @@ bun run examples/basic.ts
 
 # Diagnostics example
 bun run examples/diagnostics.ts
+```
 
 # Pyrefly specific examples
 bun run examples/pyrefly.ts
