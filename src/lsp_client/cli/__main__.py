@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import typer
 
+from . import servers
+
 app = typer.Typer(help="LSP Client CLI")
+
+app.add_typer(servers.app, name="servers")
 
 
 @app.command()
