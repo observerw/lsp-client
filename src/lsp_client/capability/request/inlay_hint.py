@@ -79,6 +79,21 @@ class WithRequestInlayHint(
         range: lsp_type.Range,
         resolve: bool = False,
     ) -> Sequence[lsp_type.InlayHint] | None:
+        """
+        Request inlay hints for a given file and range.
+
+        This sends a `textDocument/inlayHint` request for the specified document range.
+        If ``resolve`` is True, each returned inlay hint is further resolved using
+        :meth:`request_inlay_hint_resolve` to populate optional properties such as
+        tooltip, locations, and text edits.
+
+        :param file_path: Path to the file for which inlay hints are requested.
+        :param range: LSP range within the document to compute inlay hints for.
+        :param resolve: Whether to resolve each returned inlay hint for additional
+            details supported by the server.
+        :return: A sequence of :class:`lsp_type.InlayHint` instances if the server
+            returns hints, or ``None`` if no hints are provided.
+        """
         hints = await self.file_request(
             lsp_type.InlayHintRequest(
                 id=jsonrpc_uuid(),
