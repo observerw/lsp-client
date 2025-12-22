@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Protocol, override, runtime_checkable
+
+import asyncer
+
+from lsp_client.jsonrpc.id import jsonrpc_uuid
+from lsp_client.protocol import (
+    CapabilityClientProtocol,
+    TextDocumentCapabilityProtocol,
+)
+from lsp_client.utils.types import AnyPath, lsp_type
+
+
+@runtime_checkable
+class WithRequestInlayHint(
+    TextDocumentCapabilityProtocol,
+    CapabilityClientProtocol,
+    Protocol,
+):
+    """
+    `textDocument/inlayHint` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_inlayHint
+    """
+
+    @override
+    @classmethod
+    def methods(cls) -> Sequence[str]:
+        return (
+            lsp_type.TEXT_DOCUMENT_INLAY_HINT,
+            lsp_type.INLAY_HINT_RESOLVE,
+        )
+
+    @override
+    @classmethod
+    def register_text_document_capability(
+        cls, cap: lsp_type.TextDocumentClientCapabilities
+    ) -> None:
+        cap.inlay_hint = lsp_type.InlayHintClientCapabilities(
+            dynamic_registration=True,
+            resolve_support=lsp_type.ClientInlayHintResolveOptions(
+                properties=[
+                    "tooltip",
+                    "location",
+                    "label.tooltip",
+                    "label.location",
+                    "textEdits",
+                ]
+            ),
+        )
+
+    @override
+    @classmethod
+    def check_server_capability(
+        cls,
+        cap: lsp_type.ServerCapabilities,
+        info: lsp_type.ServerInfo | None,
+    ) -> None:
+        super().check_server_capability(cap, info)
+        assert cap.inlay_hint_provider
+
+    def get_inlay_hint_label(
+        self, hint: lsp_type.InlayHint | lsp_type.InlayHintLabelPart
+    ) -> str:
+        """Extract the text label from an InlayHint or InlayHintLabelPart."""
+        match hint:
+            case lsp_type.InlayHintLabelPart(value=value):
+                return value
+            case lsp_type.InlayHint(label=str() as label):
+                return label
+            case lsp_type.InlayHint(label=parts):
+                return "".join(part.value for part in parts)
+            case _:
+                raise TypeError(f"Unexpected type for inlay hint label: {type(hint)}")
+
+    async def request_inlay_hint(
+        self,
+        file_path: AnyPath,
+        range: lsp_type.Range,
+        resolve: bool = False,
+    ) -> Sequence[lsp_type.InlayHint] | None:
+        hints = await self.file_request(
+            lsp_type.InlayHintRequest(
+                id=jsonrpc_uuid(),
+                params=lsp_type.InlayHintParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    range=range,
+                ),
+            ),
+            schema=lsp_type.InlayHintResponse,
+            file_paths=[file_path],
+        )
+
+        if resolve and hints:
+            async with asyncer.create_task_group() as tg:
+                tasks = [
+                    tg.soonify(self.request_inlay_hint_resolve)(hint) for hint in hints
+                ]
+            return [task.value for task in tasks]
+
+        return hints
+
+    async def request_inlay_hint_resolve(
+        self,
+        hint: lsp_type.InlayHint,
+    ) -> lsp_type.InlayHint:
+        return await self.request(
+            lsp_type.InlayHintResolveRequest(
+                id=jsonrpc_uuid(),
+                params=hint,
+            ),
+            schema=lsp_type.InlayHintResolveResponse,
+        )
