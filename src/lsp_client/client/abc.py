@@ -82,7 +82,7 @@ class Client(
             errors: list[ServerRuntimeError] = []
             for server in self._iter_candidate_servers():
                 try:
-                    async with server.run(self.get_workspace(), sender=sender) as s:  # ty: ignore[invalid-argument-type]
+                    async with server.run(self._workspace, sender=sender) as s:  # ty: ignore[invalid-argument-type]
                         yield s, receiver
                         return
                 except ServerRuntimeError as e:
