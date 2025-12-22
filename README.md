@@ -11,9 +11,9 @@ A production-ready, async-first Python client for the Language Server Protocol (
 
 `lsp-client` is engineered for developers building **production-grade tooling** that requires precise control over language server environments:
 
-- **🐳 Container-First Architecture**: Containers as first-class citizens with workspace mounting, path translation, and lifecycle management. Pre-built images available, seamless switching between local and container environments.
 - **🧩 Intelligent Capability Management**: Zero-overhead mixin system with automatic registration, negotiation, and availability checks. Only access methods for registered capabilities.
-- **🎯 Complete LSP 3.17 Support**: Full specification implementation with pre-configured clients for Pyright, Rust-Analyzer, Deno, TypeScript, and Pyrefly.
+- **🎯 Complete LSP 3.17 Support**: Full specification implementation with pre-configured clients for multiple popular language servers. Easily extendable for custom servers and capabilities.
+- **🐳 Container-First Architecture**: Containers as first-class citizens with workspace mounting, path translation, and lifecycle management. Pre-built images available, seamless switching between local and container environments.
 - **⚡ Production-Ready & Modern**: Explicit environment control with no auto-downloads. Built with async patterns, comprehensive error handling, retries, and full type safety.
 
 ## Quick Start
@@ -50,7 +50,7 @@ async def main():
 anyio.run(main)
 ```
 
-### Container-based Language Server
+### Containerized Language Server
 
 ```python
 async def main():
@@ -85,7 +85,36 @@ Run examples with:
 uv run examples/pyright_docker.py
 ```
 
-## Supported Language Servers
+## Client Definition
+
+Defining a custom client is super easy with the capability mixin:
+
+```python
+@define
+class MyPythonClient(
+    Client,
+    WithRequestHover, # textDocument/hover
+    WithRequestDefinition, # textDocument/definition
+    WithRequestReferences, # textDocument/references
+    WithNotifyDidChangeConfiguration, # workspace/didChangeConfiguration
+    # ... and other capabilities as needed
+):
+    def create_default_servers(self) -> DefaultServers:
+        return DefaultServers(
+            # support both local ...
+            local=LocalServer(program="pylsp", args=["--stdio"]),
+            # ... and containerized server!
+            container=ContainerServer(image="ghcr.io/observerw/lsp-client/python-lsp-server")
+        )
+
+    def create_initialization_options(self) -> dict:
+        return {"plugins": {"pyflakes": {"enabled": True}}} # custom init options
+
+    def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
+        return  # Custom compatibility checks if needed
+```
+
+## Current Supported Language Servers
 
 | Language Server            | Module Path                        | Language              | Container Image                              |
 | -------------------------- | ---------------------------------- | --------------------- | -------------------------------------------- |
