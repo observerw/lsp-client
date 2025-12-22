@@ -14,6 +14,7 @@ from lsp_client.capability.notification import (
     WithNotifyDidChangeConfiguration,
 )
 from lsp_client.capability.request import (
+    WithRequestCompletion,
     WithRequestDeclaration,
     WithRequestDefinition,
     WithRequestDocumentSymbol,
@@ -72,6 +73,7 @@ TyLocalServer = partial(
 class TyClient(
     Client,
     WithNotifyDidChangeConfiguration,
+    WithRequestCompletion,
     WithRequestDeclaration,
     WithRequestDefinition,
     WithRequestDocumentSymbol,

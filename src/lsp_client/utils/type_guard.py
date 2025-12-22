@@ -42,3 +42,9 @@ def is_symbol_information_seq(
     return result is not None and all(
         isinstance(item, lsp_type.SymbolInformation) for item in result
     )
+
+
+def is_completion_items(result: Any) -> TypeGuard[Iterable[lsp_type.CompletionItem]]:
+    return result is not None and all(
+        isinstance(item, lsp_type.CompletionItem) for item in result
+    )

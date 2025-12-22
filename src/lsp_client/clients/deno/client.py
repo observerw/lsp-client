@@ -11,6 +11,7 @@ from loguru import logger
 
 from lsp_client.capability.request import (
     WithRequestCallHierarchy,
+    WithRequestCompletion,
     WithRequestDefinition,
     WithRequestDocumentSymbol,
     WithRequestHover,
@@ -81,6 +82,7 @@ DenoLocalServer = partial(
 class DenoClient(
     Client,
     WithRequestHover,
+    WithRequestCompletion,
     WithRequestDefinition,
     WithRequestReferences,
     WithRequestImplementation,
