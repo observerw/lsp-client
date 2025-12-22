@@ -24,7 +24,7 @@ from lsp_client.capability.server_notification import (
 )
 from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
 from lsp_client.client.abc import Client
-from lsp_client.server import DefaultServers
+from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -62,7 +62,7 @@ async def ensure_deno_installed() -> None:
         logger.info("Successfully installed deno via shell script")
         return
     except CalledProcessError as e:
-        raise RuntimeError(
+        raise ServerInstallationError(
             "Could not install deno. Please install it manually with:\n"
             "curl -fsSL https://deno.land/install.sh | sh\n\n"
             "See https://deno.land/ for more information."

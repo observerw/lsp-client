@@ -7,6 +7,7 @@ from lsprotocol import converters
 
 from lsp_client.utils.types import Notification, Request, Response, lsp_type
 
+from .exception import JsonRpcParseError, JsonRpcResponseError
 from .types import (
     RawNotification,
     RawPackage,
@@ -74,16 +75,15 @@ def response_deserialize[R](
     match raw_resp:
         case {"error": _} as raw_err_resp:
             err_resp = converter.structure(raw_err_resp, lsp_type.ResponseErrorMessage)
-            raise (
-                ValueError(f"JSON-RPC Error {err.code}: {err.message}")
-                if (err := err_resp.error)
-                else ValueError(f"JSON-RPC Error: {err_resp}")
-            )
+            if err := err_resp.error:
+                raise JsonRpcResponseError(err.code, err.message, err.data)
+            else:
+                raise JsonRpcParseError(f"Invalid Error Response: {err_resp}")
         case {"result": _} as raw_resp:
             resp = converter.structure(raw_resp, schema)
             return resp.result
         case unexpected:
-            raise ValueError(f"Unexpected response: {unexpected}")
+            raise JsonRpcParseError(f"Unexpected response: {unexpected}")
 
 
 def response_serialize(response: Response[Any]) -> RawResponsePackage:

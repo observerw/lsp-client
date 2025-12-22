@@ -7,6 +7,7 @@ from anyio.abc import AnyByteSendStream
 from anyio.streams.buffered import BufferedByteReceiveStream
 
 from .convert import package_serialize
+from .exception import JsonRpcParseError, JsonRpcTransportError
 from .types import RawPackage
 
 HEADER_RE = re.compile(r"Content-Length:\s*(?P<length>\d+)")
@@ -17,12 +18,12 @@ async def read_raw_package(receiver: BufferedByteReceiveStream) -> RawPackage:
     # when process is closed, the reader will always return b''
     header_bytes = await receiver.receive_until(b"\r\n", max_bytes=65536)
     if not header_bytes:
-        raise EOFError("LSP server process closed")
+        raise JsonRpcTransportError("LSP server process closed")
 
     header = header_bytes.decode("utf-8")
     header_match = HEADER_RE.match(header)
     if not header_match or not (length := int(header_match.group("length"))):
-        raise ValueError("Invalid LSP response header")
+        raise JsonRpcParseError("Invalid LSP response header")
 
     await receiver.receive_until(b"\r\n", max_bytes=65536)  # consume '\r\n'
 

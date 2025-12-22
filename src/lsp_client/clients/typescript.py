@@ -34,7 +34,7 @@ from lsp_client.capability.server_request import (
     WithRespondWorkspaceFoldersRequest,
 )
 from lsp_client.client.abc import Client
-from lsp_client.server import DefaultServers
+from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
@@ -61,7 +61,7 @@ async def ensure_typescript_installed() -> None:
         logger.info("Successfully installed typescript-language-server via npm")
         return
     except CalledProcessError as e:
-        raise RuntimeError(
+        raise ServerInstallationError(
             "Could not install typescript-language-server and typescript. Please install them manually with 'npm install -g typescript-language-server typescript'. "
             "See https://github.com/typescript-language-server/typescript-language-server for more information."
         ) from e
