@@ -9,6 +9,7 @@ from .document_symbol import WithRequestDocumentSymbol
 from .hover import WithRequestHover
 from .implementation import WithRequestImplementation
 from .inline_value import WithRequestInlineValue
+from .pull_diagnostic import WithRequestPullDiagnostic
 from .reference import WithRequestReferences
 from .type_definition import WithRequestTypeDefinition
 from .type_hierarchy import WithRequestTypeHierarchy
@@ -22,6 +23,7 @@ capabilities: Final = (
     WithRequestHover,
     WithRequestImplementation,
     WithRequestInlineValue,
+    WithRequestPullDiagnostic,
     WithRequestReferences,
     WithRequestTypeDefinition,
     WithRequestTypeHierarchy,
@@ -36,6 +38,7 @@ __all__ = [
     "WithRequestHover",
     "WithRequestImplementation",
     "WithRequestInlineValue",
+    "WithRequestPullDiagnostic",
     "WithRequestReferences",
     "WithRequestTypeDefinition",
     "WithRequestTypeHierarchy",
