@@ -10,6 +10,7 @@ from .hover import WithRequestHover
 from .implementation import WithRequestImplementation
 from .inline_value import WithRequestInlineValue
 from .reference import WithRequestReferences
+from .signature_help import WithRequestSignatureHelp
 from .type_definition import WithRequestTypeDefinition
 from .type_hierarchy import WithRequestTypeHierarchy
 from .workspace_symbol import WithRequestWorkspaceSymbol
@@ -23,6 +24,7 @@ capabilities: Final = (
     WithRequestImplementation,
     WithRequestInlineValue,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestTypeHierarchy,
     WithRequestWorkspaceSymbol,
@@ -37,6 +39,7 @@ __all__ = [
     "WithRequestImplementation",
     "WithRequestInlineValue",
     "WithRequestReferences",
+    "WithRequestSignatureHelp",
     "WithRequestTypeDefinition",
     "WithRequestTypeHierarchy",
     "WithRequestWorkspaceSymbol",
