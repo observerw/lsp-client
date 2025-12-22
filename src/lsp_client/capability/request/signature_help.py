@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
+import attrs
+
 from lsp_client.jsonrpc.id import jsonrpc_uuid
 from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.types import AnyPath, Position, lsp_type
@@ -109,7 +111,6 @@ class WithRequestSignatureHelp(
         it prefers the `active_parameter` from the top-level `SignatureHelp` response
         over the one defined in `SignatureInformation`, following the LSP specification.
         """
-        import attrs
 
         res = await self.request_signature_help(
             file_path,
