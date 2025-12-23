@@ -10,7 +10,7 @@ from lsp_client.protocol import (
     CapabilityClientProtocol,
     TextDocumentCapabilityProtocol,
 )
-from lsp_client.utils.types import AnyPath, lsp_type
+from lsp_client.utils.types import AnyPath, Range, lsp_type
 
 
 @runtime_checkable
@@ -76,7 +76,8 @@ class WithRequestInlayHint(
     async def request_inlay_hint(
         self,
         file_path: AnyPath,
-        range: lsp_type.Range,
+        range: Range,
+        *,
         resolve: bool = False,
     ) -> Sequence[lsp_type.InlayHint] | None:
         """
