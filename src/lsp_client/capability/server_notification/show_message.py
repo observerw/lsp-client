@@ -46,10 +46,13 @@ class WithReceiveShowMessage(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
+    async def _receive_show_message(self, params: lsp_type.ShowMessageParams) -> None:
+        logger.info("Received show message: {}", params.message)
+
     async def receive_show_message(
         self, noti: lsp_type.ShowMessageNotification
     ) -> None:
-        logger.info("Received show message: {}", noti.params.message)
+        return await self._receive_show_message(noti.params)
 
     @override
     def register_server_request_hooks(

@@ -37,9 +37,14 @@ class WithNotifyDidChangeConfiguration(
         super().check_server_capability(cap)
         return
 
-    async def notify_change_configuration(self, settings: Any | None) -> None:
+    async def _notify_change_configuration(
+        self, params: lsp_type.DidChangeConfigurationParams
+    ) -> None:
         return await self.notify(
-            lsp_type.DidChangeConfigurationNotification(
-                params=lsp_type.DidChangeConfigurationParams(settings=settings)
-            ),
+            lsp_type.DidChangeConfigurationNotification(params=params)
+        )
+
+    async def notify_change_configuration(self, settings: Any | None) -> None:
+        return await self._notify_change_configuration(
+            lsp_type.DidChangeConfigurationParams(settings=settings)
         )

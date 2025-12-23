@@ -41,6 +41,17 @@ class WithRequestDeclaration(
         super().check_server_capability(cap)
         assert cap.declaration_provider
 
+    async def _request_declaration(
+        self, params: lsp_type.DeclarationParams
+    ) -> lsp_type.DeclarationResponse:
+        return await self.request(
+            lsp_type.DeclarationRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.DeclarationResponse,
+        )
+
     async def request_declaration(
         self, file_path: AnyPath, position: Position
     ) -> (
@@ -49,19 +60,15 @@ class WithRequestDeclaration(
         | Sequence[lsp_type.LocationLink]
         | None
     ):
-        return await self.file_request(
-            lsp_type.DeclarationRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.DeclarationParams(
+        async with self.open_files(file_path):
+            return await self._request_declaration(
+                lsp_type.DeclarationParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.DeclarationResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_declaration_locations(
         self, file_path: AnyPath, position: Position

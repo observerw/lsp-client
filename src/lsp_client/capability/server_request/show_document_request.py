@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
-import lsprotocol.types as lsp_type
 from loguru import logger
 
 from lsp_client.protocol import (
@@ -13,6 +12,7 @@ from lsp_client.protocol import (
     ServerRequestHookRegistry,
     WindowCapabilityProtocol,
 )
+from lsp_client.utils.types import lsp_type
 
 
 @runtime_checkable
@@ -42,10 +42,9 @@ class WithRespondShowDocumentRequest(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
-    async def respond_show_document_request(
-        self, req: lsp_type.ShowDocumentRequest
-    ) -> lsp_type.ShowDocumentResponse:
-        params = req.params
+    async def _respond_show_document(
+        self, params: lsp_type.ShowDocumentParams
+    ) -> lsp_type.ShowDocumentResult:
         logger.debug(
             "Responding to show document: uri={}, external={}, takeFocus={}",
             params.uri,
@@ -55,9 +54,14 @@ class WithRespondShowDocumentRequest(
 
         # TODO add resonable default behavior
 
+        return lsp_type.ShowDocumentResult(success=True)
+
+    async def respond_show_document_request(
+        self, req: lsp_type.ShowDocumentRequest
+    ) -> lsp_type.ShowDocumentResponse:
         return lsp_type.ShowDocumentResponse(
             id=req.id,
-            result=lsp_type.ShowDocumentResult(success=True),
+            result=await self._respond_show_document(req.params),
         )
 
     @override

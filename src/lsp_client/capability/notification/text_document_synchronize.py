@@ -45,29 +45,61 @@ class WithNotifyTextDocumentSynchronize(
         super().check_server_capability(cap)
         assert cap.text_document_sync
 
+    async def _notify_text_document_opened(
+        self, params: lsp_type.DidOpenTextDocumentParams
+    ) -> None:
+        return await self.notify(
+            lsp_type.DidOpenTextDocumentNotification(params=params)
+        )
+
     async def notify_text_document_opened(
         self, file_path: AnyPath, file_content: str
     ) -> None:
-        await self.notify(
-            msg=lsp_type.DidOpenTextDocumentNotification(
-                params=lsp_type.DidOpenTextDocumentParams(
-                    text_document=lsp_type.TextDocumentItem(
-                        uri=self.as_uri(file_path),
-                        language_id=self.get_language_id(),
-                        version=0,  # Version 0 for the initial open
-                        text=file_content,
-                    )
+        return await self._notify_text_document_opened(
+            lsp_type.DidOpenTextDocumentParams(
+                text_document=lsp_type.TextDocumentItem(
+                    uri=self.as_uri(file_path),
+                    language_id=self.get_language_id(),
+                    version=0,  # Version 0 for the initial open
+                    text=file_content,
                 )
             )
         )
 
+    async def _notify_text_document_changed(
+        self, params: lsp_type.DidChangeTextDocumentParams
+    ) -> None:
+        return await self.notify(
+            lsp_type.DidChangeTextDocumentNotification(params=params)
+        )
+
+    async def notify_text_document_changed(
+        self,
+        file_path: AnyPath,
+        content_changes: Sequence[lsp_type.TextDocumentContentChangeEvent],
+        version: int = 0,
+    ) -> None:
+        return await self._notify_text_document_changed(
+            lsp_type.DidChangeTextDocumentParams(
+                text_document=lsp_type.VersionedTextDocumentIdentifier(
+                    uri=self.as_uri(file_path), version=version
+                ),
+                content_changes=list(content_changes),
+            )
+        )
+
+    async def _notify_text_document_closed(
+        self, params: lsp_type.DidCloseTextDocumentParams
+    ) -> None:
+        return await self.notify(
+            lsp_type.DidCloseTextDocumentNotification(params=params)
+        )
+
     async def notify_text_document_closed(self, file_path: AnyPath) -> None:
-        await self.notify(
-            msg=lsp_type.DidCloseTextDocumentNotification(
-                params=lsp_type.DidCloseTextDocumentParams(
-                    text_document=lsp_type.TextDocumentIdentifier(
-                        uri=self.as_uri(file_path)
-                    ),
-                )
+        return await self._notify_text_document_closed(
+            lsp_type.DidCloseTextDocumentParams(
+                text_document=lsp_type.TextDocumentIdentifier(
+                    uri=self.as_uri(file_path)
+                ),
             )
         )

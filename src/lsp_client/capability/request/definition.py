@@ -44,6 +44,17 @@ class WithRequestDefinition(
         super().check_server_capability(cap)
         assert cap.definition_provider
 
+    async def _request_definition(
+        self, params: lsp_type.DefinitionParams
+    ) -> lsp_type.DefinitionResponse:
+        return await self.request(
+            lsp_type.DefinitionRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.DefinitionResponse,
+        )
+
     async def request_definition(
         self,
         file_path: AnyPath,
@@ -54,19 +65,15 @@ class WithRequestDefinition(
         | Sequence[lsp_type.LocationLink]
         | None
     ):
-        return await self.file_request(
-            lsp_type.DefinitionRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.DefinitionParams(
+        async with self.open_files(file_path):
+            return await self._request_definition(
+                lsp_type.DefinitionParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.DefinitionResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_definition_locations(
         self,

@@ -51,6 +51,17 @@ class WithRequestPullDiagnostic(
         super().check_server_capability(cap)
         assert cap.diagnostic_provider
 
+    async def _request_diagnostic(
+        self, params: lsp_type.DocumentDiagnosticParams
+    ) -> lsp_type.DocumentDiagnosticResponse:
+        return await self.request(
+            lsp_type.DocumentDiagnosticRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.DocumentDiagnosticResponse,
+        )
+
     async def request_diagnostic(
         self,
         file_path: AnyPath,
@@ -61,20 +72,16 @@ class WithRequestPullDiagnostic(
         """
         `textDocument/diagnostic` - Request a diagnostic report for a document.
         """
-        return await self.file_request(
-            lsp_type.DocumentDiagnosticRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.DocumentDiagnosticParams(
+        async with self.open_files(file_path):
+            return await self._request_diagnostic(
+                lsp_type.DocumentDiagnosticParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     identifier=identifier,
                     previous_result_id=previous_result_id,
-                ),
-            ),
-            schema=lsp_type.DocumentDiagnosticResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_diagnostics(
         self,

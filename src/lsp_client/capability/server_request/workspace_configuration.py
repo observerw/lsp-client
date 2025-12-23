@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol, override, runtime_checkable
+from typing import Any, Protocol, override, runtime_checkable
 
-import lsprotocol.types as lsp_type
 from loguru import logger
 
 from lsp_client.protocol import (
@@ -13,6 +12,7 @@ from lsp_client.protocol import (
     ServerRequestHookRegistry,
     WorkspaceCapabilityProtocol,
 )
+from lsp_client.utils.types import lsp_type
 
 
 @runtime_checkable
@@ -44,17 +44,21 @@ class WithRespondConfigurationRequest(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
-    async def respond_configuration_request(
-        self, req: lsp_type.ConfigurationRequest
-    ) -> lsp_type.ConfigurationResponse:
-        params = req.params
+    async def _respond_configuration(
+        self, params: lsp_type.ConfigurationParams
+    ) -> list[Any]:
         logger.debug("Responding to configuration request")
 
         # TODO add reasonable default behavior
 
+        return [None for _ in params.items]
+
+    async def respond_configuration_request(
+        self, req: lsp_type.ConfigurationRequest
+    ) -> lsp_type.ConfigurationResponse:
         return lsp_type.ConfigurationResponse(
             id=req.id,
-            result=[None for _ in params.items],
+            result=await self._respond_configuration(req.params),
         )
 
     @override

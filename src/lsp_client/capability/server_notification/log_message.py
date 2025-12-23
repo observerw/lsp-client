@@ -41,8 +41,11 @@ class WithReceiveLogMessage(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
+    async def _receive_log_message(self, params: lsp_type.LogMessageParams) -> None:
+        logger.info("Received log message: {}", params.message)
+
     async def receive_log_message(self, noti: lsp_type.LogMessageNotification) -> None:
-        logger.info("Received log message: {}", noti.params.message)
+        return await self._receive_log_message(noti.params)
 
     @override
     def register_server_request_hooks(

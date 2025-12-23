@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
-import lsprotocol.types as lsp_type
 from loguru import logger
 
 from lsp_client.protocol import (
@@ -13,6 +12,7 @@ from lsp_client.protocol import (
     ServerRequestHookRegistry,
     WorkspaceCapabilityProtocol,
 )
+from lsp_client.utils.types import lsp_type
 
 
 @runtime_checkable
@@ -44,16 +44,18 @@ class WithRespondWorkspaceFoldersRequest(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
+    async def _respond_workspace_folders(
+        self, params: None
+    ) -> list[lsp_type.WorkspaceFolder] | None:
+        logger.debug("Responding to workspace folders request")
+        return self.get_workspace().to_folders()
+
     async def respond_workspace_folders_request(
         self, req: lsp_type.WorkspaceFoldersRequest
     ) -> lsp_type.WorkspaceFoldersResponse:
-        logger.debug("Responding to workspace folders request")
-
-        # TODO add reasonable default behavior
-
         return lsp_type.WorkspaceFoldersResponse(
             id=req.id,
-            result=self.get_workspace().to_folders(),
+            result=await self._respond_workspace_folders(req.params),
         )
 
     @override

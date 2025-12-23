@@ -36,6 +36,17 @@ class WithRequestReferences(
         super().check_server_capability(cap)
         assert cap.references_provider
 
+    async def _request_references(
+        self, params: lsp_type.ReferenceParams
+    ) -> lsp_type.ReferencesResult:
+        return await self.request(
+            lsp_type.ReferencesRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.ReferencesResponse,
+        )
+
     async def request_references(
         self,
         file_path: AnyPath,
@@ -43,10 +54,9 @@ class WithRequestReferences(
         *,
         include_declaration: bool = True,
     ) -> Sequence[lsp_type.Location] | None:
-        return await self.file_request(
-            lsp_type.ReferencesRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.ReferenceParams(
+        async with self.open_files(file_path):
+            return await self._request_references(
+                lsp_type.ReferenceParams(
                     context=lsp_type.ReferenceContext(
                         include_declaration=include_declaration
                     ),
@@ -54,8 +64,5 @@ class WithRequestReferences(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.ReferencesResponse,
-            file_paths=[file_path],
-        )
+                )
+            )

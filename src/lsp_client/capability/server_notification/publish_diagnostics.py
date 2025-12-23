@@ -52,14 +52,19 @@ class WithReceivePublishDiagnostics(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
-    async def receive_publish_diagnostics(
-        self, noti: lsp_type.PublishDiagnosticsNotification
+    async def _receive_publish_diagnostics(
+        self, params: lsp_type.PublishDiagnosticsParams
     ) -> None:
         logger.debug(
             "Received diagnostics for {}: {}",
-            noti.params.uri,
-            noti.params.diagnostics,
+            params.uri,
+            params.diagnostics,
         )
+
+    async def receive_publish_diagnostics(
+        self, noti: lsp_type.PublishDiagnosticsNotification
+    ) -> None:
+        return await self._receive_publish_diagnostics(noti.params)
 
     @override
     def register_server_request_hooks(

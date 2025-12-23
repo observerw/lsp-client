@@ -44,12 +44,15 @@ class WithRespondInlayHintRefresh(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
+    async def _respond_inlay_hint_refresh(self, params: None) -> None:
+        return None
+
     async def respond_inlay_hint_refresh(
         self, req: lsp_type.InlayHintRefreshRequest
     ) -> lsp_type.InlayHintRefreshResponse:
         return lsp_type.InlayHintRefreshResponse(
             id=req.id,
-            result=None,
+            result=await self._respond_inlay_hint_refresh(req.params),
         )
 
     @override

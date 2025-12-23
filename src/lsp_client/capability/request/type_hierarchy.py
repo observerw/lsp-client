@@ -42,75 +42,110 @@ class WithRequestTypeHierarchy(
         super().check_server_capability(cap)
         assert cap.type_hierarchy_provider
 
+    async def _request_type_hierarchy_prepare(
+        self, params: lsp_type.TypeHierarchyPrepareParams
+    ) -> lsp_type.TypeHierarchyPrepareResponse:
+        return await self.request(
+            lsp_type.TypeHierarchyPrepareRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.TypeHierarchyPrepareResponse,
+        )
+
+    async def _request_type_hierarchy_supertypes(
+        self, params: lsp_type.TypeHierarchySupertypesParams
+    ) -> lsp_type.TypeHierarchySupertypesResponse:
+        return await self.request(
+            lsp_type.TypeHierarchySupertypesRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.TypeHierarchySupertypesResponse,
+        )
+
+    async def _request_type_hierarchy_subtypes(
+        self, params: lsp_type.TypeHierarchySubtypesParams
+    ) -> lsp_type.TypeHierarchySubtypesResponse:
+        return await self.request(
+            lsp_type.TypeHierarchySubtypesRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.TypeHierarchySubtypesResponse,
+        )
+
     async def prepare_type_hierarchy(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.TypeHierarchyItem] | None:
-        return await self.file_request(
-            lsp_type.TypeHierarchyPrepareRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.TypeHierarchyPrepareParams(
+        async with self.open_files(file_path):
+            return await self._request_type_hierarchy_prepare(
+                lsp_type.TypeHierarchyPrepareParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.TypeHierarchyPrepareResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_type_hierarchy_supertypes(
         self, file_path: AnyPath, position: Position
     ) -> list[lsp_type.TypeHierarchyItem] | None:
-        prepared = await self.prepare_type_hierarchy(file_path, position)
+        async with self.open_files(file_path):
+            prepared = await self._request_type_hierarchy_prepare(
+                lsp_type.TypeHierarchyPrepareParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    position=position,
+                )
+            )
 
-        if not prepared:
-            return None
+            if not prepared:
+                return None
 
-        items: list[lsp_type.TypeHierarchyItem] = []
+            items: list[lsp_type.TypeHierarchyItem] = []
 
-        async def append_items(item: lsp_type.TypeHierarchyItem) -> None:
-            if resp := await self.file_request(
-                req=lsp_type.TypeHierarchySupertypesRequest(
-                    id=jsonrpc_uuid(),
-                    params=lsp_type.TypeHierarchySupertypesParams(item=item),
-                ),
-                schema=lsp_type.TypeHierarchySupertypesResponse,
-                file_paths=[file_path],
-            ):
-                items.extend(resp)
+            async def append_items(item: lsp_type.TypeHierarchyItem) -> None:
+                if resp := await self._request_type_hierarchy_supertypes(
+                    lsp_type.TypeHierarchySupertypesParams(item=item)
+                ):
+                    items.extend(resp)
 
-        async with asyncer.create_task_group() as tg:
-            for item in prepared:
-                tg.soonify(append_items)(item)
+            async with asyncer.create_task_group() as tg:
+                for item in prepared:
+                    tg.soonify(append_items)(item)
 
-        if items:
-            return items
+            if items:
+                return items
 
     async def request_type_hierarchy_subtypes(
         self, file_path: AnyPath, position: Position
     ) -> list[lsp_type.TypeHierarchyItem] | None:
-        prepared = await self.prepare_type_hierarchy(file_path, position)
+        async with self.open_files(file_path):
+            prepared = await self._request_type_hierarchy_prepare(
+                lsp_type.TypeHierarchyPrepareParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    position=position,
+                )
+            )
 
-        if not prepared:
-            return None
+            if not prepared:
+                return None
 
-        items: list[lsp_type.TypeHierarchyItem] = []
+            items: list[lsp_type.TypeHierarchyItem] = []
 
-        async def append_items(item: lsp_type.TypeHierarchyItem) -> None:
-            if resp := await self.file_request(
-                req=lsp_type.TypeHierarchySubtypesRequest(
-                    id=jsonrpc_uuid(),
-                    params=lsp_type.TypeHierarchySubtypesParams(item=item),
-                ),
-                schema=lsp_type.TypeHierarchySubtypesResponse,
-                file_paths=[file_path],
-            ):
-                items.extend(resp)
+            async def append_items(item: lsp_type.TypeHierarchyItem) -> None:
+                if resp := await self._request_type_hierarchy_subtypes(
+                    lsp_type.TypeHierarchySubtypesParams(item=item)
+                ):
+                    items.extend(resp)
 
-        async with asyncer.create_task_group() as tg:
-            for item in prepared:
-                tg.soonify(append_items)(item)
+            async with asyncer.create_task_group() as tg:
+                for item in prepared:
+                    tg.soonify(append_items)(item)
 
-        if items:
-            return items
+            if items:
+                return items

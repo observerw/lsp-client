@@ -46,22 +46,51 @@ class WithRequestCallHierarchy(
         super().check_server_capability(cap)
         assert cap.call_hierarchy_provider
 
+    async def _request_call_hierarchy_prepare(
+        self, params: lsp_type.CallHierarchyPrepareParams
+    ) -> lsp_type.CallHierarchyPrepareResult:
+        return await self.request(
+            lsp_type.CallHierarchyPrepareRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.CallHierarchyPrepareResponse,
+        )
+
+    async def _request_call_hierarchy_incoming_calls(
+        self, params: lsp_type.CallHierarchyIncomingCallsParams
+    ) -> lsp_type.CallHierarchyIncomingCallsResult:
+        return await self.request(
+            lsp_type.CallHierarchyIncomingCallsRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.CallHierarchyIncomingCallsResponse,
+        )
+
+    async def _request_call_hierarchy_outgoing_calls(
+        self, params: lsp_type.CallHierarchyOutgoingCallsParams
+    ) -> lsp_type.CallHierarchyOutgoingCallsResult:
+        return await self.request(
+            lsp_type.CallHierarchyOutgoingCallsRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.CallHierarchyOutgoingCallsResponse,
+        )
+
     async def prepare_call_hierarchy(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.CallHierarchyItem] | None:
-        return await self.file_request(
-            lsp_type.CallHierarchyPrepareRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.CallHierarchyPrepareParams(
+        async with self.open_files(file_path):
+            return await self._request_call_hierarchy_prepare(
+                lsp_type.CallHierarchyPrepareParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.CallHierarchyPrepareResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_call_hierarchy_incoming_call(
         self, file_path: AnyPath, position: Position
@@ -71,30 +100,33 @@ class WithRequestCallHierarchy(
         all incoming calls for each definition.
         """
 
-        prepared = await self.prepare_call_hierarchy(file_path, position)
+        async with self.open_files(file_path):
+            prepared = await self._request_call_hierarchy_prepare(
+                lsp_type.CallHierarchyPrepareParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    position=position,
+                )
+            )
 
-        if not prepared:
-            return None
+            if not prepared:
+                return None
 
-        calls: list[lsp_type.CallHierarchyIncomingCall] = []
+            calls: list[lsp_type.CallHierarchyIncomingCall] = []
 
-        async def request(item: lsp_type.CallHierarchyItem) -> None:
-            if resp := await self.file_request(
-                req=lsp_type.CallHierarchyIncomingCallsRequest(
-                    id=jsonrpc_uuid(),
-                    params=lsp_type.CallHierarchyIncomingCallsParams(item=item),
-                ),
-                schema=lsp_type.CallHierarchyIncomingCallsResponse,
-                file_paths=[file_path],
-            ):
-                calls.extend(resp)
+            async def request(item: lsp_type.CallHierarchyItem) -> None:
+                if resp := await self._request_call_hierarchy_incoming_calls(
+                    lsp_type.CallHierarchyIncomingCallsParams(item=item)
+                ):
+                    calls.extend(resp)
 
-        async with asyncer.create_task_group() as tg:
-            for item in prepared:
-                tg.soonify(request)(item)
+            async with asyncer.create_task_group() as tg:
+                for item in prepared:
+                    tg.soonify(request)(item)
 
-        if calls:
-            return calls
+            if calls:
+                return calls
 
     async def request_call_hierarchy_outgoing_call(
         self, file_path: AnyPath, position: Position
@@ -104,27 +136,30 @@ class WithRequestCallHierarchy(
         all outgoing calls for each definition.
         """
 
-        prepared = await self.prepare_call_hierarchy(file_path, position)
+        async with self.open_files(file_path):
+            prepared = await self._request_call_hierarchy_prepare(
+                lsp_type.CallHierarchyPrepareParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path)
+                    ),
+                    position=position,
+                )
+            )
 
-        if not prepared:
-            return None
+            if not prepared:
+                return None
 
-        calls: list[lsp_type.CallHierarchyOutgoingCall] = []
+            calls: list[lsp_type.CallHierarchyOutgoingCall] = []
 
-        async def append_calls(item: lsp_type.CallHierarchyItem) -> None:
-            if resp := await self.file_request(
-                req=lsp_type.CallHierarchyOutgoingCallsRequest(
-                    id=jsonrpc_uuid(),
-                    params=lsp_type.CallHierarchyOutgoingCallsParams(item=item),
-                ),
-                schema=lsp_type.CallHierarchyOutgoingCallsResponse,
-                file_paths=[file_path],
-            ):
-                calls.extend(resp)
+            async def append_calls(item: lsp_type.CallHierarchyItem) -> None:
+                if resp := await self._request_call_hierarchy_outgoing_calls(
+                    lsp_type.CallHierarchyOutgoingCallsParams(item=item)
+                ):
+                    calls.extend(resp)
 
-        async with asyncer.create_task_group() as tg:
-            for item in prepared:
-                tg.soonify(append_calls)(item)
+            async with asyncer.create_task_group() as tg:
+                for item in prepared:
+                    tg.soonify(append_calls)(item)
 
-        if calls:
-            return calls
+            if calls:
+                return calls

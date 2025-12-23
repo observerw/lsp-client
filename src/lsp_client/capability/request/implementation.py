@@ -41,6 +41,17 @@ class WithRequestImplementation(
         super().check_server_capability(cap)
         assert cap.implementation_provider
 
+    async def _request_implementation(
+        self, params: lsp_type.ImplementationParams
+    ) -> lsp_type.ImplementationResponse:
+        return await self.request(
+            lsp_type.ImplementationRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.ImplementationResponse,
+        )
+
     async def request_implementation(
         self, file_path: AnyPath, position: Position
     ) -> (
@@ -49,19 +60,15 @@ class WithRequestImplementation(
         | Sequence[lsp_type.LocationLink]
         | None
     ):
-        return await self.file_request(
-            lsp_type.ImplementationRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.ImplementationParams(
+        async with self.open_files(file_path):
+            return await self._request_implementation(
+                lsp_type.ImplementationParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.ImplementationResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_implementation_locations(
         self, file_path: AnyPath, position: Position

@@ -54,6 +54,28 @@ class WithRequestCompletion(
         super().check_server_capability(cap)
         assert cap.completion_provider
 
+    async def _request_completion(
+        self, params: lsp_type.CompletionParams
+    ) -> lsp_type.CompletionResponse:
+        return await self.request(
+            lsp_type.CompletionRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.CompletionResponse,
+        )
+
+    async def _request_completion_resolve(
+        self, params: lsp_type.CompletionItem
+    ) -> lsp_type.CompletionResolveResponse:
+        return await self.request(
+            lsp_type.CompletionResolveRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.CompletionResolveResponse,
+        )
+
     async def request_completion(
         self,
         file_path: AnyPath,
@@ -67,20 +89,17 @@ class WithRequestCompletion(
             trigger_kind=trigger_kind,
             trigger_character=trigger_character,
         )
-        result = await self.file_request(
-            lsp_type.CompletionRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.CompletionParams(
+
+        async with self.open_files(file_path):
+            result = await self._request_completion(
+                lsp_type.CompletionParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                     context=context,
-                ),
-            ),
-            schema=lsp_type.CompletionResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
         match result:
             case lsp_type.CompletionList(items=items):
@@ -108,10 +127,4 @@ class WithRequestCompletion(
         self,
         item: lsp_type.CompletionItem,
     ) -> lsp_type.CompletionItem:
-        return await self.request(
-            lsp_type.CompletionResolveRequest(
-                id=jsonrpc_uuid(),
-                params=item,
-            ),
-            schema=lsp_type.CompletionResolveResponse,
-        )
+        return await self._request_completion_resolve(item)

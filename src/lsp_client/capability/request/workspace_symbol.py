@@ -46,15 +46,22 @@ class WithRequestWorkspaceSymbol(
         super().check_server_capability(cap)
         assert cap.workspace_symbol_provider
 
+    async def _request_workspace_symbol(
+        self, params: lsp_type.WorkspaceSymbolParams
+    ) -> lsp_type.WorkspaceSymbolResponse:
+        return await self.request(
+            lsp_type.WorkspaceSymbolRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.WorkspaceSymbolResponse,
+        )
+
     async def request_workspace_symbol(
         self, query: str
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.WorkspaceSymbol] | None
     ):
-        return await self.request(
-            lsp_type.WorkspaceSymbolRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.WorkspaceSymbolParams(query=query),
-            ),
-            schema=lsp_type.WorkspaceSymbolResponse,
+        return await self._request_workspace_symbol(
+            lsp_type.WorkspaceSymbolParams(query=query)
         )

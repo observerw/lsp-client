@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, override, runtime_checkable
 
-import lsprotocol.types as lsp_type
 from loguru import logger
 
 from lsp_client.protocol import (
@@ -13,6 +12,7 @@ from lsp_client.protocol import (
     ServerRequestHookRegistry,
     WindowCapabilityProtocol,
 )
+from lsp_client.utils.types import lsp_type
 
 
 @runtime_checkable
@@ -46,19 +46,21 @@ class WithRespondShowMessageRequest(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
-    async def respond_show_message_request(
-        self, req: lsp_type.ShowMessageRequest
-    ) -> lsp_type.ShowMessageResponse:
-        params = req.params
+    async def _respond_show_message(
+        self, params: lsp_type.ShowMessageRequestParams
+    ) -> lsp_type.MessageActionItem | None:
         logger.debug("Responding to show message: {}", params.message)
 
         # TODO add reasonable default behavior
 
+        return lsp_type.MessageActionItem(title="Default response from `lsp-client`.")
+
+    async def respond_show_message_request(
+        self, req: lsp_type.ShowMessageRequest
+    ) -> lsp_type.ShowMessageResponse:
         return lsp_type.ShowMessageResponse(
             id=req.id,
-            result=lsp_type.MessageActionItem(
-                title="Default response from `lsp-client`."
-            ),
+            result=await self._respond_show_message(req.params),
         )
 
     @override

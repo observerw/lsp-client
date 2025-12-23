@@ -41,22 +41,29 @@ class WithRequestHover(
         super().check_server_capability(cap)
         assert cap.hover_provider
 
+    async def _request_hover(
+        self, params: lsp_type.HoverParams
+    ) -> lsp_type.HoverResult:
+        return await self.request(
+            lsp_type.HoverRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.HoverResponse,
+        )
+
     async def request_hover(
         self, file_path: AnyPath, position: Position
     ) -> lsp_type.MarkupContent | None:
-        hover = await self.file_request(
-            lsp_type.HoverRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.HoverParams(
+        async with self.open_files(file_path):
+            hover = await self._request_hover(
+                lsp_type.HoverParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
-                ),
-            ),
-            schema=lsp_type.HoverResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
         if hover is None:
             return None

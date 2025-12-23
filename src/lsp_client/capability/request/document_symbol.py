@@ -48,21 +48,28 @@ class WithRequestDocumentSymbol(
         super().check_server_capability(cap)
         assert cap.document_symbol_provider
 
+    async def _request_document_symbol(
+        self, params: lsp_type.DocumentSymbolParams
+    ) -> lsp_type.DocumentSymbolResponse:
+        return await self.request(
+            lsp_type.DocumentSymbolRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.DocumentSymbolResponse,
+        )
+
     async def request_document_symbol(
         self, file_path: AnyPath
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.DocumentSymbol] | None
     ):
-        return await self.request(
-            lsp_type.DocumentSymbolRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.DocumentSymbolParams(
-                    text_document=lsp_type.TextDocumentIdentifier(
-                        uri=self.as_uri(file_path),
-                    ),
+        return await self._request_document_symbol(
+            lsp_type.DocumentSymbolParams(
+                text_document=lsp_type.TextDocumentIdentifier(
+                    uri=self.as_uri(file_path),
                 ),
             ),
-            schema=lsp_type.DocumentSymbolResponse,
         )
 
     async def request_document_symbol_information_list(

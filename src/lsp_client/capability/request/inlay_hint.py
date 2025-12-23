@@ -69,6 +69,28 @@ class WithRequestInlayHint(
             case _:
                 raise TypeError(f"Unexpected type for inlay hint label: {type(hint)}")
 
+    async def _request_inlay_hint(
+        self, params: lsp_type.InlayHintParams
+    ) -> lsp_type.InlayHintResponse:
+        return await self.request(
+            lsp_type.InlayHintRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.InlayHintResponse,
+        )
+
+    async def _request_inlay_hint_resolve(
+        self, params: lsp_type.InlayHint
+    ) -> lsp_type.InlayHintResolveResponse:
+        return await self.request(
+            lsp_type.InlayHintResolveRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.InlayHintResolveResponse,
+        )
+
     async def request_inlay_hint(
         self,
         file_path: AnyPath,
@@ -91,19 +113,15 @@ class WithRequestInlayHint(
         :return: A sequence of :class:`lsp_type.InlayHint` instances if the server
             returns hints, or ``None`` if no hints are provided.
         """
-        hints = await self.file_request(
-            lsp_type.InlayHintRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.InlayHintParams(
+        async with self.open_files(file_path):
+            hints = await self._request_inlay_hint(
+                lsp_type.InlayHintParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     range=range,
-                ),
-            ),
-            schema=lsp_type.InlayHintResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
         if resolve and hints:
             async with asyncer.create_task_group() as tg:
@@ -133,10 +151,4 @@ class WithRequestInlayHint(
         :return: A new :class:`lsp_type.InlayHint` containing any additional
             data supplied by the server.
         """
-        return await self.request(
-            lsp_type.InlayHintResolveRequest(
-                id=jsonrpc_uuid(),
-                params=hint,
-            ),
-            schema=lsp_type.InlayHintResolveResponse,
-        )
+        return await self._request_inlay_hint_resolve(hint)

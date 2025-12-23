@@ -38,6 +38,17 @@ class WithRequestInlineValue(
         super().check_server_capability(cap)
         assert cap.inline_value_provider
 
+    async def _request_inline_value(
+        self, params: lsp_type.InlineValueParams
+    ) -> lsp_type.InlineValueResponse:
+        return await self.request(
+            lsp_type.InlineValueRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.InlineValueResponse,
+        )
+
     async def request_inline_value(
         self,
         file_path: AnyPath,
@@ -55,17 +66,13 @@ class WithRequestInlineValue(
         Returns:
             List of inline value objects containing the computed inline values
         """
-        return await self.file_request(
-            lsp_type.InlineValueRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.InlineValueParams(
+        async with self.open_files(file_path):
+            return await self._request_inline_value(
+                lsp_type.InlineValueParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     range=range,
                     context=context,
-                ),
-            ),
-            schema=lsp_type.InlineValueResponse,
-            file_paths=[file_path],
-        )
+                )
+            )

@@ -50,6 +50,17 @@ class WithRequestSignatureHelp(
         super().check_server_capability(cap)
         assert cap.signature_help_provider
 
+    async def _request_signature_help(
+        self, params: lsp_type.SignatureHelpParams
+    ) -> lsp_type.SignatureHelpResponse:
+        return await self.request(
+            lsp_type.SignatureHelpRequest(
+                id=jsonrpc_uuid(),
+                params=params,
+            ),
+            schema=lsp_type.SignatureHelpResponse,
+        )
+
     async def request_signature_help(
         self,
         file_path: AnyPath,
@@ -77,20 +88,16 @@ class WithRequestSignatureHelp(
             active_signature_help=active_signature_help,
         )
 
-        return await self.file_request(
-            lsp_type.SignatureHelpRequest(
-                id=jsonrpc_uuid(),
-                params=lsp_type.SignatureHelpParams(
+        async with self.open_files(file_path):
+            return await self._request_signature_help(
+                lsp_type.SignatureHelpParams(
                     text_document=lsp_type.TextDocumentIdentifier(
                         uri=self.as_uri(file_path)
                     ),
                     position=position,
                     context=context,
-                ),
-            ),
-            schema=lsp_type.SignatureHelpResponse,
-            file_paths=[file_path],
-        )
+                )
+            )
 
     async def request_active_signature(
         self,
