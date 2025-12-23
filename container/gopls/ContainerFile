@@ -16,5 +16,9 @@ LABEL org.opencontainers.image.title="Gopls LSP" \
 WORKDIR /app
 COPY --from=builder /go/bin/gopls /usr/local/bin/gopls
 
+RUN addgroup -g 1000 gopls && adduser -D -u 1000 -G gopls gopls
+
 WORKDIR /workspace
+RUN mkdir -p /workspace && chown -R 1000:1000 /workspace
+USER 1000:1000
 ENTRYPOINT ["gopls", "serve"]
