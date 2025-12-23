@@ -56,7 +56,7 @@ anyio.run(main)
 async def main():
     workspace = Path.cwd()
     async with PyrightClient(
-        server=PyrightContainerServer(mounts=[workspace]),
+        server=PyrightContainerServer(),
         workspace=workspace
     ) as client:
         # Find definition of a symbol
@@ -74,7 +74,7 @@ anyio.run(main)
 
 The `examples/` directory contains comprehensive usage examples:
 
-- `pyright_docker.py` - Using Pyright in Docker for Python analysis
+- `pyright_container.py` - Using Pyright in Docker for Python analysis
 - `rust_analyzer.py` - Rust code intelligence with Rust-Analyzer
 - `pyrefly.py` - Python linting and analysis with Pyrefly
 - `protocol.py` - Direct LSP protocol usage
@@ -82,7 +82,7 @@ The `examples/` directory contains comprehensive usage examples:
 Run examples with:
 
 ```bash
-uv run examples/pyright_docker.py
+uv run examples/pyright_container.py
 ```
 
 ## Client Definition
@@ -118,11 +118,13 @@ class MyPythonClient(
 
 | Language Server            | Module Path                        | Language              | Container Image                              |
 | -------------------------- | ---------------------------------- | --------------------- | -------------------------------------------- |
-| Pyright                    | `lsp_client.clients.pyright`       | Python                | `ghcr.io/observerw/lsp-client/pyright`       |
-| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                | `ghcr.io/observerw/lsp-client/pyrefly`       |
-| Rust Analyzer              | `lsp_client.clients.rust_analyzer` | Rust                  | `ghcr.io/observerw/lsp-client/rust-analyzer` |
-| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/deno`          |
-| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript | `ghcr.io/observerw/lsp-client/typescript`    |
+| Pyright                    | `lsp_client.clients.pyright`       | Python                | `ghcr.io/lsp-client/pyright:latest`         |
+| Pyrefly                    | `lsp_client.clients.pyrefly`       | Python                | `ghcr.io/lsp-client/pyrefly:latest`         |
+| Ty                         | `lsp_client.clients.ty`            | Python                | `ghcr.io/lsp-client/ty:latest`              |
+| Rust Analyzer              | `lsp_client.clients.rust_analyzer` | Rust                  | `ghcr.io/lsp-client/rust-analyzer:latest`   |
+| Deno                       | `lsp_client.clients.deno`          | TypeScript/JavaScript | `ghcr.io/lsp-client/deno:latest`            |
+| TypeScript Language Server | `lsp_client.clients.typescript`    | TypeScript/JavaScript | `ghcr.io/lsp-client/typescript:latest`     |
+| Gopls                      | `lsp_client.clients.gopls`         | Go                    | `ghcr.io/lsp-client/gopls:latest`           |
 
 Container images are automatically updated weekly to ensure access to the latest language server versions.
 
