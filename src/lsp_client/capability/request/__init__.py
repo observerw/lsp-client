@@ -12,6 +12,7 @@ from .implementation import WithRequestImplementation
 from .inline_value import WithRequestInlineValue
 from .pull_diagnostic import WithRequestPullDiagnostic
 from .reference import WithRequestReferences
+from .signature_help import WithRequestSignatureHelp
 from .type_definition import WithRequestTypeDefinition
 from .type_hierarchy import WithRequestTypeHierarchy
 from .workspace_symbol import WithRequestWorkspaceSymbol
@@ -27,6 +28,7 @@ capabilities: Final = (
     WithRequestInlineValue,
     WithRequestPullDiagnostic,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestTypeHierarchy,
     WithRequestWorkspaceSymbol,
@@ -43,6 +45,7 @@ __all__ = [
     "WithRequestInlineValue",
     "WithRequestPullDiagnostic",
     "WithRequestReferences",
+    "WithRequestSignatureHelp",
     "WithRequestTypeDefinition",
     "WithRequestTypeHierarchy",
     "WithRequestWorkspaceSymbol",
