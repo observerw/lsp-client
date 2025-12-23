@@ -33,12 +33,8 @@ class WithNotifyDidChangeConfiguration(
 
     @override
     @classmethod
-    def check_server_capability(
-        cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
-    ) -> None:
-        super().check_server_capability(cap, info)
+    def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
+        super().check_server_capability(cap)
         return
 
     async def notify_change_configuration(self, settings: Any | None) -> None:

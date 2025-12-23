@@ -10,6 +10,7 @@ from .hover import WithRequestHover
 from .implementation import WithRequestImplementation
 from .inlay_hint import WithRequestInlayHint
 from .inline_value import WithRequestInlineValue
+from .pull_diagnostic import WithRequestPullDiagnostic
 from .reference import WithRequestReferences
 from .type_definition import WithRequestTypeDefinition
 from .type_hierarchy import WithRequestTypeHierarchy
@@ -24,6 +25,7 @@ capabilities: Final = (
     WithRequestImplementation,
     WithRequestInlayHint,
     WithRequestInlineValue,
+    WithRequestPullDiagnostic,
     WithRequestReferences,
     WithRequestTypeDefinition,
     WithRequestTypeHierarchy,
@@ -39,6 +41,7 @@ __all__ = [
     "WithRequestImplementation",
     "WithRequestInlayHint",
     "WithRequestInlineValue",
+    "WithRequestPullDiagnostic",
     "WithRequestReferences",
     "WithRequestTypeDefinition",
     "WithRequestTypeHierarchy",

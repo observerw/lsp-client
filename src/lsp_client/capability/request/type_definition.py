@@ -37,12 +37,8 @@ class WithRequestTypeDefinition(
 
     @override
     @classmethod
-    def check_server_capability(
-        cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
-    ) -> None:
-        super().check_server_capability(cap, info)
+    def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
+        super().check_server_capability(cap)
         assert cap.type_definition_provider
 
     async def request_type_definition(

@@ -37,12 +37,8 @@ class WithRequestDeclaration(
 
     @override
     @classmethod
-    def check_server_capability(
-        cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
-    ) -> None:
-        super().check_server_capability(cap, info)
+    def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
+        super().check_server_capability(cap)
         assert cap.declaration_provider
 
     async def request_declaration(

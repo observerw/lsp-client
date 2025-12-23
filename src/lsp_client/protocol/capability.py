@@ -21,11 +21,7 @@ class CapabilityProtocol(Protocol):
         """
 
     @classmethod
-    def check_server_capability(
-        cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
-    ) -> None:
+    def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         """
         Check if the server supports current capability.
 

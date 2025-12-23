@@ -38,12 +38,8 @@ class WithReceiveLogTrace(
 
     @override
     @classmethod
-    def check_server_capability(
-        cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
-    ) -> None:
-        super().check_server_capability(cap, info)
+    def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
+        super().check_server_capability(cap)
 
     async def receive_log_trace(self, noti: lsp_type.LogTraceNotification) -> None:
         logger.info("Received log trace: {}", noti.params.message)
