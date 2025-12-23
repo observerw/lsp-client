@@ -21,7 +21,8 @@ class WithRequestCompletion(
     Protocol,
 ):
     """
-    `textDocument/completion` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
+    - `textDocument/completion` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
+    - `completionItem/resolve` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItem_resolve
     """
 
     @override
