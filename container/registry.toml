@@ -24,6 +24,10 @@ type = "github"
 repo = "denoland/deno"
 strip_v = true
 
+[gopls]
+type = "github"
+repo = "golang/tools"
+
 # [custom-server]
 # type = "custom"
 # command = "curl -s https://api.example.com/version | jq -r .version"
