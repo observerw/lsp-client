@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, Iterable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Self, override
+from typing import Any, Literal, Self, override
 
 import anyio
 import asyncer
@@ -50,7 +50,9 @@ class Client(
     AsyncContextManagerMixin,
     ABC,
 ):
-    _server_arg: Server | None = field(alias="server", default=None)
+    _server_arg: Server | Literal["container", "local"] | None = field(
+        alias="server", default=None
+    )
     _workspace_arg: RawWorkspace = field(alias="workspace", factory=Path.cwd)
 
     sync_file: bool = True
@@ -68,9 +70,16 @@ class Client(
         3. Local server (maybe with auto-installation)
         """
 
-        if self._server_arg:
-            yield self._server_arg
         defaults = self.create_default_servers()
+
+        match self._server_arg:
+            case "container":
+                yield defaults.container
+            case "local":
+                yield defaults.local
+            case Server() as server:
+                yield server
+
         yield defaults.container
         yield defaults.local
 
