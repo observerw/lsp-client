@@ -25,8 +25,8 @@ repo = "denoland/deno"
 strip_v = true
 
 [gopls]
-type = "github"
-repo = "golang/tools"
+type = "custom"
+command = "curl -s https://api.github.com/repos/golang/tools/tags | jq -r '.[0].name' | cut -d'/' -f2-"
 
 # [custom-server]
 # type = "custom"
