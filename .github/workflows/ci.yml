@@ -2,9 +2,27 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "justfile"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/ci.yml"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "justfile"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/ci.yml"
 
 jobs:
   test:
@@ -19,21 +37,21 @@ jobs:
             os: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install uv and set Python version
-      uses: astral-sh/setup-uv@v7
-      with:
-        python-version: ${{ matrix.python-version }}
-        enable-cache: true
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-    - name: Install dependencies
-      run: uv sync --locked --all-extras --dev
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
 
-    - name: Run linter and static analysis
-      run: |
-        uv run ruff check
-        uv run ruff format --check
+      - name: Run linter and static analysis
+        run: |
+          uv run ruff check
+          uv run ruff format --check
 
-    - name: Run tests
-      run: uv run pytest
+      - name: Run tests
+        run: uv run pytest
