@@ -43,12 +43,8 @@ class WithRespondShowMessageRequest(
 
     @override
     @classmethod
-    def check_server_capability(
-        cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
-    ) -> None:
-        super().check_server_capability(cap, info)
+    def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
+        super().check_server_capability(cap)
 
     async def respond_show_message_request(
         self, req: lsp_type.ShowMessageRequest

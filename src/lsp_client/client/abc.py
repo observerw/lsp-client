@@ -207,7 +207,7 @@ class Client(
 
             # ensure all client capabilities are supported by the server
             if isinstance(self, CapabilityProtocol):
-                self.check_server_capability(server_capabilities, server_info)
+                self.check_server_capability(server_capabilities)
         else:
             logger.debug("Skip server check in optimized mode")
 

@@ -46,7 +46,6 @@ async def inspect_capabilities(
         await server.kill()
 
     server_capabilities = resp.capabilities
-    server_info = resp.server_info
 
     for cap in itertools.chain(
         request_capabilities,
@@ -57,7 +56,7 @@ async def inspect_capabilities(
         client_available = issubclass(client_cls, cap)
 
         try:
-            cap.check_server_capability(server_capabilities, server_info)
+            cap.check_server_capability(server_capabilities)
             server_available = True
         except AssertionError:
             server_available = False

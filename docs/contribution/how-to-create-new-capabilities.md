@@ -49,7 +49,7 @@ The capability class must:
     - `register_window_capability(...)`
     - `register_notebook_document_capability(...)`
     - `register_general_capability(...)`
-  - `check_server_capability(...)`: Assert server support. Always call `super().check_server_capability(cap, info)`.
+  - `check_server_capability(...)`: Assert server support. Always call `super().check_server_capability(cap)`.
 - For server messages, implement `register_server_request_hooks(self, registry: ServerRequestHookRegistry)`.
 - Implement the method for the capability's action (`request_*`, `notify_*`, `receive_*`, `respond_*`).
 
@@ -105,10 +105,9 @@ class WithRequestX(
     @classmethod
     def check_server_capability(
         cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
+        cap: lsp_type.ServerCapabilities
     ) -> None:
-        super().check_server_capability(cap, info)
+        super().check_server_capability(cap)
         assert cap.x_provider
 
     async def request_x(
@@ -147,10 +146,9 @@ class WithRequestWorkspaceX(
     @classmethod
     def check_server_capability(
         cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
+        cap: lsp_type.ServerCapabilities
     ) -> None:
-        super().check_server_capability(cap, info)
+        super().check_server_capability(cap)
         assert cap.workspace_x_provider
 
     async def request_workspace_x(self, query: str) -> lsp_type.WorkspaceXResponse | None:
@@ -200,10 +198,9 @@ class WithNotifyX(
     @classmethod
     def check_server_capability(
         cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
+        cap: lsp_type.ServerCapabilities
     ) -> None:
-        super().check_server_capability(cap, info)
+        super().check_server_capability(cap)
         assert cap.text_document_sync
 
     async def notify_x(self, file_path: AnyPath) -> None:
@@ -254,10 +251,9 @@ class WithReceiveX(
     @classmethod
     def check_server_capability(
         cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
+        cap: lsp_type.ServerCapabilities
     ) -> None:
-        super().check_server_capability(cap, info)
+        super().check_server_capability(cap)
 
     async def receive_x(self, noti: lsp_type.XNotification) -> None:
         # Handle server notification
@@ -315,10 +311,9 @@ class WithRespondX(
     @classmethod
     def check_server_capability(
         cls,
-        cap: lsp_type.ServerCapabilities,
-        info: lsp_type.ServerInfo | None,
+        cap: lsp_type.ServerCapabilities
     ) -> None:
-        super().check_server_capability(cap, info)
+        super().check_server_capability(cap)
 
     async def respond_x(self, req: lsp_type.XRequest) -> lsp_type.XResponse:
         # Return response object
@@ -372,7 +367,7 @@ class MyClient(
 
 ## Common Pitfalls
 
-- **Missing `super()` Call**: Forgetting to call `super().check_server_capability(...)` or `super().register_server_request_hooks(...)` can break the inheritance chain.
+- **Missing `super()` Call**: Forgetting to call `super().check_server_capability()` or `super().register_server_request_hooks(...)` can break the inheritance chain.
 - **Missing Export**: An `ImportError` may indicate the capability was not added to `__init__.py`.
 - **Missing `file_paths`**: Failure to use `file_request` or manually handle synchronization prevents the server from seeing the document content.
 - **Assertion Failure**: An `assert` failure on startup indicates the server does not support the capability.
