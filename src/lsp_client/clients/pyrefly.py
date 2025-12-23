@@ -44,7 +44,7 @@ from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
 PyreflyContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/pyrefly:latest"
+    ContainerServer, image="ghcr.io/lsp-client/pyrefly:latest"
 )
 
 

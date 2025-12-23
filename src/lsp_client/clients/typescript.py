@@ -42,7 +42,7 @@ from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
 TypescriptContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/typescript:latest"
+    ContainerServer, image="ghcr.io/lsp-client/typescript:latest"
 )
 
 

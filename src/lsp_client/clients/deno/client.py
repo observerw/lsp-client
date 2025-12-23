@@ -45,9 +45,7 @@ from .extension import (
     WithRequestDenoVirtualTextDocument,
 )
 
-DenoContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/deno:latest"
-)
+DenoContainerServer = partial(ContainerServer, image="ghcr.io/lsp-client/deno:latest")
 
 
 async def ensure_deno_installed() -> None:

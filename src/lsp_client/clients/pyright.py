@@ -43,7 +43,7 @@ from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
 PyrightContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/pyright:latest"
+    ContainerServer, image="ghcr.io/lsp-client/pyright:latest"
 )
 
 

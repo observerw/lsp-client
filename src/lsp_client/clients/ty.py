@@ -42,7 +42,7 @@ from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-TyContainerServer = partial(ContainerServer, image="ghcr.io/astral-sh/ty:latest")
+TyContainerServer = partial(ContainerServer, image="ghcr.io/lsp-client/ty:latest")
 
 
 async def ensure_ty_installed() -> None:

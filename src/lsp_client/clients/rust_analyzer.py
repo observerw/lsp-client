@@ -44,7 +44,7 @@ from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
 RustAnalyzerContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/rust-analyzer:latest"
+    ContainerServer, image="ghcr.io/lsp-client/rust-analyzer:latest"
 )
 
 
