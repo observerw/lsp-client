@@ -19,8 +19,8 @@ from lsp_client.capability.request import (
     WithRequestDefinition,
     WithRequestDocumentSymbol,
     WithRequestHover,
-    WithRequestPullDiagnostic,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
 )
@@ -32,6 +32,7 @@ from lsp_client.capability.server_notification import (
 )
 from lsp_client.capability.server_request import (
     WithRespondConfigurationRequest,
+    WithRespondInlayHintRefresh,
     WithRespondShowDocumentRequest,
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
@@ -82,8 +83,8 @@ class PyrightClient(
     WithRequestDefinition,
     WithRequestDocumentSymbol,
     WithRequestHover,
-    WithRequestPullDiagnostic,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
@@ -91,6 +92,7 @@ class PyrightClient(
     WithReceivePublishDiagnostics,
     WithReceiveShowMessage,
     WithRespondConfigurationRequest,
+    WithRespondInlayHintRefresh,
     WithRespondShowDocumentRequest,
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,

@@ -9,6 +9,9 @@ import anyio
 from attrs import Factory, define
 from loguru import logger
 
+from lsp_client.capability.notification import (
+    WithNotifyDidChangeConfiguration,
+)
 from lsp_client.capability.request import (
     WithRequestCallHierarchy,
     WithRequestCompletion,
@@ -16,15 +19,26 @@ from lsp_client.capability.request import (
     WithRequestDocumentSymbol,
     WithRequestHover,
     WithRequestImplementation,
+    WithRequestInlayHint,
     WithRequestPullDiagnostic,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
 )
 from lsp_client.capability.server_notification import (
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
 )
 from lsp_client.capability.server_notification.log_message import WithReceiveLogMessage
+from lsp_client.capability.server_request import (
+    WithRespondConfigurationRequest,
+    WithRespondInlayHintRefresh,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
+)
 from lsp_client.client.abc import Client
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
@@ -80,6 +94,7 @@ DenoLocalServer = partial(
 @define
 class DenoClient(
     Client,
+    WithNotifyDidChangeConfiguration,
     WithRequestHover,
     WithRequestCompletion,
     WithRequestDefinition,
@@ -88,10 +103,19 @@ class DenoClient(
     WithRequestTypeDefinition,
     WithRequestCallHierarchy,
     WithRequestDocumentSymbol,
+    WithRequestInlayHint,
     WithRequestPullDiagnostic,
+    WithRequestSignatureHelp,
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
+    WithReceiveLogTrace,
     WithReceivePublishDiagnostics,
+    WithReceiveShowMessage,
+    WithRespondConfigurationRequest,
+    WithRespondInlayHintRefresh,
+    WithRespondShowDocumentRequest,
+    WithRespondShowMessageRequest,
+    WithRespondWorkspaceFoldersRequest,
     WithRequestDenoCache,
     WithRequestDenoPerformance,
     WithRequestDenoReloadImportRegistries,

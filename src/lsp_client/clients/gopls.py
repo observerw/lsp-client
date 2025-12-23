@@ -41,9 +41,7 @@ from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
 from lsp_client.utils.types import lsp_type
 
-GoplsContainerServer = partial(
-    ContainerServer, image="ghcr.io/observerw/lsp-client/gopls:latest"
-)
+GoplsContainerServer = partial(ContainerServer, image="ghcr.io/lsp-client/gopls:latest")
 
 
 async def ensure_gopls_installed() -> None:

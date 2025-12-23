@@ -20,8 +20,9 @@ from lsp_client.capability.request import (
     WithRequestDocumentSymbol,
     WithRequestHover,
     WithRequestImplementation,
-    WithRequestPullDiagnostic,
+    WithRequestInlayHint,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
 )
@@ -33,6 +34,7 @@ from lsp_client.capability.server_notification import (
 )
 from lsp_client.capability.server_request import (
     WithRespondConfigurationRequest,
+    WithRespondInlayHintRefresh,
     WithRespondShowDocumentRequest,
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
@@ -87,8 +89,9 @@ class PyreflyClient(
     WithRequestDocumentSymbol,
     WithRequestHover,
     WithRequestImplementation,
-    WithRequestPullDiagnostic,
+    WithRequestInlayHint,
     WithRequestReferences,
+    WithRequestSignatureHelp,
     WithRequestTypeDefinition,
     WithRequestWorkspaceSymbol,
     WithReceiveLogMessage,
@@ -96,6 +99,7 @@ class PyreflyClient(
     WithReceivePublishDiagnostics,
     WithReceiveShowMessage,
     WithRespondConfigurationRequest,
+    WithRespondInlayHintRefresh,
     WithRespondShowDocumentRequest,
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
