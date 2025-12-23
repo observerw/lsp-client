@@ -110,8 +110,8 @@ class GoplsClient(
     codelenses: dict[str, bool] = field(factory=dict)
     complete_completions: bool = False
     complete_unimported: bool = False
-    completion_budget: str = "500ms"
-    diagnostics_delay: str = "500ms"
+    completion_budget: str | None = None
+    diagnostics_delay: str | None = None
     documentation_options: dict[str, bool] = field(factory=dict)
     experimental_postfix_completions: bool = True
     experimental_prefixed_format: bool = True
