@@ -83,25 +83,6 @@ class Client(
         yield defaults.container
         yield defaults.local
 
-    @asynccontextmanager
-    async def _run_server(
-        self,
-    ) -> AsyncGenerator[tuple[Server, Receiver[ServerRequest]]]:
-        async with channel[ServerRequest].create() as (sender, receiver):
-            errors: list[ServerRuntimeError] = []
-            for server in self._iter_candidate_servers():
-                try:
-                    async with server.run(self._workspace, sender=sender) as s:  # ty: ignore[invalid-argument-type]
-                        yield s, receiver
-                        return
-                except ServerRuntimeError as e:
-                    logger.debug("Failed to start server {}: {}", server, e)
-                    errors.append(e)
-
-            raise ExceptionGroup(
-                f"All servers failed to start for {type(self).__name__}", errors
-            )
-
     @override
     def get_workspace(self) -> Workspace:
         return self._workspace
@@ -243,6 +224,25 @@ class Client(
 
         await self.notify(lsp_type.ExitNotification())
 
+    @asynccontextmanager
+    async def _run_server(
+        self,
+    ) -> AsyncGenerator[tuple[Server, Receiver[ServerRequest]]]:
+        async with channel[ServerRequest].create() as (sender, receiver):
+            errors: list[ServerRuntimeError] = []
+            for server in self._iter_candidate_servers():
+                try:
+                    async with server.run(self._workspace, sender=sender) as s:  # ty: ignore[invalid-argument-type]
+                        yield s, receiver
+                        return
+                except ServerRuntimeError as e:
+                    logger.debug("Failed to start server {}: {}", server, e)
+                    errors.append(e)
+
+            raise ExceptionGroup(
+                f"All servers failed to start for {type(self).__name__}", errors
+            )
+
     @override
     @asynccontextmanager
     @logger.catch(reraise=True)
@@ -279,7 +279,7 @@ class Client(
                     root_uri=root_uri,
                     initialization_options=self.create_initialization_options(),
                     trace=lsp_type.TraceValue.Verbose,
-                    workspace_folders=self.get_workspace().to_folders(),
+                    workspace_folders=self._workspace.to_folders(),
                 )
             )
 
