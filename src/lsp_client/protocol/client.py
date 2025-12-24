@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -37,12 +37,6 @@ class CapabilityClientProtocol(Protocol):
     @abstractmethod
     async def request[R](self, req: Request, schema: type[Response[R]]) -> R: ...
 
-    async def file_request[R](
-        self, req: Request, schema: type[Response[R]], file_paths: Sequence[AnyPath]
-    ):
-        async with self.open_files(*file_paths):
-            return await self.request(req, schema)
-
     @abstractmethod
     async def notify(self, msg: Notification) -> None: ...
 
@@ -77,3 +71,10 @@ class CapabilityClientProtocol(Protocol):
     def from_uri(self, uri: str) -> Path:
         """Convert a URI to an absolute path."""
         return from_local_uri(uri)
+
+    def read_file(self, file_path: AnyPath) -> str:
+        """Read the content of a file in the workspace."""
+
+        uri = self.as_uri(file_path)
+        abs_file_path = self.from_uri(uri)
+        return abs_file_path.read_text()
