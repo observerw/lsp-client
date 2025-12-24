@@ -6,6 +6,7 @@ from .abc import Server
 from .container import ContainerServer
 from .exception import ServerError, ServerInstallationError, ServerRuntimeError
 from .local import LocalServer
+from .socket import SocketServer
 
 
 @frozen
@@ -22,4 +23,5 @@ __all__ = [
     "ServerError",
     "ServerInstallationError",
     "ServerRuntimeError",
+    "SocketServer",
 ]
