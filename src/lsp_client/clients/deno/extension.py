@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Any, Protocol, override, runtime_checkable
 
 from loguru import logger
@@ -62,8 +62,9 @@ class WithRequestDenoCache(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_CACHE,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_CACHE,)
 
     async def request_deno_cache(
         self,
@@ -93,8 +94,9 @@ class WithRequestDenoPerformance(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_PERFORMANCE,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_PERFORMANCE,)
 
     async def request_deno_performance(self) -> Any:
         return await self.request(
@@ -111,8 +113,9 @@ class WithRequestDenoReloadImportRegistries(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_RELOAD_IMPORT_REGISTRIES,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_RELOAD_IMPORT_REGISTRIES,)
 
     async def request_deno_reload_import_registries(self) -> None:
         return await self.request(
@@ -129,8 +132,9 @@ class WithRequestDenoVirtualTextDocument(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_VIRTUAL_TEXT_DOCUMENT,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_VIRTUAL_TEXT_DOCUMENT,)
 
     async def request_deno_virtual_text_document(
         self,
@@ -155,8 +159,9 @@ class WithRequestDenoTask(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_TASK,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_TASK,)
 
     async def request_deno_task(self) -> list[Any]:
         return await self.request(
@@ -174,8 +179,9 @@ class WithRequestDenoTestRun(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_TEST_RUN,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_TEST_RUN,)
 
     @override
     @classmethod
@@ -203,8 +209,9 @@ class WithRequestDenoTestRunCancel(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_TEST_RUN_CANCEL,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_TEST_RUN_CANCEL,)
 
     async def request_deno_test_run_cancel(
         self,
@@ -227,8 +234,9 @@ class WithReceiveDenoRegistryStatus(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_REGISTRY_STATE,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_REGISTRY_STATE,)
 
     async def receive_deno_registry_state(
         self, noti: DenoRegistryStatusNotification
@@ -257,8 +265,9 @@ class WithReceiveDenoTestModule(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_TEST_MODULE,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_TEST_MODULE,)
 
     async def receive_deno_test_module(self, noti: DenoTestModuleNotification) -> None:
         logger.debug("Received Deno test module: {}", noti.params)
@@ -285,8 +294,9 @@ class WithReceiveDenoTestModuleDelete(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_TEST_MODULE_DELETE,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_TEST_MODULE_DELETE,)
 
     async def receive_deno_test_module_delete(
         self, noti: DenoTestModuleDeleteNotification
@@ -315,8 +325,9 @@ class WithReceiveDenoTestRunProgress(
 ):
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (DENO_TEST_RUN_PROGRESS,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (DENO_TEST_RUN_PROGRESS,)
 
     async def receive_deno_test_run_progress(
         self, noti: DenoTestRunProgressNotification
