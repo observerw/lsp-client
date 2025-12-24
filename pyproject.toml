@@ -13,6 +13,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "aioshutil>=1.6",
     "anyio>=4.10.0",
     "asyncer>=0.0.10",
     "attrs>=25.3.0",

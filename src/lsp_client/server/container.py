@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal, final, override
 
+import anyio
 from attrs import Factory, define, field
 from loguru import logger
 
@@ -190,6 +191,20 @@ class ContainerServer(Server):
     @override
     async def kill(self) -> None:
         await self._local.kill()
+
+    @override
+    async def check_availability(self) -> None:
+        try:
+            await anyio.run_process(
+                [self.backend, "pull", self.image],
+                stdout=anyio.streams.devnull.DevnullStream(),
+                stderr=anyio.streams.devnull.DevnullStream(),
+            )
+        except anyio.ProcessError as e:
+            raise RuntimeError(
+                f"Container backend '{self.backend}' is not available or image '{self.image}' "
+                "could not be pulled."
+            ) from e
 
     @override
     @asynccontextmanager

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import shutil
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from functools import cached_property
 from pathlib import Path
 from typing import Protocol, final, override
 
+import aioshutil
 import anyio
 from anyio.abc import AnyByteSendStream, Process
 from anyio.streams.buffered import BufferedByteReceiveStream
@@ -81,26 +81,26 @@ class LocalServer(Server):
             await self._process.aclose()
 
     @override
+    async def check_availability(self) -> None:
+        if not await aioshutil.which(self.program):
+            raise ServerRuntimeError(
+                self, f"Program '{self.program}' not found in PATH."
+            )
+
+    @override
     @asynccontextmanager
     async def run_process(self, workspace: Workspace) -> AsyncGenerator[None]:
-        if not shutil.which(self.program):
+        try:
+            await self.check_availability()
+        except ServerRuntimeError as e:
             if disable_auto_installation():
-                raise ServerRuntimeError(
-                    self,
-                    f"Program '{self.program}' not found in PATH and auto-installation is disabled.",
-                )
+                raise ServerRuntimeError(self, "auto-installation is disabled.") from e
             elif self.ensure_installed:
-                try:
-                    await self.ensure_installed()
-                except (OSError, RuntimeError) as e:
-                    raise ServerRuntimeError(
-                        self, f"Failed to install '{self.program}'"
-                    ) from e
+                await self.ensure_installed()
             else:
                 raise ServerRuntimeError(
-                    self,
-                    f"Program '{self.program}' not found in PATH and no installation method is provided.",
-                )
+                    self, "no installation method is provided."
+                ) from e
 
         command = [self.program, *self.args]
         logger.debug("Running with command: {}", command)

@@ -28,6 +28,10 @@ class Server(ABC):
     _resp_table: ResponseTable = field(factory=ResponseTable, init=False)
 
     @abstractmethod
+    async def check_availability(self) -> None:
+        """Check if the server runtime is available."""
+
+    @abstractmethod
     async def send(self, package: RawPackage) -> None:
         """Send a package to the runtime."""
 

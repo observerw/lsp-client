@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Iterable
-from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any, Literal, Self, override
 
@@ -62,12 +62,13 @@ class Client(
     _workspace: Workspace = field(init=False)
     _buffer: LSPFileBuffer = field(factory=LSPFileBuffer, init=False)
 
-    def _iter_candidate_servers(self) -> Iterable[Server]:
+    async def _iter_candidate_servers(self) -> AsyncGenerator[Server]:
         """
         Server candidates in order of priority:
         1. User-provided server
-        2. Containerized server
-        3. Local server (maybe with auto-installation)
+        2. Local server (if available)
+        3. Containerized server
+        4. Local server with auto-install (if enabled)
         """
 
         defaults = self.create_default_servers()
@@ -79,6 +80,10 @@ class Client(
                 yield defaults.local
             case Server() as server:
                 yield server
+
+        with suppress(ServerRuntimeError):
+            await defaults.local.check_availability()
+            yield defaults.local
 
         yield defaults.container
         yield defaults.local
@@ -230,13 +235,13 @@ class Client(
     ) -> AsyncGenerator[tuple[Server, Receiver[ServerRequest]]]:
         async with channel[ServerRequest].create() as (sender, receiver):
             errors: list[ServerRuntimeError] = []
-            for server in self._iter_candidate_servers():
+            async for candidate in self._iter_candidate_servers():
                 try:
-                    async with server.run(self._workspace, sender=sender) as s:  # ty: ignore[invalid-argument-type]
-                        yield s, receiver
+                    async with candidate.run(self._workspace, sender=sender) as server:  # ty: ignore[invalid-argument-type]
+                        yield server, receiver
                         return
                 except ServerRuntimeError as e:
-                    logger.debug("Failed to start server {}: {}", server, e)
+                    logger.debug("Failed to start server {}: {}", candidate, e)
                     errors.append(e)
 
             raise ExceptionGroup(
