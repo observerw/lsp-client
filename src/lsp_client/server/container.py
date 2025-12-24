@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -197,8 +198,8 @@ class ContainerServer(Server):
         try:
             await anyio.run_process(
                 [self.backend, "pull", self.image],
-                stdout=anyio.streams.devnull.DevnullStream(),
-                stderr=anyio.streams.devnull.DevnullStream(),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         except anyio.ProcessError as e:
             raise RuntimeError(

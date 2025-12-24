@@ -20,6 +20,8 @@ class CapabilityProtocol(Protocol):
         LSP methods associated with this capability.
         """
 
+        yield from ()
+
     @classmethod
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         """
