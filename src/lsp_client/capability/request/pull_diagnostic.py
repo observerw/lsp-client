@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Protocol, override, runtime_checkable
 
 from loguru import logger
@@ -25,8 +25,9 @@ class WithRequestPullDiagnostic(
 
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (lsp_type.TEXT_DOCUMENT_DIAGNOSTIC,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (lsp_type.TEXT_DOCUMENT_DIAGNOSTIC,)
 
     @override
     @classmethod

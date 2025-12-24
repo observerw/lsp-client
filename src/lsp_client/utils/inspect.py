@@ -61,7 +61,7 @@ async def inspect_capabilities(
         except AssertionError:
             server_available = False
 
-        for method in cap.methods():
+        for method in cap.iter_methods():
             yield CapabilityInspectResult(
                 capability=method,
                 client=client_available,

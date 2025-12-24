@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator
 from typing import Any, Protocol, override, runtime_checkable
 
 from lsp_client.protocol import CapabilityClientProtocol, WorkspaceCapabilityProtocol
@@ -19,8 +19,9 @@ class WithNotifyDidChangeConfiguration(
 
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (lsp_type.WORKSPACE_DID_CHANGE_CONFIGURATION,)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (lsp_type.WORKSPACE_DID_CHANGE_CONFIGURATION,)
 
     @override
     @classmethod

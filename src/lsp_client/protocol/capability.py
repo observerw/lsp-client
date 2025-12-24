@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterator
 from typing import Any, Protocol, runtime_checkable
 
 from lsp_client.utils.types import lsp_type
@@ -15,7 +15,7 @@ class CapabilityProtocol(Protocol):
 
     @classmethod
     @abstractmethod
-    def methods(cls) -> Sequence[str]:
+    def iter_methods(cls) -> Iterator[str]:
         """
         LSP methods associated with this capability.
         """

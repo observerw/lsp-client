@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Protocol, override, runtime_checkable
 
 from loguru import logger
@@ -23,8 +23,9 @@ class WithRequestDocumentSymbol(
 
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return ("text_document/document_symbol",)
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from ("text_document/document_symbol",)
 
     @override
     @classmethod

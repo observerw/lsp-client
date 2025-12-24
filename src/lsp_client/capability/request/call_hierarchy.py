@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Protocol, override, runtime_checkable
 
 import asyncer
@@ -25,8 +25,9 @@ class WithRequestCallHierarchy(
 
     @override
     @classmethod
-    def methods(cls) -> Sequence[str]:
-        return (
+    def iter_methods(cls) -> Iterator[str]:
+        yield from super().iter_methods()
+        yield from (
             lsp_type.TEXT_DOCUMENT_PREPARE_CALL_HIERARCHY,
             lsp_type.CALL_HIERARCHY_INCOMING_CALLS,
             lsp_type.CALL_HIERARCHY_OUTGOING_CALLS,
