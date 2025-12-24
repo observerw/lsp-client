@@ -3,11 +3,10 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Literal, final, override
+from typing import Literal, final, override
 
 from attrs import Factory, define, field
 from loguru import logger
-from pydantic import BaseModel, Field
 
 from lsp_client.jsonrpc.parse import RawPackage
 from lsp_client.utils.workspace import Workspace
@@ -16,7 +15,8 @@ from .abc import Server
 from .local import LocalServer
 
 
-class MountBase(BaseModel):
+@define
+class MountBase:
     type: str
     target: str
     source: str | None = None
@@ -35,6 +35,7 @@ class MountBase(BaseModel):
         return ",".join(self._parts())
 
 
+@define
 class BindMount(MountBase):
     type: str = "bind"
 
@@ -63,6 +64,7 @@ class BindMount(MountBase):
         return cls(source=str(absolute_path), target=str(absolute_path))
 
 
+@define
 class VolumeMount(MountBase):
     type: str = "volume"
 
@@ -87,6 +89,7 @@ class VolumeMount(MountBase):
         return parts
 
 
+@define
 class TmpfsMount(MountBase):
     type: str = "tmpfs"
 
@@ -104,10 +107,7 @@ class TmpfsMount(MountBase):
         return parts
 
 
-MountPoint = Annotated[
-    BindMount | VolumeMount | TmpfsMount,
-    Field(discriminator="type"),
-]
+MountPoint = BindMount | VolumeMount | TmpfsMount
 
 Mount = MountPoint | str | Path
 
