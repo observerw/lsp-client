@@ -15,6 +15,7 @@ htmlcov/
 .venv
 .env
 .python-version
+uv.lock
 
 # IDE
 .idea/
