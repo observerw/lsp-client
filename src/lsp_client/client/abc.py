@@ -18,6 +18,9 @@ from lsp_client.capability.build import (
     build_server_request_hooks,
 )
 from lsp_client.capability.notification import WithNotifyTextDocumentSynchronize
+from lsp_client.capability.notification.did_change_configuration import (
+    WithNotifyDidChangeConfiguration,
+)
 from lsp_client.client.buffer import LSPFileBuffer
 from lsp_client.jsonrpc.convert import (
     notification_serialize,
@@ -299,6 +302,10 @@ class Client(
                     workspace_folders=self._workspace.to_folders(),
                 )
             )
+
+            # send initial configuration if supported
+            if isinstance(self, WithNotifyDidChangeConfiguration):
+                await self.notify_change_configuration(self.get_default_settings())
 
             try:
                 yield self
