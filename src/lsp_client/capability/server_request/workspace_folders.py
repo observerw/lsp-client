@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from typing import Protocol, override, runtime_checkable
 
 from loguru import logger
@@ -47,7 +47,7 @@ class WithRespondWorkspaceFoldersRequest(
 
     async def _respond_workspace_folders(
         self, params: None
-    ) -> list[lsp_type.WorkspaceFolder] | None:
+    ) -> Sequence[lsp_type.WorkspaceFolder] | None:
         logger.debug("Responding to workspace folders request")
         return self.get_workspace().to_folders()
 

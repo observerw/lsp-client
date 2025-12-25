@@ -45,7 +45,7 @@ class WithRequestTypeHierarchy(
 
     async def _request_type_hierarchy_prepare(
         self, params: lsp_type.TypeHierarchyPrepareParams
-    ) -> lsp_type.TypeHierarchyPrepareResponse:
+    ) -> lsp_type.TypeHierarchyPrepareResult:
         return await self.request(
             lsp_type.TypeHierarchyPrepareRequest(
                 id=jsonrpc_uuid(),
@@ -56,7 +56,7 @@ class WithRequestTypeHierarchy(
 
     async def _request_type_hierarchy_supertypes(
         self, params: lsp_type.TypeHierarchySupertypesParams
-    ) -> lsp_type.TypeHierarchySupertypesResponse:
+    ) -> lsp_type.TypeHierarchySupertypesResult:
         return await self.request(
             lsp_type.TypeHierarchySupertypesRequest(
                 id=jsonrpc_uuid(),
@@ -67,7 +67,7 @@ class WithRequestTypeHierarchy(
 
     async def _request_type_hierarchy_subtypes(
         self, params: lsp_type.TypeHierarchySubtypesParams
-    ) -> lsp_type.TypeHierarchySubtypesResponse:
+    ) -> lsp_type.TypeHierarchySubtypesResult:
         return await self.request(
             lsp_type.TypeHierarchySubtypesRequest(
                 id=jsonrpc_uuid(),

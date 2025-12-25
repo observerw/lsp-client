@@ -12,6 +12,7 @@ from lsp_client.protocol import (
 )
 from lsp_client.utils.type_guard import is_location_links, is_locations
 from lsp_client.utils.types import AnyPath, Position, lsp_type
+from lsp_client.utils.warn import deprecated
 
 
 @runtime_checkable
@@ -47,7 +48,7 @@ class WithRequestDefinition(
 
     async def _request_definition(
         self, params: lsp_type.DefinitionParams
-    ) -> lsp_type.DefinitionResponse:
+    ) -> lsp_type.DefinitionResult:
         return await self.request(
             lsp_type.DefinitionRequest(
                 id=jsonrpc_uuid(),
@@ -76,6 +77,7 @@ class WithRequestDefinition(
                 )
             )
 
+    @deprecated("Prefer using 'request_definition_links' for LocationLink results.")
     async def request_definition_locations(
         self,
         file_path: AnyPath,

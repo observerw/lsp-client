@@ -9,6 +9,7 @@ from lsp_client.jsonrpc.id import jsonrpc_uuid
 from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.type_guard import is_location_links, is_locations
 from lsp_client.utils.types import AnyPath, Position, lsp_type
+from lsp_client.utils.warn import deprecated
 
 
 @runtime_checkable
@@ -44,7 +45,7 @@ class WithRequestDeclaration(
 
     async def _request_declaration(
         self, params: lsp_type.DeclarationParams
-    ) -> lsp_type.DeclarationResponse:
+    ) -> lsp_type.DeclarationResult:
         return await self.request(
             lsp_type.DeclarationRequest(
                 id=jsonrpc_uuid(),
@@ -71,6 +72,7 @@ class WithRequestDeclaration(
                 )
             )
 
+    @deprecated("Prefer using 'request_declaration_links' for LocationLink results.")
     async def request_declaration_locations(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.Location] | None:

@@ -9,6 +9,7 @@ from lsp_client.jsonrpc.id import jsonrpc_uuid
 from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.type_guard import is_location_links, is_locations
 from lsp_client.utils.types import AnyPath, Position, lsp_type
+from lsp_client.utils.warn import deprecated
 
 
 @runtime_checkable
@@ -44,7 +45,7 @@ class WithRequestTypeDefinition(
 
     async def _request_type_definition(
         self, params: lsp_type.TypeDefinitionParams
-    ) -> lsp_type.TypeDefinitionResponse:
+    ) -> lsp_type.TypeDefinitionResult:
         return await self.request(
             lsp_type.TypeDefinitionRequest(
                 id=jsonrpc_uuid(),
@@ -71,6 +72,9 @@ class WithRequestTypeDefinition(
                 )
             )
 
+    @deprecated(
+        "Prefer using 'request_type_definition_links' for LocationLink support."
+    )
     async def request_type_definition_locations(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.Location] | None:

@@ -9,6 +9,7 @@ from lsp_client.jsonrpc.id import jsonrpc_uuid
 from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.type_guard import is_location_links, is_locations
 from lsp_client.utils.types import AnyPath, Position, lsp_type
+from lsp_client.utils.warn import deprecated
 
 
 @runtime_checkable
@@ -44,7 +45,7 @@ class WithRequestImplementation(
 
     async def _request_implementation(
         self, params: lsp_type.ImplementationParams
-    ) -> lsp_type.ImplementationResponse:
+    ) -> lsp_type.ImplementationResult:
         return await self.request(
             lsp_type.ImplementationRequest(
                 id=jsonrpc_uuid(),
@@ -71,6 +72,7 @@ class WithRequestImplementation(
                 )
             )
 
+    @deprecated("Prefer using `request_implementation_links` for LocationLink results.")
     async def request_implementation_locations(
         self, file_path: AnyPath, position: Position
     ) -> Sequence[lsp_type.Location] | None:

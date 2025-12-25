@@ -41,7 +41,7 @@ class WithRequestInlineValue(
 
     async def _request_inline_value(
         self, params: lsp_type.InlineValueParams
-    ) -> lsp_type.InlineValueResponse:
+    ) -> lsp_type.InlineValueResult:
         return await self.request(
             lsp_type.InlineValueRequest(
                 id=jsonrpc_uuid(),

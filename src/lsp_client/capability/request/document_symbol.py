@@ -9,6 +9,7 @@ from lsp_client.jsonrpc.id import jsonrpc_uuid
 from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.type_guard import is_document_symbols, is_symbol_information_seq
 from lsp_client.utils.types import AnyPath, lsp_type
+from lsp_client.utils.warn import deprecated
 
 
 @runtime_checkable
@@ -25,7 +26,7 @@ class WithRequestDocumentSymbol(
     @classmethod
     def iter_methods(cls) -> Iterator[str]:
         yield from super().iter_methods()
-        yield from ("text_document/document_symbol",)
+        yield from (lsp_type.TEXT_DOCUMENT_DOCUMENT_SYMBOL,)
 
     @override
     @classmethod
@@ -51,7 +52,7 @@ class WithRequestDocumentSymbol(
 
     async def _request_document_symbol(
         self, params: lsp_type.DocumentSymbolParams
-    ) -> lsp_type.DocumentSymbolResponse:
+    ) -> lsp_type.DocumentSymbolResult | None:
         return await self.request(
             lsp_type.DocumentSymbolRequest(
                 id=jsonrpc_uuid(),
@@ -65,14 +66,19 @@ class WithRequestDocumentSymbol(
     ) -> (
         Sequence[lsp_type.SymbolInformation] | Sequence[lsp_type.DocumentSymbol] | None
     ):
-        return await self._request_document_symbol(
-            lsp_type.DocumentSymbolParams(
-                text_document=lsp_type.TextDocumentIdentifier(
-                    uri=self.as_uri(file_path),
+        async with self.open_files(file_path):
+            return await self._request_document_symbol(
+                lsp_type.DocumentSymbolParams(
+                    text_document=lsp_type.TextDocumentIdentifier(
+                        uri=self.as_uri(file_path),
+                    ),
                 ),
-            ),
-        )
+            )
 
+    @deprecated(
+        "Use 'request_document_symbol_information_list' or "
+        "'request_document_symbol_list' instead."
+    )
     async def request_document_symbol_information_list(
         self, file_path: AnyPath
     ) -> Sequence[lsp_type.SymbolInformation] | None:

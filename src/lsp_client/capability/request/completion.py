@@ -6,10 +6,7 @@ from typing import Protocol, override, runtime_checkable
 import asyncer
 
 from lsp_client.jsonrpc.id import jsonrpc_uuid
-from lsp_client.protocol import (
-    CapabilityClientProtocol,
-    TextDocumentCapabilityProtocol,
-)
+from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.type_guard import is_completion_items
 from lsp_client.utils.types import AnyPath, Position, lsp_type
 
@@ -57,7 +54,7 @@ class WithRequestCompletion(
 
     async def _request_completion(
         self, params: lsp_type.CompletionParams
-    ) -> lsp_type.CompletionResponse:
+    ) -> lsp_type.CompletionResult:
         return await self.request(
             lsp_type.CompletionRequest(
                 id=jsonrpc_uuid(),
@@ -68,7 +65,7 @@ class WithRequestCompletion(
 
     async def _request_completion_resolve(
         self, params: lsp_type.CompletionItem
-    ) -> lsp_type.CompletionResolveResponse:
+    ) -> lsp_type.CompletionItem:
         return await self.request(
             lsp_type.CompletionResolveRequest(
                 id=jsonrpc_uuid(),

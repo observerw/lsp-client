@@ -53,7 +53,7 @@ class WithRequestSignatureHelp(
 
     async def _request_signature_help(
         self, params: lsp_type.SignatureHelpParams
-    ) -> lsp_type.SignatureHelpResponse:
+    ) -> lsp_type.SignatureHelpResult:
         return await self.request(
             lsp_type.SignatureHelpRequest(
                 id=jsonrpc_uuid(),

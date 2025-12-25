@@ -6,10 +6,7 @@ from typing import Protocol, override, runtime_checkable
 import asyncer
 
 from lsp_client.jsonrpc.id import jsonrpc_uuid
-from lsp_client.protocol import (
-    CapabilityClientProtocol,
-    TextDocumentCapabilityProtocol,
-)
+from lsp_client.protocol import CapabilityClientProtocol, TextDocumentCapabilityProtocol
 from lsp_client.utils.types import AnyPath, Range, lsp_type
 
 
@@ -72,7 +69,7 @@ class WithRequestInlayHint(
 
     async def _request_inlay_hint(
         self, params: lsp_type.InlayHintParams
-    ) -> lsp_type.InlayHintResponse:
+    ) -> lsp_type.InlayHintResult:
         return await self.request(
             lsp_type.InlayHintRequest(
                 id=jsonrpc_uuid(),
@@ -83,7 +80,7 @@ class WithRequestInlayHint(
 
     async def _request_inlay_hint_resolve(
         self, params: lsp_type.InlayHint
-    ) -> lsp_type.InlayHintResolveResponse:
+    ) -> lsp_type.InlayHint:
         return await self.request(
             lsp_type.InlayHintResolveRequest(
                 id=jsonrpc_uuid(),
@@ -134,8 +131,7 @@ class WithRequestInlayHint(
         return hints
 
     async def request_inlay_hint_resolve(
-        self,
-        hint: lsp_type.InlayHint,
+        self, hint: lsp_type.InlayHint
     ) -> lsp_type.InlayHint:
         """
         Resolve additional details for a previously returned inlay hint.

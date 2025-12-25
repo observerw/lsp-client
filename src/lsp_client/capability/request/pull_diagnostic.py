@@ -54,7 +54,7 @@ class WithRequestPullDiagnostic(
 
     async def _request_diagnostic(
         self, params: lsp_type.DocumentDiagnosticParams
-    ) -> lsp_type.DocumentDiagnosticResponse:
+    ) -> lsp_type.DocumentDiagnosticReport:
         return await self.request(
             lsp_type.DocumentDiagnosticRequest(
                 id=jsonrpc_uuid(),
@@ -73,6 +73,7 @@ class WithRequestPullDiagnostic(
         """
         `textDocument/diagnostic` - Request a diagnostic report for a document.
         """
+
         async with self.open_files(file_path):
             return await self._request_diagnostic(
                 lsp_type.DocumentDiagnosticParams(
@@ -99,13 +100,13 @@ class WithRequestPullDiagnostic(
             identifier=identifier,
             previous_result_id=previous_result_id,
         ):
-            case lsp_type.RelatedFullDocumentDiagnosticReport(items=items):
-                return items
-            case lsp_type.FullDocumentDiagnosticReport(items=items):
+            case (
+                lsp_type.RelatedFullDocumentDiagnosticReport(items=items)
+                | lsp_type.RelatedUnchangedDocumentDiagnosticReport(items=items)
+            ):
                 return items
             case _:
                 logger.warning(
                     "Unsupported diagnostic report type for file {}",
                     file_path,
                 )
-                return None
