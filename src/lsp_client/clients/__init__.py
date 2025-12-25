@@ -31,5 +31,4 @@ __all__ = [
     "PythonClient",
     "RustClient",
     "TypeScriptClient",
-    "client",
 ]

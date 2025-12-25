@@ -95,6 +95,18 @@ class Client(
     def get_server(self) -> Server:
         return self._server
 
+    @classmethod
+    @abstractmethod
+    def check_project_root(cls, path: Path) -> bool:
+        """Check if the given path is a project root for this client."""
+
+    @classmethod
+    def find_project_root(cls, path: Path) -> Path | None:
+        """Find the project root for the given path by searching upwards."""
+        for parent in [path, *path.parents]:
+            if cls.check_project_root(parent):
+                return parent
+
     @abstractmethod
     def get_language_id(self) -> lsp_type.LanguageKind:
         """The language ID of the client."""

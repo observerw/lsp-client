@@ -40,7 +40,7 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import Client
+from lsp_client.clients.base import RustClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
@@ -77,7 +77,7 @@ RustAnalyzerLocalServer = partial(
 
 @define
 class RustAnalyzerClient(
-    Client,
+    RustClientBase,
     WithNotifyDidChangeConfiguration,
     WithRequestCallHierarchy,
     WithRequestCompletion,
@@ -123,10 +123,6 @@ class RustAnalyzerClient(
     cargo_features: list[str] = Factory(list)
     cargo_extra_args: list[str] = Factory(list)
     cargo_extra_env: dict[str, str] = Factory(dict)
-
-    @override
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        return lsp_type.LanguageKind.Rust
 
     @override
     def create_default_servers(self) -> DefaultServers:

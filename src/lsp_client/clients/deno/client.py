@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 from functools import partial
+from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Any, override
 
@@ -157,6 +158,10 @@ class DenoClient(
 
     testing_enable: bool = False
     testing_args: list[str] = Factory(list)
+
+    @classmethod
+    def check_project_root(cls, path: Path) -> bool:
+        return any((path / f).exists() for f in ("deno.json", "deno.jsonc"))
 
     @override
     def get_language_id(self) -> lsp_type.LanguageKind:

@@ -37,7 +37,7 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import Client
+from lsp_client.clients.base import TypeScriptClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
@@ -81,7 +81,7 @@ TypescriptLocalServer = partial(
 
 @define
 class TypescriptClient(
-    Client,
+    TypeScriptClientBase,
     WithNotifyDidChangeConfiguration,
     WithRequestCompletion,
     WithRequestHover,
@@ -117,10 +117,6 @@ class TypescriptClient(
     include_automatic_optional_chain_completions: bool = True
     include_completions_for_module_exports: bool = True
     include_completions_with_insert_text: bool = True
-
-    @override
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        return lsp_type.LanguageKind.TypeScript
 
     @override
     def create_default_servers(self) -> DefaultServers:

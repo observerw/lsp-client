@@ -37,7 +37,7 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import Client
+from lsp_client.clients.base import PythonClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
@@ -75,7 +75,7 @@ PyrightLocalServer = partial(
 
 @define
 class PyrightClient(
-    Client,
+    PythonClientBase,
     WithNotifyDidChangeConfiguration,
     WithRequestCallHierarchy,
     WithRequestCompletion,
@@ -107,10 +107,6 @@ class PyrightClient(
 
     diagnostic_mode: Literal["openFilesOnly", "workspace"] = "workspace"
     disable_pull_diagnostics: bool = False
-
-    @override
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        return lsp_type.LanguageKind.Python
 
     @override
     def create_default_servers(self) -> DefaultServers:

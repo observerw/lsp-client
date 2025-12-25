@@ -36,7 +36,7 @@ from lsp_client.capability.server_request import (
     WithRespondShowMessageRequest,
     WithRespondWorkspaceFoldersRequest,
 )
-from lsp_client.client.abc import Client
+from lsp_client.clients.base import PythonClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
@@ -72,7 +72,7 @@ TyLocalServer = partial(
 
 @define
 class TyClient(
-    Client,
+    PythonClientBase,
     WithNotifyDidChangeConfiguration,
     WithRequestCompletion,
     WithRequestDeclaration,
@@ -104,10 +104,6 @@ class TyClient(
     diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
     inlay_hints_variable_types: bool = True
     inlay_hints_call_argument_names: bool = True
-
-    @override
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        return lsp_type.LanguageKind.Python
 
     @override
     def create_default_servers(self) -> DefaultServers:
