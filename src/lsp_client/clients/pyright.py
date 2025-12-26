@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from functools import partial
 from subprocess import CalledProcessError
-from typing import Any, Literal, override
+from typing import override
 
 import anyio
 from attrs import define
@@ -105,22 +105,12 @@ class PyrightClient(
     - VSCode Extension: https://github.com/microsoft/pyright/tree/main/packages/vscode-pyright
     """
 
-    diagnostic_mode: Literal["openFilesOnly", "workspace"] = "workspace"
-    disable_pull_diagnostics: bool = False
-
     @override
     def create_default_servers(self) -> DefaultServers:
         return DefaultServers(
             local=PyrightLocalServer(),
             container=PyrightContainerServer(),
         )
-
-    @override
-    def create_initialization_options(self) -> dict[str, Any]:
-        return {
-            "diagnosticMode": self.diagnostic_mode,
-            "disablePullDiagnostics": self.disable_pull_diagnostics,
-        }
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:

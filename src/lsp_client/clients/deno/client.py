@@ -4,10 +4,10 @@ import shutil
 from functools import partial
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any, override
+from typing import override
 
 import anyio
-from attrs import Factory, define
+from attrs import define
 from loguru import logger
 
 from lsp_client.capability.notification import (
@@ -137,28 +137,6 @@ class DenoClient(
     - VSCode Extension: https://marketplace.visualstudio.com/items?itemName=denoland.vscode-deno
     """
 
-    enable: bool = True
-    unstable: bool = False
-    lint: bool = True
-
-    config: str | None = None
-    import_map: str | None = None
-
-    code_lens_implementations: bool = True
-    code_lens_references: bool = True
-    code_lens_references_all_functions: bool = True
-    code_lens_test: bool = True
-
-    suggest_complete_function_calls: bool = True
-    suggest_names: bool = True
-    suggest_paths: bool = True
-    suggest_auto_imports: bool = True
-    suggest_imports_auto_discover: bool = True
-    suggest_imports_hosts: list[str] = Factory(list)
-
-    testing_enable: bool = False
-    testing_args: list[str] = Factory(list)
-
     @classmethod
     def check_project_root(cls, path: Path) -> bool:
         return any((path / f).exists() for f in ("deno.json", "deno.jsonc"))
@@ -173,44 +151,6 @@ class DenoClient(
             local=DenoLocalServer(),
             container=DenoContainerServer(),
         )
-
-    @override
-    def create_initialization_options(self) -> dict[str, Any]:
-        options: dict[str, Any] = {
-            "enable": self.enable,
-            "unstable": self.unstable,
-            "lint": self.lint,
-            "codeLens": {
-                "implementations": self.code_lens_implementations,
-                "references": self.code_lens_references,
-                "referencesAllFunctions": self.code_lens_references_all_functions,
-                "test": self.code_lens_test,
-            },
-            "suggest": {
-                "completeFunctionCalls": self.suggest_complete_function_calls,
-                "names": self.suggest_names,
-                "paths": self.suggest_paths,
-                "autoImports": self.suggest_auto_imports,
-                "imports": {
-                    "autoDiscover": self.suggest_imports_auto_discover,
-                    "hosts": list(self.suggest_imports_hosts),
-                },
-            },
-        }
-
-        if self.config:
-            options["config"] = self.config
-
-        if self.import_map:
-            options["importMap"] = self.import_map
-
-        if self.testing_enable:
-            options["testing"] = {
-                "enable": self.testing_enable,
-                "args": list(self.testing_args),
-            }
-
-        return options
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:

@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from typing import Any, Literal, Self, override
+from typing import Literal, Self, override
 
 import anyio
 import asyncer
@@ -60,6 +60,7 @@ class Client(
 
     sync_file: bool = True
     request_timeout: float = 5.0
+    initialization_options: dict = field(factory=dict)
 
     _server: Server = field(init=False)
     _workspace: Workspace = field(init=False)
@@ -117,16 +118,6 @@ class Client(
     @abstractmethod
     def create_default_servers(self) -> DefaultServers:
         """Create default servers for this client."""
-
-    @abstractmethod
-    def create_initialization_options(self) -> dict[str, Any]:
-        """
-        Create initialization options for the `initialize` request.
-
-        Override this to provide server-specific initialization options.
-        """
-
-        return {}
 
     @abstractmethod
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
@@ -297,7 +288,7 @@ class Client(
                     # set both `root_path` and `root_uri` for compatibility
                     root_path=root_path,
                     root_uri=root_uri,
-                    initialization_options=self.create_initialization_options(),
+                    initialization_options=self.initialization_options,
                     trace=lsp_type.TraceValue.Verbose,
                     workspace_folders=self._workspace.to_folders(),
                 )

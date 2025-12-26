@@ -3,10 +3,10 @@ from __future__ import annotations
 import shutil
 from functools import partial
 from subprocess import CalledProcessError
-from typing import Any, Literal, override
+from typing import override
 
 import anyio
-from attrs import Factory, define
+from attrs import define
 from loguru import logger
 
 from lsp_client.capability.notification import (
@@ -110,45 +110,12 @@ class RustAnalyzerClient(
     - VSCode Extension: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
     """
 
-    proc_macro_enable: bool = True
-    cargo_build_scripts_enable: bool = True
-
-    check_command: Literal["check", "clippy"] = "check"
-    check_all_targets: bool = True
-    check_extra_args: list[str] = Factory(list)
-    check_extra_env: dict[str, str] = Factory(dict)
-
-    diagnostics_enable: bool = True
-
-    cargo_features: list[str] = Factory(list)
-    cargo_extra_args: list[str] = Factory(list)
-    cargo_extra_env: dict[str, str] = Factory(dict)
-
     @override
     def create_default_servers(self) -> DefaultServers:
         return DefaultServers(
             local=RustAnalyzerLocalServer(),
             container=RustAnalyzerContainerServer(),
         )
-
-    @override
-    def create_initialization_options(self) -> dict[str, Any]:
-        return {
-            "procMacro": {"enable": self.proc_macro_enable},
-            "cargo": {
-                "buildScripts": {"enable": self.cargo_build_scripts_enable},
-                "features": list(self.cargo_features),
-                "extraArgs": list(self.cargo_extra_args),
-                "extraEnv": dict(self.cargo_extra_env),
-            },
-            "check": {
-                "command": self.check_command,
-                "allTargets": self.check_all_targets,
-                "extraArgs": list(self.check_extra_args),
-                "extraEnv": dict(self.check_extra_env),
-            },
-            "diagnostics": {"enable": self.diagnostics_enable},
-        }
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:

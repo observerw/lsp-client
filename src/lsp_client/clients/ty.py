@@ -4,7 +4,7 @@ import shutil
 import sys
 from functools import partial
 from subprocess import CalledProcessError
-from typing import Any, Literal, override
+from typing import override
 
 import anyio
 from attrs import define
@@ -100,28 +100,12 @@ class TyClient(
     - VSCode Extension: https://docs.astral.sh/ty/editors/vscode/
     """
 
-    log_level: Literal["trace", "debug", "info", "warn", "error"] = "info"
-    diagnostic_mode: Literal["openFilesOnly", "workspace"] = "openFilesOnly"
-    inlay_hints_variable_types: bool = True
-    inlay_hints_call_argument_names: bool = True
-
     @override
     def create_default_servers(self) -> DefaultServers:
         return DefaultServers(
             local=TyLocalServer(),
             container=TyContainerServer(),
         )
-
-    @override
-    def create_initialization_options(self) -> dict[str, Any]:
-        return {
-            "logLevel": self.log_level,
-            "diagnosticMode": self.diagnostic_mode,
-            "inlayHints": {
-                "variableTypes": self.inlay_hints_variable_types,
-                "callArgumentNames": self.inlay_hints_call_argument_names,
-            },
-        }
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:

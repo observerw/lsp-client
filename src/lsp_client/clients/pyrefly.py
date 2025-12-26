@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from functools import partial
 from subprocess import CalledProcessError
-from typing import Any, Literal, override
+from typing import override
 
 import anyio
 from attrs import define
@@ -112,27 +112,12 @@ class PyreflyClient(
     - VSCode Extension: https://github.com/facebook/pyrefly/tree/main/lsp
     """
 
-    trace_server: Literal["off", "verbose"] = "off"
-    """LSP trace output verbosity"""
-
-    diagnostic_mode: Literal["Workspace", "OpenFilesOnly"] = "Workspace"
-    """How diagnostics are reported"""
-
     @override
     def create_default_servers(self) -> DefaultServers:
         return DefaultServers(
             local=PyreflyLocalServer(),
             container=PyreflyContainerServer(),
         )
-
-    @override
-    def create_initialization_options(self) -> dict[str, Any]:
-        options: dict[str, Any] = {}
-
-        options["trace"] = {"server": self.trace_server}
-        options["diagnostic_mode"] = self.diagnostic_mode
-
-        return options
 
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
