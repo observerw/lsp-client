@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from collections.abc import Iterator
 from typing import Any, Protocol, override, runtime_checkable
 
@@ -45,14 +46,26 @@ class WithRespondConfigurationRequest(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
+    @abstractmethod
+    def get_configuration(self, scope_uri: str | None, section: str | None) -> Any:
+        """
+        Get the configuration value for the given scope URI and section.
+
+        If a client supports this capability, it's the user's responsibility to implement this method to return the appropriate configuration value.
+
+        :param scope_uri: The scope URI for which to get the configuration.
+        :param section: The section of the configuration to get.
+        :return: The configuration value.
+        """
+
     async def _respond_configuration(
         self, params: lsp_type.ConfigurationParams
     ) -> list[Any]:
         logger.debug("Responding to configuration request")
-
-        # TODO add reasonable default behavior
-
-        return [None for _ in params.items]
+        return [
+            self.get_configuration(item.scope_uri, item.section)
+            for item in params.items
+        ]
 
     async def respond_configuration_request(
         self, req: lsp_type.ConfigurationRequest

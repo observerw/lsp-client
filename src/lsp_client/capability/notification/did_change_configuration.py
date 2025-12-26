@@ -45,10 +45,13 @@ class WithNotifyDidChangeConfiguration(
             lsp_type.DidChangeConfigurationNotification(params=params)
         )
 
-    def get_default_settings(self) -> Any:
-        return {}
+    async def notify_change_configuration(self, settings: Any | None = None) -> None:
+        """
+        Notify the server that the configuration has changed.
 
-    async def notify_change_configuration(self, settings: Any | None) -> None:
+        For most clients, the `settings` parameter is often set to `None`, indicating that the server should fetch the updated configuration itself.
+        """
+
         return await self._notify_change_configuration(
             lsp_type.DidChangeConfigurationParams(settings=settings)
         )
