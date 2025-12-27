@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections.abc import Iterator
 from typing import Any, Protocol, override, runtime_checkable
 
@@ -13,6 +12,7 @@ from lsp_client.protocol import (
     ServerRequestHookRegistry,
     WorkspaceCapabilityProtocol,
 )
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 
@@ -26,6 +26,8 @@ class WithRespondConfigurationRequest(
     """
     `workspace/configuration` - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_configuration
     """
+
+    configuration_map: ConfigurationMap | None = None
 
     @override
     @classmethod
@@ -46,17 +48,15 @@ class WithRespondConfigurationRequest(
     def check_server_capability(cls, cap: lsp_type.ServerCapabilities) -> None:
         super().check_server_capability(cap)
 
-    @abstractmethod
     def get_configuration(self, scope_uri: str | None, section: str | None) -> Any:
         """
         Get the configuration value for the given scope URI and section.
 
-        If a client supports this capability, it's the user's responsibility to implement this method to return the appropriate configuration value.
-
-        :param scope_uri: The scope URI for which to get the configuration.
-        :param section: The section of the configuration to get.
-        :return: The configuration value.
+        Default implementation uses `self.configuration_map` if available.
         """
+        if self.configuration_map:
+            return self.configuration_map.get(scope_uri, section)
+        return None
 
     async def _respond_configuration(
         self, params: lsp_type.ConfigurationParams
