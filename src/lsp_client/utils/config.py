@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 from copy import deepcopy
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from attrs import define, field
 from loguru import logger
@@ -23,6 +23,15 @@ def deep_merge(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+@runtime_checkable
+class ConfigurationChangeListener(Protocol):
+    """
+    Protocol for configuration change listeners.
+    """
+
+    def __call__(self, config_map: ConfigurationMap, **kwargs: Any) -> Any: ...
+
+
 @define
 class ConfigurationMap:
     """
@@ -32,8 +41,36 @@ class ConfigurationMap:
 
     _global_config: dict[str, Any] = field(factory=dict)
     _scoped_configs: list[tuple[str, dict[str, Any]]] = field(factory=list)
+    _on_change_callbacks: list[ConfigurationChangeListener] = field(
+        factory=list, init=False
+    )
 
-    def add_scope(self, pattern: str, config: dict[str, Any]) -> None:
+    def on_change(self, callback: ConfigurationChangeListener) -> None:
+        """
+        Register a callback to be called when the configuration changes.
+        """
+        self._on_change_callbacks.append(callback)
+
+    def _notify_change(self, **kwargs: Any) -> None:
+        for callback in self._on_change_callbacks:
+            try:
+                callback(self, **kwargs)
+            except Exception as e:
+                logger.error(f"Error in configuration change callback: {e}")
+
+    def update_global(
+        self, config: dict[str, Any], merge: bool = True, **kwargs: Any
+    ) -> None:
+        """
+        Update global configuration.
+        """
+        if merge:
+            self._global_config = deep_merge(self._global_config, config)
+        else:
+            self._global_config = deepcopy(config)
+        self._notify_change(**kwargs)
+
+    def add_scope(self, pattern: str, config: dict[str, Any], **kwargs: Any) -> None:
         """
         Add a configuration override for a specific file pattern.
 
@@ -41,12 +78,12 @@ class ConfigurationMap:
         :param config: The configuration dict to merge for this scope
         """
         self._scoped_configs.append((pattern, config))
+        self._notify_change(**kwargs)
 
     def _get_section(self, config: Any, section: str | None) -> Any:
         if not section:
             return config
 
-        # Traverse the config dictionary using the section path (e.g. "python.analysis")
         current = config
         for part in section.split("."):
             if isinstance(current, dict) and part in current:
@@ -56,10 +93,8 @@ class ConfigurationMap:
         return current
 
     def get(self, scope_uri: str | None, section: str | None) -> Any:
-        # Start with global config
         final_config = self._global_config
 
-        # If we have a scope, merge matching scoped configs
         if scope_uri:
             try:
                 path_str = str(from_local_uri(scope_uri))

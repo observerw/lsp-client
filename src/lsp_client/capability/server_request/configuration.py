@@ -80,6 +80,26 @@ class WithRespondConfigurationRequest(
         self, registry: ServerRequestHookRegistry
     ) -> None:
         super().register_server_request_hooks(registry)
+
+        # Automatically bind change notification if both capabilities are present
+        from lsp_client.capability.notification.did_change_configuration import (
+            WithNotifyDidChangeConfiguration,
+        )
+
+        if self.configuration_map and isinstance(
+            self, WithNotifyDidChangeConfiguration
+        ):
+            # We use a lambda to avoid sync/async issues if the notification
+            # needs to be scheduled on an event loop
+            import asyncer
+
+            def on_config_change(config_map: ConfigurationMap, **kwargs: Any):
+                with logger.contextualize(method="didChangeConfiguration"):
+                    logger.debug("Configuration changed, notifying server")
+                    asyncer.runnify(self.notify_change_configuration)()
+
+            self.configuration_map.on_change(on_config_change)
+
         registry.register(
             lsp_type.WORKSPACE_CONFIGURATION,
             ServerRequestHook(
