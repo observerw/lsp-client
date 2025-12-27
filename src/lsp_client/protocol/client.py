@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+import anyio
+
 from lsp_client.utils.types import AnyPath, Notification, Request, Response, lsp_type
 from lsp_client.utils.uri import from_local_uri
 from lsp_client.utils.workspace import DEFAULT_WORKSPACE_DIR, Workspace
@@ -72,9 +74,9 @@ class CapabilityClientProtocol(Protocol):
         """Convert a URI to an absolute path."""
         return from_local_uri(uri)
 
-    def read_file(self, file_path: AnyPath) -> str:
+    async def read_file(self, file_path: AnyPath) -> str:
         """Read the content of a file in the workspace."""
 
         uri = self.as_uri(file_path)
         abs_file_path = self.from_uri(uri)
-        return abs_file_path.read_text()
+        return await anyio.Path(abs_file_path).read_text()
