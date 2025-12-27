@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import shutil
 from functools import partial
-from pathlib import Path
 from subprocess import CalledProcessError
 from typing import override
 
@@ -137,10 +136,6 @@ class DenoClient(
     - Github: https://github.com/denoland/deno
     - VSCode Extension: https://marketplace.visualstudio.com/items?itemName=denoland.vscode-deno
     """
-
-    @classmethod
-    def check_project_root(cls, path: Path) -> bool:
-        return any((path / f).exists() for f in ("deno.json", "deno.jsonc"))
 
     @override
     def get_language_config(self) -> LanguageConfig:
