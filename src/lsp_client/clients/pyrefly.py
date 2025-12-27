@@ -43,6 +43,7 @@ from lsp_client.clients.base import PythonClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 PyreflyContainerServer = partial(
@@ -122,3 +123,29 @@ class PyreflyClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for pyrefly with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "pyrefly": {
+                    # Enable inlay hints
+                    "inlayHints": {
+                        "variableTypes": True,
+                        "functionReturnTypes": True,
+                        "parameterTypes": True,
+                    },
+                    # Enable diagnostics
+                    "diagnostics": {
+                        "enable": True,
+                    },
+                    # Enable auto-imports
+                    "completion": {
+                        "autoImports": True,
+                    },
+                }
+            }
+        )
+        return config_map

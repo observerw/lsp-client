@@ -44,6 +44,7 @@ from lsp_client.client.lang import LanguageConfig
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 from .extension import (
@@ -155,3 +156,52 @@ class DenoClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for deno with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "deno": {
+                    # Enable deno
+                    "enable": True,
+                    # Enable inlay hints
+                    "inlayHints": {
+                        "parameterNames": {"enabled": "all"},
+                        "parameterTypes": {"enabled": True},
+                        "variableTypes": {"enabled": True},
+                        "propertyDeclarationTypes": {"enabled": True},
+                        "functionLikeReturnTypes": {"enabled": True},
+                        "enumMemberValues": {"enabled": True},
+                    },
+                    # Enable linting
+                    "lint": True,
+                    # Enable unstable features
+                    "unstable": True,
+                    # Enable code lens
+                    "codeLens": {
+                        "implementations": True,
+                        "references": True,
+                        "referencesAllFunctions": True,
+                        "test": True,
+                        "testArgs": ["--allow-all"],
+                    },
+                    # Enable suggestions
+                    "suggest": {
+                        "autoImports": True,
+                        "completeFunctionCalls": True,
+                        "names": True,
+                        "paths": True,
+                        "imports": {
+                            "autoDiscover": True,
+                            "hosts": {
+                                "https://deno.land": True,
+                                "https://esm.sh": True,
+                            },
+                        },
+                    },
+                }
+            }
+        )
+        return config_map

@@ -44,6 +44,7 @@ from lsp_client.clients.base import RustClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 RustAnalyzerContainerServer = partial(
@@ -120,3 +121,54 @@ class RustAnalyzerClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for rust-analyzer with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "rust-analyzer": {
+                    # Enable inlay hints for all types
+                    "inlayHints": {
+                        "enable": True,
+                        "chainingHints": {"enable": True},
+                        "closureReturnTypeHints": {"enable": "always"},
+                        "lifetimeElisionHints": {"enable": "always"},
+                        "parameterHints": {"enable": True},
+                        "reborrowHints": {"enable": "always"},
+                        "renderColons": True,
+                        "typeHints": {"enable": True},
+                    },
+                    # Enable diagnostics
+                    "diagnostics": {
+                        "enable": True,
+                        "experimental": {"enable": True},
+                    },
+                    # Enable completion features
+                    "completion": {
+                        "autoimport": {"enable": True},
+                        "autoself": {"enable": True},
+                        "callable": {"snippets": "fill_arguments"},
+                        "postfix": {"enable": True},
+                        "privateEditable": {"enable": True},
+                    },
+                    # Enable checkOnSave with cargo check
+                    "checkOnSave": {"enable": True},
+                    # Enable code lens
+                    "lens": {
+                        "enable": True,
+                        "run": {"enable": True},
+                        "debug": {"enable": True},
+                        "implementations": {"enable": True},
+                        "references": {
+                            "adt": {"enable": True},
+                            "enumVariant": {"enable": True},
+                            "method": {"enable": True},
+                            "trait": {"enable": True},
+                        },
+                    },
+                }
+            }
+        )
+        return config_map
