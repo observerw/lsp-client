@@ -41,6 +41,7 @@ from lsp_client.clients.base import TypeScriptClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 TypescriptContainerServer = partial(
@@ -121,3 +122,61 @@ class TypescriptClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for typescript-language-server with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "typescript": {
+                    # Enable inlay hints for TypeScript
+                    "inlayHints": {
+                        "includeInlayParameterNameHints": "all",
+                        "includeInlayParameterNameHintsWhenArgumentMatchesName": True,
+                        "includeInlayFunctionParameterTypeHints": True,
+                        "includeInlayVariableTypeHints": True,
+                        "includeInlayVariableTypeHintsWhenTypeMatchesName": True,
+                        "includeInlayPropertyDeclarationTypeHints": True,
+                        "includeInlayFunctionLikeReturnTypeHints": True,
+                        "includeInlayEnumMemberValueHints": True,
+                    },
+                    # Enable suggestions
+                    "suggest": {
+                        "autoImports": True,
+                        "completeFunctionCalls": True,
+                        "includeCompletionsForModuleExports": True,
+                    },
+                    # Enable preferences
+                    "preferences": {
+                        "includePackageJsonAutoImports": "on",
+                        "importModuleSpecifier": "shortest",
+                    },
+                },
+                "javascript": {
+                    # Enable inlay hints for JavaScript
+                    "inlayHints": {
+                        "includeInlayParameterNameHints": "all",
+                        "includeInlayParameterNameHintsWhenArgumentMatchesName": True,
+                        "includeInlayFunctionParameterTypeHints": True,
+                        "includeInlayVariableTypeHints": True,
+                        "includeInlayVariableTypeHintsWhenTypeMatchesName": True,
+                        "includeInlayPropertyDeclarationTypeHints": True,
+                        "includeInlayFunctionLikeReturnTypeHints": True,
+                        "includeInlayEnumMemberValueHints": True,
+                    },
+                    # Enable suggestions
+                    "suggest": {
+                        "autoImports": True,
+                        "completeFunctionCalls": True,
+                        "includeCompletionsForModuleExports": True,
+                    },
+                    # Enable preferences
+                    "preferences": {
+                        "includePackageJsonAutoImports": "on",
+                        "importModuleSpecifier": "shortest",
+                    },
+                },
+            }
+        )
+        return config_map

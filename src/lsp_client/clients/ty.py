@@ -40,6 +40,7 @@ from lsp_client.clients.base import PythonClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 TyContainerServer = partial(ContainerServer, image="ghcr.io/lsp-client/ty:latest")
@@ -110,3 +111,23 @@ class TyClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for ty with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "ty": {
+                    # Enable diagnostics
+                    "diagnostics": {
+                        "enable": True,
+                    },
+                    # Enable completion features
+                    "completion": {
+                        "autoImports": True,
+                    },
+                }
+            }
+        )
+        return config_map

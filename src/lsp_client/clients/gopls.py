@@ -41,6 +41,7 @@ from lsp_client.clients.base import GoClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 GoplsContainerServer = partial(ContainerServer, image="ghcr.io/lsp-client/gopls:latest")
@@ -115,3 +116,52 @@ class GoplsClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for gopls with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "gopls": {
+                    # Enable inlay hints
+                    "hints": {
+                        "assignVariableTypes": True,
+                        "compositeLiteralFields": True,
+                        "compositeLiteralTypes": True,
+                        "constantValues": True,
+                        "functionTypeParameters": True,
+                        "parameterNames": True,
+                        "rangeVariableTypes": True,
+                    },
+                    # Enable code lenses
+                    "codelenses": {
+                        "gc_details": True,
+                        "generate": True,
+                        "regenerate_cgo": True,
+                        "run_govulncheck": True,
+                        "test": True,
+                        "tidy": True,
+                        "upgrade_dependency": True,
+                        "vendor": True,
+                    },
+                    # Enable diagnostics
+                    "diagnosticsDelay": "250ms",
+                    "analyses": {
+                        "fieldalignment": True,
+                        "nilness": True,
+                        "unusedparams": True,
+                        "unusedwrite": True,
+                        "useany": True,
+                    },
+                    # Enable completion features
+                    "completionDocumentation": True,
+                    "deepCompletion": True,
+                    "matcher": "Fuzzy",
+                    "usePlaceholders": True,
+                    # Enable semantic tokens
+                    "semanticTokens": True,
+                }
+            }
+        )
+        return config_map

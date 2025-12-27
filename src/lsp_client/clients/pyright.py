@@ -41,6 +41,7 @@ from lsp_client.clients.base import PythonClientBase
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import lsp_type
 
 PyrightContainerServer = partial(
@@ -115,3 +116,38 @@ class PyrightClient(
     @override
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         return
+
+    @override
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """Create default configuration for pyright with all features enabled."""
+        config_map = ConfigurationMap()
+        config_map.update_global(
+            {
+                "python": {
+                    "analysis": {
+                        # Enable inlay hints
+                        "inlayHints": {
+                            "variableTypes": True,
+                            "functionReturnTypes": True,
+                            "callArgumentNames": True,
+                            "pytestParameters": True,
+                        },
+                        # Enable auto-import completions
+                        "autoImportCompletions": True,
+                        # Enable type checking (default: basic)
+                        "typeCheckingMode": "basic",
+                        # Enable diagnostics
+                        "diagnosticMode": "openFilesOnly",
+                        # Enable auto-search paths
+                        "autoSearchPaths": True,
+                        # Enable indexing
+                        "indexing": True,
+                        # Enable diagnostics for shadowed imports
+                        "diagnosticSeverityOverrides": {
+                            "reportGeneralTypeIssues": "warning",
+                        },
+                    }
+                }
+            }
+        )
+        return config_map

@@ -34,6 +34,7 @@ from lsp_client.protocol import (
 from lsp_client.server import DefaultServers, Server, ServerRuntimeError
 from lsp_client.server.types import ServerRequest
 from lsp_client.utils.channel import Receiver, channel
+from lsp_client.utils.config import ConfigurationMap
 from lsp_client.utils.types import AnyPath, Notification, Request, Response, lsp_type
 from lsp_client.utils.workspace import (
     DEFAULT_WORKSPACE_DIR,
@@ -108,6 +109,38 @@ class Client(
     @abstractmethod
     def check_server_compatibility(self, info: lsp_type.ServerInfo | None) -> None:
         """Check if the available server capabilities are compatible with the client."""
+
+    def create_default_configuration_map(self) -> ConfigurationMap | None:
+        """
+        Create default configuration map for this client.
+
+        This method can be overridden by subclasses to provide default configurations
+        that enable extra features like inlay hints, diagnostics, etc.
+
+        The base implementation returns None, meaning no default configuration.
+        Subclasses that support configuration should override this method to provide
+        sensible defaults that enable commonly-used features.
+
+        Returns:
+            ConfigurationMap with default settings, or None if no defaults are needed.
+
+        Example:
+            Override this method in a client subclass to provide defaults:
+
+            ```python
+            @override
+            def create_default_configuration_map(self) -> ConfigurationMap | None:
+                config_map = ConfigurationMap()
+                config_map.update_global({
+                    "myserver": {
+                        "inlayHints": {"enable": True},
+                        "diagnostics": {"enable": True},
+                    }
+                })
+                return config_map
+            ```
+        """
+        return None
 
     @override
     @asynccontextmanager
@@ -245,6 +278,18 @@ class Client(
     @logger.catch(reraise=True)
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         self._workspace = format_workspace(self._workspace_arg)
+
+        # Initialize default configuration map if the client supports configuration
+        # and no configuration map has been set yet
+        from lsp_client.capability.server_request import WithRespondConfigurationRequest
+
+        if (
+            isinstance(self, WithRespondConfigurationRequest)
+            and self.configuration_map is None
+        ):
+            default_config = self.create_default_configuration_map()
+            if default_config is not None:
+                self.configuration_map = default_config
 
         async with (
             asyncer.create_task_group() as tg,
