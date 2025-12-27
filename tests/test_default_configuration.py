@@ -10,9 +10,9 @@ from lsp_client.utils.config import ConfigurationMap
 @pytest.mark.parametrize("client_cls", clients)
 def test_clients_have_default_configuration_method(client_cls):
     """Test that all clients have a create_default_configuration_map method."""
-    assert hasattr(
-        client_cls, "create_default_configuration_map"
-    ), f"{client_cls.__name__} should have create_default_configuration_map method"
+    assert hasattr(client_cls, "create_default_configuration_map"), (
+        f"{client_cls.__name__} should have create_default_configuration_map method"
+    )
 
 
 @pytest.mark.parametrize("client_cls", clients)
@@ -20,9 +20,9 @@ def test_default_configuration_returns_valid_type(client_cls):
     """Test that create_default_configuration_map returns None or ConfigurationMap."""
     client = client_cls()
     result = client.create_default_configuration_map()
-    assert result is None or isinstance(
-        result, ConfigurationMap
-    ), f"{client_cls.__name__}.create_default_configuration_map() should return None or ConfigurationMap"
+    assert result is None or isinstance(result, ConfigurationMap), (
+        f"{client_cls.__name__}.create_default_configuration_map() should return None or ConfigurationMap"
+    )
 
 
 @pytest.mark.parametrize("client_cls", clients)
@@ -59,11 +59,10 @@ def test_default_configuration_has_content(client_cls):
     if config_map is None:
         pytest.skip(f"{client_cls.__name__} has no default configuration")
 
-    # Check that the configuration map has some content
-    # Access the private attribute to check if global config has content
-    assert (
-        config_map._global_config
-    ), f"{client_cls.__name__} default configuration should not be empty"
+    # Check that the configuration map has some content using public API
+    assert config_map.has_global_config(), (
+        f"{client_cls.__name__} default configuration should not be empty"
+    )
 
 
 @pytest.mark.asyncio

@@ -105,3 +105,12 @@ class ConfigurationMap:
                 logger.warning(f"Failed to parse scope URI: {scope_uri}")
 
         return self._get_section(final_config, section)
+
+    def has_global_config(self) -> bool:
+        """
+        Check if the configuration map has any global configuration.
+
+        Returns:
+            True if global configuration is not empty, False otherwise.
+        """
+        return bool(self._global_config)

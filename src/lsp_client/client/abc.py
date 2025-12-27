@@ -117,8 +117,28 @@ class Client(
         This method can be overridden by subclasses to provide default configurations
         that enable extra features like inlay hints, diagnostics, etc.
 
+        The base implementation returns None, meaning no default configuration.
+        Subclasses that support configuration should override this method to provide
+        sensible defaults that enable commonly-used features.
+
         Returns:
             ConfigurationMap with default settings, or None if no defaults are needed.
+
+        Example:
+            Override this method in a client subclass to provide defaults:
+
+            ```python
+            @override
+            def create_default_configuration_map(self) -> ConfigurationMap | None:
+                config_map = ConfigurationMap()
+                config_map.update_global({
+                    "myserver": {
+                        "inlayHints": {"enable": True},
+                        "diagnostics": {"enable": True},
+                    }
+                })
+                return config_map
+            ```
         """
         return None
 

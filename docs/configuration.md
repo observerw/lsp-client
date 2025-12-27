@@ -202,5 +202,14 @@ from lsp_client.clients.rust_analyzer import RustAnalyzerClient
 
 client = RustAnalyzerClient()
 config_map = client.create_default_configuration_map()
-print(config_map._global_config)  # View the default settings
+
+# Check if configuration exists
+if config_map and config_map.has_global_config():
+    # Get specific configuration values
+    inlay_hints_enabled = config_map.get(None, "rust-analyzer.inlayHints.enable")
+    print(f"Inlay hints enabled: {inlay_hints_enabled}")
+    
+    # Get entire section
+    all_inlay_hints = config_map.get(None, "rust-analyzer.inlayHints")
+    print(f"All inlay hint settings: {all_inlay_hints}")
 ```
