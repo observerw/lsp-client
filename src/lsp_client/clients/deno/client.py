@@ -41,6 +41,7 @@ from lsp_client.capability.server_request import (
     WithRespondWorkspaceFoldersRequest,
 )
 from lsp_client.client.abc import Client
+from lsp_client.client.lang import LanguageConfig
 from lsp_client.server import DefaultServers, ServerInstallationError
 from lsp_client.server.container import ContainerServer
 from lsp_client.server.local import LocalServer
@@ -142,8 +143,12 @@ class DenoClient(
         return any((path / f).exists() for f in ("deno.json", "deno.jsonc"))
 
     @override
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        return lsp_type.LanguageKind.TypeScript
+    def get_language_config(self) -> LanguageConfig:
+        return LanguageConfig(
+            kind=lsp_type.LanguageKind.TypeScript,
+            suffixes=[".ts", ".tsx", ".js", ".jsx", ".mjs"],
+            project_files=["deno.json", "deno.jsonc"],
+        )
 
     @override
     def create_default_servers(self) -> DefaultServers:

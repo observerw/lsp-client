@@ -19,6 +19,7 @@ from lsp_client.capability.build import (
 )
 from lsp_client.capability.notification import WithNotifyTextDocumentSynchronize
 from lsp_client.client.buffer import LSPFileBuffer
+from lsp_client.client.lang import LanguageConfig
 from lsp_client.jsonrpc.convert import (
     notification_serialize,
     request_deserialize,
@@ -109,8 +110,8 @@ class Client(
                 return parent
 
     @abstractmethod
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        """The language ID of the client."""
+    def get_language_config(self) -> LanguageConfig:
+        """Get language-specific configuration for this client."""
 
     @abstractmethod
     def create_default_servers(self) -> DefaultServers:

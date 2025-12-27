@@ -60,7 +60,7 @@ class WithNotifyTextDocumentSynchronize(
             lsp_type.DidOpenTextDocumentParams(
                 text_document=lsp_type.TextDocumentItem(
                     uri=self.as_uri(file_path),
-                    language_id=self.get_language_id(),
+                    language_id=self.get_language_config().kind,
                     version=0,  # Version 0 for the initial open
                     text=file_content,
                 )

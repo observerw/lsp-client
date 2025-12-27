@@ -4,13 +4,16 @@ from abc import abstractmethod
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import anyio
 
-from lsp_client.utils.types import AnyPath, Notification, Request, Response, lsp_type
+from lsp_client.utils.types import AnyPath, Notification, Request, Response
 from lsp_client.utils.uri import from_local_uri
 from lsp_client.utils.workspace import DEFAULT_WORKSPACE_DIR, Workspace
+
+if TYPE_CHECKING:
+    from lsp_client.client.lang import LanguageConfig
 
 
 @runtime_checkable
@@ -24,8 +27,8 @@ class CapabilityClientProtocol(Protocol):
         """The workspace folders of the client."""
 
     @abstractmethod
-    def get_language_id(self) -> lsp_type.LanguageKind:
-        """The language ID of the client."""
+    def get_language_config(self) -> LanguageConfig:
+        """Get language-specific configuration for this client."""
 
     @abstractmethod
     @asynccontextmanager
